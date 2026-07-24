@@ -1,0 +1,77 @@
+import AVFoundation
+import Foundation
+
+/// Records the default input device to a file via AVAudioEngine, encoding AAC
+/// in the mic's native format. Buffers stream straight to disk — nothing is
+/// held in memory, so session length is unbounded.
+final class MicRecorder {
+    enum RecorderError: Error, CustomStringConvertible {
+        case engineStartFailed(Error)
+        case fileCreationFailed(Error)
+
+        var description: String {
+            switch self {
+            case .engineStartFailed(let e): return "mic engine start failed: \(e)"
+            case .fileCreationFailed(let e): return "mic file creation failed: \(e)"
+            }
+        }
+    }
+
+    private let engine = AVAudioEngine()
+    private var file: AVAudioFile?
+    private(set) var isRecording = false
+
+    /// Start capturing the mic, encoding AAC into `url` (use a .caf extension
+    /// — CAF needs no finalization pass, so a crash loses nothing written).
+    func start(writingTo url: URL) throws {
+        guard !isRecording else { return }
+
+        let input = engine.inputNode
+        let inputFormat = input.outputFormat(forBus: 0)
+
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: inputFormat.sampleRate,
+            AVNumberOfChannelsKey: inputFormat.channelCount,
+        ]
+        do {
+            file = try AVAudioFile(
+                forWriting: url,
+                settings: settings,
+                commonFormat: inputFormat.commonFormat,
+                interleaved: inputFormat.isInterleaved
+            )
+        } catch {
+            throw RecorderError.fileCreationFailed(error)
+        }
+
+        input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
+            guard let file = self?.file else { return }
+            do {
+                try file.write(from: buffer)
+            } catch {
+                FileHandle.standardError.write(Data("mic track write failed: \(error)\n".utf8))
+            }
+        }
+
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            file = nil
+            throw RecorderError.engineStartFailed(error)
+        }
+
+        isRecording = true
+    }
+
+    /// Stop capturing and finalize the file. Idempotent.
+    func stop() {
+        guard isRecording else { return }
+        isRecording = false
+        engine.stop()
+        engine.inputNode.removeTap(onBus: 0)
+        file = nil
+    }
+}
