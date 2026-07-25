@@ -72,6 +72,11 @@ final class MicRecorder: @unchecked Sendable {
         if voice {
             do {
                 try input.setVoiceProcessingEnabled(true)
+                // The live voice unit makes macOS treat the session like a
+                // call and duck all other audio — meetings played through the
+                // speakers would get quieter the moment recording starts.
+                input.voiceProcessingOtherAudioDuckingConfiguration =
+                    .init(enableAdvancedDucking: false, duckingLevel: .min)
             } catch {
                 FileHandle.standardError.write(Data(
                     "warning: mic voice processing unavailable (\(error)) — recording raw mic\n".utf8
