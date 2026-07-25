@@ -80,6 +80,7 @@ struct Doctor: ParsableCommand {
 final class AppController {
     private let root: URL
     private let menuBar = MenuBarController()
+    private let overlay = RecordingOverlay()
     private let transcription = TranscriptionCoordinator()
     private var session: RecordingSession?
     private var ticker: Timer?
@@ -118,6 +119,7 @@ final class AppController {
     private func startSession() {
         do {
             let newSession = try RecordingSession(root: root)
+            newSession.onMicLevel = { [overlay] level in overlay.pushLevel(level) }
             try newSession.start()
             session = newSession
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
@@ -128,6 +130,7 @@ final class AppController {
         }
 
         menuBar.update(recording: true, elapsed: "0:00")
+        overlay.show()
         ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
@@ -144,6 +147,7 @@ final class AppController {
         ticker?.invalidate()
         ticker = nil
         menuBar.update(recording: false, elapsed: nil)
+        overlay.hide()
 
         let dir = session.dir
         Task { [transcription] in await transcription.enqueue(dir) }

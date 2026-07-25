@@ -1,4 +1,5 @@
 import AVFoundation
+import Accelerate
 import Foundation
 
 /// Records the default input device to a file via AVAudioEngine, encoding AAC
@@ -23,6 +24,9 @@ final class MicRecorder {
     /// Wall-clock time of the first captured buffer — the track's true start,
     /// used to offset-align the two tracks' transcript timestamps.
     private(set) var firstBufferAt: Date?
+    /// Per-buffer RMS level (0…~1), called on the audio thread. Set before
+    /// start(); drives the recording overlay's waveform.
+    var onLevel: (@Sendable (Float) -> Void)?
 
     /// Start capturing the mic, encoding AAC into `url` (use a .caf extension
     /// — CAF needs no finalization pass, so a crash loses nothing written).
@@ -51,6 +55,11 @@ final class MicRecorder {
         input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
             guard let self, let file = self.file else { return }
             if self.firstBufferAt == nil { self.firstBufferAt = Date() }
+            if let onLevel = self.onLevel, let samples = buffer.floatChannelData?[0] {
+                var rms: Float = 0
+                vDSP_rmsqv(samples, 1, &rms, vDSP_Length(buffer.frameLength))
+                onLevel(rms)
+            }
             do {
                 try file.write(from: buffer)
             } catch {
