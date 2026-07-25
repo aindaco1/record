@@ -34,6 +34,19 @@ final class MicRecorder {
         guard !isRecording else { return }
 
         let input = engine.inputNode
+        // Apple's voice-processing stack (echo cancellation): subtracts what
+        // the speakers are playing from what the mic hears, so the system
+        // track doesn't bleed into the mic track when recording without
+        // headphones. Enable before reading the format — it changes it.
+        if Config.micVoiceProcessing() {
+            do {
+                try input.setVoiceProcessingEnabled(true)
+            } catch {
+                FileHandle.standardError.write(Data(
+                    "warning: mic voice processing unavailable (\(error)) — recording raw mic\n".utf8
+                ))
+            }
+        }
         let inputFormat = input.outputFormat(forBus: 0)
 
         let settings: [String: Any] = [

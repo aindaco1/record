@@ -5,6 +5,7 @@ import Foundation
 ///     {
 ///       "recordings_dir": "~/Recordings",
 ///       "transcription": { "enabled": true, "engine": "parakeet" },
+///       "mic_voice_processing": true,
 ///       "on_stop": "my-hook"
 ///     }
 ///
@@ -45,6 +46,14 @@ enum Config {
 
     private static func transcription() -> [String: Any]? {
         load()?["transcription"] as? [String: Any]
+    }
+
+    /// Apple voice processing (acoustic echo cancellation) on the mic, so
+    /// speaker playback doesn't bleed into the mic track and get transcribed
+    /// as "me". Default on; set false for the raw mic (e.g. always-headphones
+    /// setups that want untouched audio).
+    static func micVoiceProcessing() -> Bool {
+        load()?["mic_voice_processing"] as? Bool ?? true
     }
 
     /// Parse the config file. A malformed config is reported on stderr rather
