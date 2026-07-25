@@ -8,10 +8,6 @@ final class RecordingSession {
     let dir: URL
     let startedAt = Date()
 
-    /// Forwarded to the mic recorder's per-buffer level callback (audio
-    /// thread). Set before start().
-    var onMicLevel: (@Sendable (Float) -> Void)?
-
     private let mic = MicRecorder()
     private let system = SystemAudioRecorder()
 
@@ -39,7 +35,6 @@ final class RecordingSession {
     /// Start both tracks. If the mic fails after the system tap started, the
     /// tap is torn down so we never run half a session silently.
     func start() throws {
-        mic.onLevel = onMicLevel
         try system.start(writingTo: dir.appendingPathComponent("system.caf"))
         do {
             try mic.start(writingTo: dir.appendingPathComponent("mic.caf"))
