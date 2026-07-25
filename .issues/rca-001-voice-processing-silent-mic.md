@@ -1,7 +1,7 @@
 ---
 title: "Voice processing produces a silent mic track"
 date: 2026-07-25
-status: in_progress
+status: done
 affects: "microphone recording and speaker attribution"
 ---
 
