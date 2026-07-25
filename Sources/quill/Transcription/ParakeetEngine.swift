@@ -1,3 +1,4 @@
+import AVFoundation
 import FluidAudio
 import Foundation
 
@@ -8,8 +9,16 @@ import Foundation
 actor ParakeetEngine: TranscriptionEngine {
     enum EngineError: Error, CustomStringConvertible {
         case notPrepared
+        case unreadableAudio(URL, Error?)
 
-        var description: String { "parakeet engine used before prepare()" }
+        var description: String {
+            switch self {
+            case .notPrepared: return "parakeet engine used before prepare()"
+            case .unreadableAudio(let url, let e):
+                return "unreadable or empty audio \(url.lastPathComponent)"
+                    + (e.map { ": \($0)" } ?? "")
+            }
+        }
     }
 
     nonisolated let name = "parakeet"
@@ -27,6 +36,20 @@ actor ParakeetEngine: TranscriptionEngine {
 
     func transcribe(_ audio: URL) async throws -> [TranscriptSegment] {
         guard let manager else { throw EngineError.notPrepared }
+
+        // A track with no frames (recorder died before its first buffer)
+        // makes AVFoundation raise an ObjC exception deep inside the
+        // resampler — uncatchable from Swift, so it takes the whole daemon
+        // down. Check readability up front instead.
+        do {
+            let probe = try AVAudioFile(forReading: audio)
+            guard probe.length > 0 else { throw EngineError.unreadableAudio(audio, nil) }
+        } catch let error as EngineError {
+            throw error
+        } catch {
+            throw EngineError.unreadableAudio(audio, error)
+        }
+
         var state = try TdtDecoderState()
         let result = try await manager.transcribe(audio, decoderState: &state)
 

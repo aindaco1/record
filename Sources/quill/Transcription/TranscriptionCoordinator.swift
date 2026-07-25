@@ -109,7 +109,15 @@ actor TranscriptionCoordinator {
                 continue
             }
             log(dir, "transcribing \(track.file) (\(engine.name))")
-            let segments = try await engine.transcribe(audio)
+            // One bad track (empty, truncated) shouldn't cost us the other's
+            // transcript — log it and keep going.
+            let segments: [TranscriptSegment]
+            do {
+                segments = try await engine.transcribe(audio)
+            } catch {
+                log(dir, "skipping \(track.file): \(error)")
+                continue
+            }
             let offset = TimeInterval(track.offsetMs) / 1000
             merged += segments.map {
                 Transcript.Segment(

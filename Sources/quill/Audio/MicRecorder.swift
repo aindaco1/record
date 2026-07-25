@@ -8,11 +8,13 @@ final class MicRecorder {
     enum RecorderError: Error, CustomStringConvertible {
         case engineStartFailed(Error)
         case fileCreationFailed(Error)
+        case formatUnsupported(AVAudioFormat)
 
         var description: String {
             switch self {
             case .engineStartFailed(let e): return "mic engine start failed: \(e)"
             case .fileCreationFailed(let e): return "mic file creation failed: \(e)"
+            case .formatUnsupported(let f): return "can't downmix mic format \(f)"
             }
         }
     }
@@ -45,17 +47,30 @@ final class MicRecorder {
         }
         let inputFormat = input.outputFormat(forBus: 0)
 
+        // Always record mono. Some inputs present exotic layouts (a 9-channel
+        // device silently produced a zero-byte AAC file), and speech models
+        // want one channel anyway — so downmix rather than trusting the
+        // device's format.
+        guard let recordFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: inputFormat.sampleRate,
+            channels: 1,
+            interleaved: false
+        ), let converter = AVAudioConverter(from: inputFormat, to: recordFormat) else {
+            throw RecorderError.formatUnsupported(inputFormat)
+        }
+
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: inputFormat.sampleRate,
-            AVNumberOfChannelsKey: inputFormat.channelCount,
+            AVSampleRateKey: recordFormat.sampleRate,
+            AVNumberOfChannelsKey: 1,
         ]
         do {
             file = try AVAudioFile(
                 forWriting: url,
                 settings: settings,
-                commonFormat: inputFormat.commonFormat,
-                interleaved: inputFormat.isInterleaved
+                commonFormat: recordFormat.commonFormat,
+                interleaved: recordFormat.isInterleaved
             )
         } catch {
             throw RecorderError.fileCreationFailed(error)
@@ -64,8 +79,15 @@ final class MicRecorder {
         input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
             guard let self, let file = self.file else { return }
             if self.firstBufferAt == nil { self.firstBufferAt = Date() }
+            guard let mono = AVAudioPCMBuffer(
+                pcmFormat: recordFormat,
+                frameCapacity: buffer.frameCapacity
+            ) else { return }
             do {
-                try file.write(from: buffer)
+                // Same sample rate on both sides, so the one-shot convert
+                // applies — no input-block bookkeeping.
+                try converter.convert(to: mono, from: buffer)
+                try file.write(from: mono)
             } catch {
                 FileHandle.standardError.write(Data("mic track write failed: \(error)\n".utf8))
             }
