@@ -68,14 +68,14 @@ final class MenuBarController {
         }
     }
 
-    /// Reflect recording state in the icon tint, menu-bar elapsed counter, and
-    /// menu item titles. Call once a second while recording.
+    /// Reflect recording state in the icon tint and menu item titles. The
+    /// menu bar shows only the feather (red while recording); the elapsed
+    /// counter lives in the menu's state label. Call once a second while
+    /// recording.
     func update(recording: Bool, elapsed: String?) {
         stateLabel.title = recording ? "● recording · \(elapsed ?? "0:00")" : "idle"
         toggleItem.title = recording ? "Stop recording" : "Start recording"
-        guard let button = statusItem.button else { return }
-        button.contentTintColor = recording ? .systemRed : nil
-        button.title = recording ? " \(elapsed ?? "")" : ""
+        statusItem.button?.contentTintColor = recording ? .systemRed : nil
     }
 
     /// Show transcription progress/failure as a second status line in the
