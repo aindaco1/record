@@ -50,10 +50,11 @@ enum Config {
 
     /// Apple voice processing (acoustic echo cancellation) on the mic, so
     /// speaker playback doesn't bleed into the mic track and get transcribed
-    /// as "me". Default on; set false for the raw mic (e.g. always-headphones
-    /// setups that want untouched audio).
+    /// as "me". Default off — the live voice unit ducks all other playback,
+    /// and on headphones there's no echo to cancel anyway. Set true when
+    /// recording meetings through the speakers.
     static func micVoiceProcessing() -> Bool {
-        load()?["mic_voice_processing"] as? Bool ?? true
+        load()?["mic_voice_processing"] as? Bool ?? false
     }
 
     /// Parse the config file. A malformed config is reported on stderr rather

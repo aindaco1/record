@@ -83,9 +83,12 @@ Optional, at `~/.config/quill/config.json`:
 - `recordings_dir` — where sessions land. Resolution order: `--out` flag >
   config > `~/Recordings`.
 - `transcription.enabled` — set `false` to just record.
-- `mic_voice_processing` — Apple's echo cancellation on the mic (default on),
-  so speaker playback doesn't bleed into the mic track and get transcribed
-  twice. Set `false` for the raw mic if you always wear headphones.
+- `mic_voice_processing` — Apple's echo cancellation on the mic (default off).
+  Set `true` when recording meetings through the speakers, so playback doesn't
+  bleed into the mic track and get transcribed twice as "me". The trade: while
+  the voice unit is live, macOS ducks other playback slightly (`.min` ducking
+  is configured, but it can't be zeroed). On headphones there's no echo to
+  cancel, so raw capture is the better default.
 - `on_stop` — shell command spawned with the session directory as its
   argument, **after the transcript is written** (or right after recording if
   transcription is disabled). Wire it to whatever comes next: summarization,
