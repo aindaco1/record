@@ -7,6 +7,7 @@ import AppKit
 final class MenuBarController {
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
+    private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
 
     var onToggle: (() -> Void)?
@@ -22,6 +23,11 @@ final class MenuBarController {
         stateLabel = NSMenuItem(title: "idle", action: nil, keyEquivalent: "")
         stateLabel.isEnabled = false
         menu.addItem(stateLabel)
+
+        transcriptionLabel = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        transcriptionLabel.isEnabled = false
+        transcriptionLabel.isHidden = true
+        menu.addItem(transcriptionLabel)
 
         menu.addItem(.separator())
 
@@ -42,7 +48,7 @@ final class MenuBarController {
         menu.addItem(.separator())
 
         let quit = NSMenuItem(
-            title: "Quit lyrebird",
+            title: "Quit quill",
             action: #selector(quitClicked),
             keyEquivalent: "q"
         )
@@ -70,6 +76,14 @@ final class MenuBarController {
         guard let button = statusItem.button else { return }
         button.contentTintColor = recording ? .systemRed : nil
         button.title = recording ? " \(elapsed ?? "")" : ""
+    }
+
+    /// Show transcription progress/failure as a second status line in the
+    /// menu; nil hides it. Independent of recording state — a new recording
+    /// can run while the last one transcribes.
+    func updateTranscription(_ text: String?) {
+        transcriptionLabel.title = text ?? ""
+        transcriptionLabel.isHidden = text == nil
     }
 
     // Inlined Lucide feather SVG. Keeping it in source means the executable

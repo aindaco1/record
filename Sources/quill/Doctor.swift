@@ -1,4 +1,5 @@
 import AVFoundation
+import FluidAudio
 import Foundation
 
 enum CheckStatus {
@@ -19,6 +20,7 @@ enum DoctorReport {
             checkMicrophone(),
             checkSystemAudio(),
             checkRecordingsRoot(recordingsRoot),
+            checkTranscription(),
         ]
     }
 
@@ -37,7 +39,7 @@ enum DoctorReport {
             return Check(
                 name: "microphone",
                 status: .fail("denied"),
-                remediation: "System Settings → Privacy & Security → Microphone → enable for lyrebird (or your terminal)"
+                remediation: "System Settings → Privacy & Security → Microphone → enable for quill (or your terminal)"
             )
         @unknown default:
             return Check(name: "microphone", status: .fail("unknown state"), remediation: nil)
@@ -72,6 +74,27 @@ enum DoctorReport {
             )
         }
         return Check(name: "recordings folder", status: .ok, remediation: nil)
+    }
+
+    /// Never discover a missing model after an important meeting: report
+    /// whether the parakeet models are already in FluidAudio's cache.
+    static func checkTranscription() -> Check {
+        guard Config.transcriptionEnabled() else {
+            return Check(
+                name: "transcription",
+                status: .warn("disabled in config"),
+                remediation: nil
+            )
+        }
+        let cache = AsrModels.defaultCacheDirectory(for: .v2)
+        if AsrModels.modelsExist(at: cache, version: .v2) {
+            return Check(name: "transcription", status: .ok, remediation: nil)
+        }
+        return Check(
+            name: "transcription",
+            status: .warn("parakeet models not downloaded (~600 MB)"),
+            remediation: "downloads automatically on first transcription — record a short test session while online"
+        )
     }
 
     static func print(_ checks: [Check]) {

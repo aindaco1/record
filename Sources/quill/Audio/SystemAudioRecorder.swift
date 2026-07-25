@@ -33,8 +33,11 @@ final class SystemAudioRecorder {
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
     private var file: AVAudioFile?
-    private let queue = DispatchQueue(label: "com.digimata.lyrebird.system-tap")
+    private let queue = DispatchQueue(label: "com.digimata.quill.system-tap")
     private(set) var isRecording = false
+    /// Wall-clock time of the first captured buffer — the track's true start,
+    /// used to offset-align the two tracks' transcript timestamps.
+    private(set) var firstBufferAt: Date?
 
     /// Start capturing system audio, encoding AAC into `url` (use a .caf
     /// extension — CAF needs no finalization pass, so a crash mid-meeting
@@ -43,7 +46,7 @@ final class SystemAudioRecorder {
         guard !isRecording else { return }
 
         let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
-        description.name = "lyrebird system tap"
+        description.name = "quill system tap"
         description.isPrivate = true
         description.muteBehavior = .unmuted
 
@@ -94,7 +97,7 @@ final class SystemAudioRecorder {
 
     private func createAggregateDevice(tapUUID: UUID) throws {
         let desc: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "lyrebird-tap",
+            kAudioAggregateDeviceNameKey: "quill-tap",
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceIsPrivateKey: true,
             kAudioAggregateDeviceIsStackedKey: false,
@@ -135,6 +138,7 @@ final class SystemAudioRecorder {
         var status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue) {
             [weak self] _, inInputData, _, _, _ in
             guard let self, let file = self.file else { return }
+            if self.firstBufferAt == nil { self.firstBufferAt = Date() }
             guard let buffer = AVAudioPCMBuffer(
                 pcmFormat: format,
                 bufferListNoCopy: inInputData,

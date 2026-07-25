@@ -51,11 +51,22 @@ final class RecordingSession {
 
         let ended = Date()
         let iso = ISO8601DateFormatter()
+
+        // The tracks don't start on the same buffer; record how far each
+        // lags the earliest so transcript timestamps share one clock.
+        let micStart = mic.firstBufferAt ?? startedAt
+        let systemStart = system.firstBufferAt ?? startedAt
+        let earliest = min(micStart, systemStart)
+
         let meta: [String: Any] = [
             "started": iso.string(from: startedAt),
             "ended": iso.string(from: ended),
             "duration_seconds": Int(ended.timeIntervalSince(startedAt)),
             "files": ["mic": "mic.caf", "system": "system.caf"],
+            "start_offset_ms": [
+                "mic": Int(micStart.timeIntervalSince(earliest) * 1000),
+                "system": Int(systemStart.timeIntervalSince(earliest) * 1000),
+            ],
         ]
         if let data = try? JSONSerialization.data(
             withJSONObject: meta,

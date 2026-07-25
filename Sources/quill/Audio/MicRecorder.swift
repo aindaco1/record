@@ -20,6 +20,9 @@ final class MicRecorder {
     private let engine = AVAudioEngine()
     private var file: AVAudioFile?
     private(set) var isRecording = false
+    /// Wall-clock time of the first captured buffer — the track's true start,
+    /// used to offset-align the two tracks' transcript timestamps.
+    private(set) var firstBufferAt: Date?
 
     /// Start capturing the mic, encoding AAC into `url` (use a .caf extension
     /// — CAF needs no finalization pass, so a crash loses nothing written).
@@ -46,7 +49,8 @@ final class MicRecorder {
         }
 
         input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
-            guard let file = self?.file else { return }
+            guard let self, let file = self.file else { return }
+            if self.firstBufferAt == nil { self.firstBufferAt = Date() }
             do {
                 try file.write(from: buffer)
             } catch {

@@ -3,16 +3,13 @@ import ArgumentParser
 import Foundation
 
 @main
-struct Lyrebird: ParsableCommand {
+struct Quill: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "lyrebird",
-        abstract: "Local meeting recorder. Two tracks — your mic and system audio — dumped to disk for later transcription.",
+        commandName: "quill",
+        abstract: "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
         subcommands: [Run.self, Doctor.self, Install.self],
         defaultSubcommand: Run.self
     )
-
-    static let defaultRoot = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Recordings/meetings", isDirectory: true)
 }
 
 struct Run: ParsableCommand {
@@ -21,7 +18,7 @@ struct Run: ParsableCommand {
         abstract: "Run the menu-bar daemon (default)."
     )
 
-    @Option(name: .long, help: "Recordings root directory.")
+    @Option(name: .long, help: "Recordings root directory (overrides the config file).")
     var out: String?
 
     func run() throws {
@@ -32,8 +29,7 @@ struct Run: ParsableCommand {
 
     @MainActor
     private func runMain() throws {
-        let root = out.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
-            ?? Lyrebird.defaultRoot
+        let root = Config.resolveRoot(cliOverride: out)
 
         // Non-blocking: permissions prompt on first recording, so warnings at
         // startup are informational, not fatal.
@@ -58,7 +54,7 @@ struct Run: ParsableCommand {
         signal(SIGINT, SIG_IGN)
 
         FileHandle.standardError.write(Data(
-            "lyrebird up · recordings → \(root.path) · ^C to quit\n".utf8
+            "quill up · recordings → \(root.path) · ^C to quit\n".utf8
         ))
         app.run()
     }
@@ -70,7 +66,7 @@ struct Doctor: ParsableCommand {
     )
 
     func run() throws {
-        let checks = DoctorReport.run(recordingsRoot: Lyrebird.defaultRoot)
+        let checks = DoctorReport.run(recordingsRoot: Config.resolveRoot(cliOverride: nil))
         DoctorReport.print(checks)
         if !DoctorReport.allOK(checks) {
             throw ExitCode(1)
@@ -84,6 +80,7 @@ struct Doctor: ParsableCommand {
 final class AppController {
     private let root: URL
     private let menuBar = MenuBarController()
+    private let transcription = TranscriptionCoordinator()
     private var session: RecordingSession?
     private var ticker: Timer?
 
@@ -93,6 +90,15 @@ final class AppController {
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+
+        Task { [transcription, root] in
+            await transcription.setStatusHandler { status in
+                Task { @MainActor [weak self] in
+                    self?.showTranscription(status)
+                }
+            }
+            await transcription.resumePending(root: root)
+        }
     }
 
     /// Stop any live session cleanly (finalizing files) and exit.
@@ -117,7 +123,7 @@ final class AppController {
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
-            notify(title: "lyrebird — recording failed", body: "\(error)")
+            notifyUser(title: "quill — recording failed", body: "\(error)")
             return
         }
 
@@ -138,6 +144,22 @@ final class AppController {
         ticker?.invalidate()
         ticker = nil
         menuBar.update(recording: false, elapsed: nil)
+
+        let dir = session.dir
+        Task { [transcription] in await transcription.enqueue(dir) }
+    }
+
+    private func showTranscription(_ status: TranscriptionCoordinator.Status) {
+        switch status {
+        case .idle:
+            menuBar.updateTranscription(nil)
+        case .transcribing(let name, let queued):
+            menuBar.updateTranscription(
+                queued > 0 ? "transcribing \(name) · \(queued) queued" : "transcribing \(name)"
+            )
+        case .failed(let name):
+            menuBar.updateTranscription("transcription failed · \(name)")
+        }
     }
 
     private func tick() {
@@ -151,21 +173,6 @@ final class AppController {
     private func openFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
-    }
-
-    /// Best-effort user-visible failure surface. osascript keeps us free of
-    /// UserNotifications entitlement requirements (which need an app bundle).
-    private func notify(title: String, body: String) {
-        let script = "display notification \(quoted(body)) with title \(quoted(title))"
-        let task = Process()
-        task.launchPath = "/usr/bin/osascript"
-        task.arguments = ["-e", script]
-        try? task.run()
-    }
-
-    private func quoted(_ s: String) -> String {
-        "\"" + s.replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
 
     private static func format(_ interval: TimeInterval) -> String {
