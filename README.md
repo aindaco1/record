@@ -5,7 +5,7 @@ click records your mic and all system audio as two separate tracks; when you
 stop, quill transcribes both on-device and writes a speaker-tagged transcript.
 Nothing ever leaves the machine.
 
-Named for the feather. Sibling of [parrot](../parrot/), same skeleton: single
+Named for the feather. Sibling of [parrot](https://github.com/digimata/parrot), same skeleton: single
 Swift binary, menu-bar tray, no app bundle.
 
 ## Install
