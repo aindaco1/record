@@ -120,6 +120,14 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertEqual(result.path, "/Volumes/Fast/Recordings")
     }
 
+    func testDefaultExportsDirectoryIsDesktop() {
+        let home = URL(fileURLWithPath: "/Users/tester", isDirectory: true)
+
+        let result = RecordPaths.defaultExportsDirectory(home: home)
+
+        XCTAssertEqual(result.path, "/Users/tester/Desktop")
+    }
+
     func testModelRegistrySupportsShortAliases() throws {
         XCTAssertEqual(try ParakeetModelID(configurationValue: "v2"), .v2)
         XCTAssertEqual(try ParakeetModelID(configurationValue: "V3"), .v3)

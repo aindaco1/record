@@ -49,6 +49,12 @@ picker and store a security-scoped bookmark before sandboxed releases. Until
 that is complete, sandbox failures are product errors and must not be worked
 around with broad temporary exceptions.
 
+Finished exports default to Desktop, but Desktop is only a suggested location
+until the user approves it through Record's folder picker. The resulting
+app-scoped bookmark is stored in the app container and its access lifetime is
+balanced explicitly. Raw session media remains in private session storage so
+an export permission failure cannot compromise capture or recovery.
+
 ## Boundary and limitations
 
 - CI and release hosts use the network to fetch reviewed source dependencies,

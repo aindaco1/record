@@ -84,6 +84,15 @@ same check. Restore `engine` to `parakeet` afterward. A failed track must be
 reported in `transcribe.log` without deleting either CAF file, and a job where
 every available track fails must not create a successful transcript.
 
+## Export folder access
+
+In the signed sandboxed app, choose **Export folder: Desktop…** from the menu,
+approve Desktop, quit, and relaunch. The menu should still show Desktop and no
+new prompt should appear. Move or revoke the selected folder, relaunch, and
+confirm Record resets the saved grant without changing or deleting raw session
+media. Finished video export is not wired yet; this check covers the persistent
+NewKap-style destination boundary it will use.
+
 ## macOS hardware matrix
 
 Hardware tests run only on a dedicated Apple Silicon runner with intentional

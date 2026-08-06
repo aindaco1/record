@@ -6,7 +6,8 @@ import Foundation
 struct RecordCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "record",
-        abstract: "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
+        abstract:
+            "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
         subcommands: [Run.self, Doctor.self, Install.self, InspectSession.self],
         defaultSubcommand: Run.self
     )
@@ -54,9 +55,10 @@ struct Run: ParsableCommand {
         sigint.resume()
         signal(SIGINT, SIG_IGN)
 
-        FileHandle.standardError.write(Data(
-            "Record up · recordings → \(root.path) · ^C to quit\n".utf8
-        ))
+        FileHandle.standardError.write(
+            Data(
+                "Record up · recordings → \(root.path) · ^C to quit\n".utf8
+            ))
         app.run()
     }
 }
@@ -83,6 +85,8 @@ final class AppController {
     private let root: URL
     private let menuBar = MenuBarController()
     private let transcription = TranscriptionCoordinator()
+    private let exportDirectoryAccess = ExportDirectoryAccess()
+    private var exportDirectoryLease: ExportDirectoryLease?
     private var session: RecordingSession?
     private var ticker: Timer?
 
@@ -90,8 +94,10 @@ final class AppController {
         self.root = root
         menuBar.onToggle = { [weak self] in self?.toggle() }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
+        menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        restoreExportFolderAccess()
 
         Task { [transcription, root] in
             await transcription.setStatusHandler { status in
@@ -143,18 +149,20 @@ final class AppController {
             finalized = true
         } catch {
             finalized = false
-            FileHandle.standardError.write(Data(
-                "recording finalization failed: \(error)\n".utf8
-            ))
+            FileHandle.standardError.write(
+                Data(
+                    "recording finalization failed: \(error)\n".utf8
+                ))
             notifyUser(
                 title: "Record — finalization failed",
                 body: "The media was preserved, but session recovery is required."
             )
         }
         let elapsed = Self.format(Date().timeIntervalSince(session.startedAt))
-        FileHandle.standardError.write(Data(
-            "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
-        ))
+        FileHandle.standardError.write(
+            Data(
+                "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
+            ))
         self.session = nil
         ticker?.invalidate()
         ticker = nil
@@ -190,6 +198,34 @@ final class AppController {
     private func openFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
+    }
+
+    private func restoreExportFolderAccess() {
+        do {
+            exportDirectoryLease = try exportDirectoryAccess.restore()
+        } catch {
+            exportDirectoryAccess.forgetStoredSelection()
+            FileHandle.standardError.write(
+                Data("saved export folder access was reset: \(error)\n".utf8)
+            )
+        }
+        menuBar.updateExportDirectory(
+            exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
+        )
+    }
+
+    private func chooseExportFolder() {
+        do {
+            guard let selection = try exportDirectoryAccess.choose() else { return }
+            exportDirectoryLease = selection
+            menuBar.updateExportDirectory(selection.url)
+        } catch {
+            FileHandle.standardError.write(Data("export folder selection failed: \(error)\n".utf8))
+            notifyUser(
+                title: "Record — export folder unavailable",
+                body: "Choose the folder again to restore access."
+            )
+        }
     }
 
     private static func format(_ interval: TimeInterval) -> String {

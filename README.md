@@ -39,6 +39,12 @@ The current binary records microphone and system audio into independently
 recoverable CAF tracks. A session starts with an atomic `session.json`
 manifest and is finalized before transcription is queued.
 
+Raw, crash-recoverable sessions stay in Record's private session storage.
+Finished NewKap-style video exports default to the real Desktop. Because
+Record is sandboxed, the menu's **Export folder: Desktop…** item asks for
+one-time folder approval and persists an app-scoped security bookmark. Record
+does not grant itself broad home-directory access.
+
 For a real sandboxed app-bundle launch and the current manual audio checklist,
 see [Testing](docs/testing.md). The project-local `./script/build_and_run.sh`
 entrypoint is also available as the Codex `Run` action.

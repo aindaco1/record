@@ -191,6 +191,15 @@ public enum RecordPaths {
         home.appendingPathComponent("Recordings", isDirectory: true)
     }
 
+    /// Default destination presented for finished, user-visible exports.
+    ///
+    /// Sandboxed builds must not write here from this URL alone. They present
+    /// the directory in an open/save panel and persist the resulting
+    /// security-scoped bookmark before exporting.
+    public static func defaultExportsDirectory(home: URL) -> URL {
+        home.appendingPathComponent("Desktop", isDirectory: true)
+    }
+
     public static func resolveRecordingsDirectory(
         cliOverride: String?,
         configuration: AppConfiguration,

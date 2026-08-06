@@ -9,7 +9,8 @@ cd "$repo_root"
 ./scripts/ci/test-model-installer.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/Record/AudioSessionInspector.swift \
-    Sources/Record/FluidAudioOfflinePolicy.swift Sources/Record/Transcription/MacWhisperEngine.swift \
+    Sources/Record/ExportDirectoryAccess.swift Sources/Record/FluidAudioOfflinePolicy.swift \
+    Sources/Record/Transcription/MacWhisperEngine.swift \
     Tests/RecordCoreTests Tests/RecordTests
 swift package resolve
 git diff --exit-code -- Package.resolved
