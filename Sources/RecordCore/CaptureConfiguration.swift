@@ -1,6 +1,7 @@
 import Foundation
 
 public struct CaptureRect: Codable, Equatable, Sendable {
+    /// Display-local coordinates in logical points.
     public var x: Double
     public var y: Double
     public var width: Double
@@ -15,13 +16,14 @@ public struct CaptureRect: Codable, Equatable, Sendable {
 
     fileprivate var isValid: Bool {
         x.isFinite && y.isFinite && width.isFinite && height.isFinite
-            && width > 0 && height > 0
+            && x >= 0 && y >= 0 && width > 0 && height > 0
     }
 }
 
 public enum CaptureSource: Codable, Equatable, Sendable {
     case display(id: UInt32)
-    case application(bundleIdentifier: String)
+    /// ScreenCaptureKit application filters are display-scoped.
+    case application(bundleIdentifier: String, displayID: UInt32)
     case window(id: UInt32)
     case region(displayID: UInt32, rect: CaptureRect)
 }
@@ -112,17 +114,29 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
         guard outputSize.isAtMost4K else {
             throw ValidationError.invalidOutputSize(outputSize)
         }
+        guard outputSize.width.isMultiple(of: 2), outputSize.height.isMultiple(of: 2) else {
+            throw ValidationError.outputDimensionsMustBeEven(outputSize)
+        }
         switch source {
         case .display(let id), .window(let id):
             guard id > 0 else { throw ValidationError.invalidSourceIdentifier }
-        case .application(let bundleIdentifier):
-            guard !bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        case .application(let bundleIdentifier, let displayID):
+            let trimmedIdentifier = bundleIdentifier.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            guard displayID > 0,
+                !trimmedIdentifier.isEmpty,
+                bundleIdentifier == trimmedIdentifier
+            else {
                 throw ValidationError.invalidSourceIdentifier
             }
         case .region(let displayID, let rect):
             guard displayID > 0, rect.isValid else {
                 throw ValidationError.invalidRegion
             }
+        }
+        guard !highlightClicks || showCursor else {
+            throw ValidationError.clickHighlightRequiresCursor
         }
         if let camera {
             guard !camera.deviceIdentifier.isEmpty else {
@@ -138,8 +152,10 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
 
     public enum ValidationError: Error, Equatable {
         case invalidOutputSize(CaptureOutputSize)
+        case outputDimensionsMustBeEven(CaptureOutputSize)
         case invalidSourceIdentifier
         case invalidRegion
+        case clickHighlightRequiresCursor
         case invalidCameraIdentifier
         case invalidCameraWidthFraction(Double)
     }

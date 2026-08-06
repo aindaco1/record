@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "RecordCore", targets: ["RecordCore"]),
+        .library(name: "RecordCapture", targets: ["RecordCapture"]),
         .executable(name: "record", targets: ["Record"]),
     ],
     dependencies: [
@@ -14,6 +15,10 @@ let package = Package(
     ],
     targets: [
         .target(name: "RecordCore"),
+        .target(
+            name: "RecordCapture",
+            dependencies: ["RecordCore"]
+        ),
         .executableTarget(
             name: "Record",
             dependencies: [
@@ -37,6 +42,10 @@ let package = Package(
         .testTarget(
             name: "RecordCoreTests",
             dependencies: ["RecordCore"]
+        ),
+        .testTarget(
+            name: "RecordCaptureTests",
+            dependencies: ["RecordCapture", "RecordCore"]
         ),
     ]
 )
