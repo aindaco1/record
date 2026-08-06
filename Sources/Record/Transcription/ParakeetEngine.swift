@@ -1,15 +1,15 @@
 import AVFoundation
 import FluidAudio
 import Foundation
+import RecordCore
 
-/// Parakeet TDT 0.6B v2 (English) via FluidAudio's Core ML port. Models
-/// download once into FluidAudio's managed cache (~600 MB); after that,
-/// transcription runs entirely on-device at roughly 20 seconds per hour of
-/// audio on Apple Silicon.
+/// Local Parakeet transcription via FluidAudio's Core ML port. Model files
+/// must already exist in the managed cache; this engine never downloads them.
 actor ParakeetEngine: TranscriptionEngine {
     enum EngineError: Error, CustomStringConvertible {
         case notPrepared
         case unreadableAudio(URL, Error?)
+        case modelsMissing(URL)
 
         var description: String {
             switch self {
@@ -17,18 +17,33 @@ actor ParakeetEngine: TranscriptionEngine {
             case .unreadableAudio(let url, let e):
                 return "unreadable or empty audio \(url.lastPathComponent)"
                     + (e.map { ": \($0)" } ?? "")
+            case .modelsMissing(let url):
+                return "local transcription model is missing at \(url.path)"
             }
         }
     }
 
     nonisolated let name = "parakeet"
-    nonisolated let model = "parakeet-tdt-0.6b-v2-coreml"
+    nonisolated let model: String
 
+    private let version: AsrModelVersion
     private var manager: AsrManager?
+
+    init(selection: ParakeetModelID) {
+        model = selection.rawValue
+        switch selection {
+        case .v2: version = .v2
+        case .v3: version = .v3
+        }
+    }
 
     func prepare() async throws {
         guard manager == nil else { return }
-        let models = try await AsrModels.downloadAndLoad(version: .v2)
+        let cache = AsrModels.defaultCacheDirectory(for: version)
+        guard AsrModels.modelsExist(at: cache, version: version) else {
+            throw EngineError.modelsMissing(cache)
+        }
+        let models = try await AsrModels.load(from: cache, version: version)
         let manager = AsrManager()
         try await manager.loadModels(models)
         self.manager = manager
