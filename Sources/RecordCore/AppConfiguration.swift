@@ -10,31 +10,44 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
     public struct Transcription: Codable, Equatable, Sendable {
         public var enabled: Bool
         public var engine: String
-        public var model: String
+        public var model: String?
+        public var executable: String?
+        public var language: String
 
         public init(
             enabled: Bool = true,
             engine: String = "parakeet",
-            model: String = "parakeet-tdt-0.6b-v3-coreml"
+            model: String? = "parakeet-tdt-0.6b-v3-coreml",
+            executable: String? = nil,
+            language: String = "auto"
         ) {
             self.enabled = enabled
             self.engine = engine
             self.model = model
+            self.executable = executable
+            self.language = language
         }
 
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-            engine = try container.decodeIfPresent(String.self, forKey: .engine) ?? "parakeet"
-            model =
-                try container.decodeIfPresent(String.self, forKey: .model)
-                ?? "parakeet-tdt-0.6b-v3-coreml"
+            engine = (try container.decodeIfPresent(String.self, forKey: .engine) ?? "parakeet")
+                .lowercased()
+            model = try container.decodeIfPresent(String.self, forKey: .model)
+            if model == nil, engine == "parakeet" {
+                model = "parakeet-tdt-0.6b-v3-coreml"
+            }
+            executable = try container.decodeIfPresent(String.self, forKey: .executable)
+            language = (try container.decodeIfPresent(String.self, forKey: .language) ?? "auto")
+                .lowercased()
         }
 
         private enum CodingKeys: String, CodingKey {
             case enabled
             case engine
             case model
+            case executable
+            case language
         }
     }
 
@@ -113,12 +126,38 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         {
             throw ConfigurationError.hookExecutableMustBeAbsolute(hook.executable)
         }
+        guard ["parakeet", "macwhisper"].contains(configuration.transcription.engine) else {
+            throw ConfigurationError.unsupportedTranscriptionEngine(
+                configuration.transcription.engine
+            )
+        }
+        if configuration.transcription.engine == "macwhisper",
+            configuration.transcription.model?.isEmpty != false
+        {
+            throw ConfigurationError.transcriptionModelRequired("macwhisper")
+        }
+        if let executable = configuration.transcription.executable,
+            !executable.hasPrefix("/")
+        {
+            throw ConfigurationError.transcriptionExecutableMustBeAbsolute(executable)
+        }
+        let language = configuration.transcription.language
+        let isLanguageValid =
+            language == "auto"
+            || (language.count == 2 && language.allSatisfy(\.isLetter))
+        guard isLanguageValid else {
+            throw ConfigurationError.invalidTranscriptionLanguage(language)
+        }
         return configuration
     }
 
     public enum ConfigurationError: Error, Equatable, CustomStringConvertible {
         case unsupportedSchema(Int)
         case hookExecutableMustBeAbsolute(String)
+        case unsupportedTranscriptionEngine(String)
+        case transcriptionModelRequired(String)
+        case transcriptionExecutableMustBeAbsolute(String)
+        case invalidTranscriptionLanguage(String)
 
         public var description: String {
             switch self {
@@ -126,6 +165,14 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
                 return "unsupported configuration schema version \(version)"
             case .hookExecutableMustBeAbsolute(let executable):
                 return "completion hook executable must be an absolute path: \(executable)"
+            case .unsupportedTranscriptionEngine(let engine):
+                return "unsupported transcription engine: \(engine)"
+            case .transcriptionModelRequired(let engine):
+                return "\(engine) transcription requires an explicit model identifier"
+            case .transcriptionExecutableMustBeAbsolute(let executable):
+                return "transcription executable must be an absolute path: \(executable)"
+            case .invalidTranscriptionLanguage(let language):
+                return "invalid transcription language: \(language)"
             }
         }
     }

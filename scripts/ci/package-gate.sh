@@ -15,6 +15,9 @@ if [[ "$architectures" != "arm64" ]]; then
     exit 1
 fi
 
+# File Provider can reattach Finder metadata after build-app's cleanup when the
+# workspace is in iCloud. Clear it at the last possible moment before signing.
+xattr -cr "$app_path"
 codesign --force --sign - \
     --entitlements Configuration/Record.entitlements "$app_path"
 ./scripts/ci/check-signed-entitlements.sh "$app_path"

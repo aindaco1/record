@@ -23,6 +23,12 @@ update path.
    fails closed and is never fetched by the application.
 6. Plugin capabilities do not include networking. Future plugin helpers must
    use the same network-denying sandbox policy.
+7. The optional MacWhisper adapter uses Apple's `NSUserUnixTask` mechanism and
+   a fixed wrapper in Record's Application Scripts directory. The wrapper
+   validates MacWhisper's Developer ID on every run and forwards exact
+   arguments without evaluation. This deliberately runs outside Record's
+   sandbox because MacWhisper's CLI requires its local Unix socket. It does not
+   persist history and never runs as an automatic fallback.
 
 FluidAudio currently contains download-capable APIs even though Record calls
 only its local existence and loading APIs. This is why the sandbox boundary is
@@ -48,6 +54,13 @@ around with broad temporary exceptions.
 - CI and release hosts use the network to fetch reviewed source dependencies,
   actions, signing/notarization services, and publish artifacts. They never
   receive user recordings or application diagnostics.
+- The developer-only Parakeet setup script downloads one immutable model
+  revision outside the app sandbox. The model is installed into Record's local
+  container; the shipping app neither contains nor calls the downloader.
+- Enabling MacWhisper expands the trust boundary to the separately installed
+  MacWhisper app. Record retains no network entitlement, but cannot enforce
+  MacWhisper's behavior from outside its sandbox; use only an installed local
+  model. Parakeet is the stricter default.
 - `swift run` and other developer-built command-line executables are not
   sandboxed app launches. The source guard still applies, but the enforceable
   runtime boundary is the signed `.app` artifact.

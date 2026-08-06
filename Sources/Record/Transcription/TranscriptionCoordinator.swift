@@ -40,12 +40,15 @@ actor TranscriptionCoordinator {
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
     func resumePending(root: URL) {
         guard Config.transcriptionEnabled() else { return }
-        guard let entries = try? FileManager.default.contentsOfDirectory(
-            at: root, includingPropertiesForKeys: nil
-        ) else { return }
+        guard
+            let entries = try? FileManager.default.contentsOfDirectory(
+                at: root, includingPropertiesForKeys: nil
+            )
+        else { return }
 
         let fm = FileManager.default
-        let pending = entries
+        let pending =
+            entries
             .filter {
                 SessionMeta.isFinalized($0)
                     && !fm.fileExists(atPath: $0.appendingPathComponent("transcript.json").path)
@@ -55,9 +58,10 @@ actor TranscriptionCoordinator {
             queue.append(dir)
         }
         if !pending.isEmpty {
-            FileHandle.standardError.write(Data(
-                "resuming \(pending.count) untranscribed session(s)\n".utf8
-            ))
+            FileHandle.standardError.write(
+                Data(
+                    "resuming \(pending.count) untranscribed session(s)\n".utf8
+                ))
         }
         drainIfIdle()
     }
@@ -102,7 +106,10 @@ actor TranscriptionCoordinator {
         let engine = try await preparedEngine()
 
         var merged: [TranscriptDocument.Segment] = []
+        var attemptedTracks = 0
+        var successfulTracks = 0
         for track in meta.tracks {
+            attemptedTracks += 1
             let audio = dir.appendingPathComponent(track.file)
             guard FileManager.default.fileExists(atPath: audio.path) else {
                 log(dir, "skipping missing track \(track.file)")
@@ -114,6 +121,7 @@ actor TranscriptionCoordinator {
             let segments: [TranscriptSegment]
             do {
                 segments = try await engine.transcribe(audio)
+                successfulTracks += 1
             } catch {
                 log(dir, "skipping \(track.file): \(error)")
                 continue
@@ -128,6 +136,7 @@ actor TranscriptionCoordinator {
                 )
             }
         }
+        try Self.validateTrackResults(attempted: attemptedTracks, succeeded: successfulTracks)
         merged.sort { $0.startMilliseconds < $1.startMilliseconds }
 
         let transcript = TranscriptDocument(
@@ -140,19 +149,43 @@ actor TranscriptionCoordinator {
         log(dir, "done — \(merged.count) segments")
     }
 
+    static func validateTrackResults(attempted: Int, succeeded: Int) throws {
+        guard attempted == 0 || succeeded > 0 else {
+            throw PipelineError.allTracksFailed(attempted)
+        }
+    }
+
     private func preparedEngine() async throws -> TranscriptionEngine {
         if let engine { return engine }
         let configured = Config.transcriptionEngine()
-        if configured != "parakeet" {
-            FileHandle.standardError.write(Data(
-                "warning: unknown transcription engine \"\(configured)\" — using parakeet\n".utf8
-            ))
+        let newEngine: TranscriptionEngine
+        switch configured {
+        case "parakeet":
+            let configuredModel = Config.transcriptionModel() ?? ParakeetModelID.v3.rawValue
+            let selection = try ParakeetModelID(configurationValue: configuredModel)
+            newEngine = ParakeetEngine(selection: selection)
+        case "macwhisper":
+            guard
+                let executable = MacWhisperExecutable.resolve(
+                    configuredPath: Config.transcriptionExecutable()
+                )
+            else {
+                throw MacWhisperEngine.EngineError.executableMissing(
+                    URL(fileURLWithPath: Config.transcriptionExecutable() ?? "mw")
+                )
+            }
+            let model = Config.transcriptionModel() ?? ""
+            newEngine = try MacWhisperEngine(
+                executable: executable,
+                model: model,
+                language: Config.transcriptionLanguage()
+            )
+        default:
+            throw AppConfiguration.ConfigurationError.unsupportedTranscriptionEngine(configured)
         }
-        let selection = try ParakeetModelID(configurationValue: Config.transcriptionModel())
-        let engine = ParakeetEngine(selection: selection)
-        try await engine.prepare()
-        self.engine = engine
-        return engine
+        try await newEngine.prepare()
+        engine = newEngine
+        return newEngine
     }
 
     /// Runs the configured executable directly without invoking a shell.
@@ -189,6 +222,17 @@ actor TranscriptionCoordinator {
 
     private func publish(_ status: Status) {
         statusHandler?(status)
+    }
+}
+
+enum PipelineError: Error, CustomStringConvertible, Equatable {
+    case allTracksFailed(Int)
+
+    var description: String {
+        switch self {
+        case .allTracksFailed(let count):
+            return "all \(count) available audio tracks failed transcription"
+        }
     }
 }
 

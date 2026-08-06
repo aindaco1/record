@@ -66,6 +66,24 @@ Never paste a recording, transcript, model, or private path into a public issue.
 Report the app commit, macOS version, Mac model, permission state, duration,
 track formats from the inspector, and a description using synthetic content.
 
+## Transcription engine checks
+
+Install the default development model once, then use the signed sandboxed app
+for the real test:
+
+```sh
+./scripts/setup/install-parakeet-model.sh
+./script/build_and_run.sh --verify
+```
+
+Stop a short recording and confirm `transcript.json` and `transcript.md` appear
+in its session directory. For the optional MacWhisper path, first run
+`./scripts/setup/install-macwhisper-cli.sh`, copy the example configuration
+from the README, choose a local model shown by `mw models list`, and repeat the
+same check. Restore `engine` to `parakeet` afterward. A failed track must be
+reported in `transcribe.log` without deleting either CAF file, and a job where
+every available track fails must not create a successful transcript.
+
 ## macOS hardware matrix
 
 Hardware tests run only on a dedicated Apple Silicon runner with intentional

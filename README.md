@@ -20,10 +20,11 @@ process.
 - local media and local inference only
 - no accounts, analytics, recording uploads, or cloud transcription
 
-The application itself does not download transcription models. A release will
-include an offline model-import path and may bundle the default model. This
-keeps recording and transcription usable without granting Record network
-access.
+The application itself does not download transcription models. Development
+builds install the pinned default Parakeet v3 model with
+`./scripts/setup/install-parakeet-model.sh`; a release will include an offline
+model-import path and may bundle the default model. This keeps recording and
+transcription usable without granting Record network access.
 
 ## Current development build
 
@@ -63,6 +64,38 @@ Optional configuration lives at `~/.config/record/config.json`:
 
 Completion hooks are executed directly. Record never passes configuration to a
 shell, and hook executable paths must be absolute.
+
+Parakeet v3 remains the default transcription engine. MacWhisper is an
+explicit opt-in when its `mw` CLI and a local model are already installed.
+Install Record's signed user-script copy first:
+
+```sh
+./scripts/setup/install-macwhisper-cli.sh
+```
+
+Then select it in the configuration:
+
+```json
+{
+  "schema_version": 1,
+  "transcription": {
+    "enabled": true,
+    "engine": "macwhisper",
+    "model": "whisperkit:openai_whisper-small",
+    "language": "auto"
+  }
+}
+```
+
+Record invokes a fixed user-script helper with exact arguments and
+`--no-speakers`; the helper performs no evaluation, forwards arguments with
+`"$@"`, and validates MacWhisper's Developer ID before each run. Record does
+not ask MacWhisper to persist a transcript. Apple's user-script API runs this
+explicit opt-in outside Record's sandbox so it can reach MacWhisper's local
+Unix socket. That expands the privacy boundary to the user's installed
+MacWhisper app, but Record itself keeps no network entitlement. Record never
+silently falls back from Parakeet, so transcript provenance remains
+predictable.
 
 ## Architecture and roadmap
 

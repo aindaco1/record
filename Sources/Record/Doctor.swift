@@ -40,7 +40,8 @@ enum DoctorReport {
             return Check(
                 name: "microphone",
                 status: .fail("denied"),
-                remediation: "System Settings → Privacy & Security → Microphone → enable for Record (or your terminal)"
+                remediation:
+                    "System Settings → Privacy & Security → Microphone → enable for Record (or your terminal)"
             )
         @unknown default:
             return Check(name: "microphone", status: .fail("unknown state"), remediation: nil)
@@ -53,7 +54,8 @@ enum DoctorReport {
         Check(
             name: "system audio",
             status: .warn("state unknowable until first use — will prompt on first recording"),
-            remediation: "if recordings come out silent: System Settings → Privacy & Security → Screen & System Audio Recording"
+            remediation:
+                "if recordings come out silent: System Settings → Privacy & Security → Screen & System Audio Recording"
         )
     }
 
@@ -87,26 +89,59 @@ enum DoctorReport {
                 remediation: nil
             )
         }
-        let selection: ParakeetModelID
-        do {
-            selection = try ParakeetModelID(configurationValue: Config.transcriptionModel())
-        } catch {
+        switch Config.transcriptionEngine() {
+        case "macwhisper":
+            guard Config.transcriptionModel()?.isEmpty == false else {
+                return Check(
+                    name: "transcription",
+                    status: .fail("MacWhisper model is not configured"),
+                    remediation: "set transcription.model to an installed MacWhisper model ID"
+                )
+            }
+            guard
+                MacWhisperExecutable.resolve(
+                    configuredPath: Config.transcriptionExecutable()
+                ) != nil
+            else {
+                return Check(
+                    name: "transcription",
+                    status: .fail("MacWhisper helper was not found"),
+                    remediation: "run ./scripts/setup/install-macwhisper-cli.sh"
+                )
+            }
+            return Check(name: "transcription", status: .ok, remediation: nil)
+        case "parakeet":
+            let selection: ParakeetModelID
+            do {
+                selection = try ParakeetModelID(
+                    configurationValue: Config.transcriptionModel()
+                        ?? ParakeetModelID.v3.rawValue
+                )
+            } catch {
+                return Check(
+                    name: "transcription",
+                    status: .fail(String(describing: error)),
+                    remediation: "choose v2 or v3 in the Record configuration"
+                )
+            }
+            let version: AsrModelVersion = selection == .v2 ? .v2 : .v3
+            let cache = AsrModels.defaultCacheDirectory(for: version)
+            if AsrModels.modelsExist(at: cache, version: version) {
+                return Check(name: "transcription", status: .ok, remediation: nil)
+            }
             return Check(
                 name: "transcription",
-                status: .fail(String(describing: error)),
-                remediation: "choose v2 or v3 in the Record configuration"
+                status: .warn("local \(selection.rawValue) model is missing"),
+                remediation:
+                    "import the model into Record before an important session; Record never downloads models automatically"
+            )
+        default:
+            return Check(
+                name: "transcription",
+                status: .fail("unsupported engine: \(Config.transcriptionEngine())"),
+                remediation: "choose parakeet or macwhisper"
             )
         }
-        let version: AsrModelVersion = selection == .v2 ? .v2 : .v3
-        let cache = AsrModels.defaultCacheDirectory(for: version)
-        if AsrModels.modelsExist(at: cache, version: version) {
-            return Check(name: "transcription", status: .ok, remediation: nil)
-        }
-        return Check(
-            name: "transcription",
-            status: .warn("local \(selection.rawValue) model is missing"),
-            remediation: "import the model into Record before an important session; Record never downloads models automatically"
-        )
     }
 
     static func print(_ checks: [Check]) {

@@ -85,6 +85,7 @@ jobs:
           SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
         run: |
           app=.build/release-artifacts/Record.app
+          xattr -cr "$app"
           codesign --force --options runtime --timestamp \
             --entitlements Configuration/Record.entitlements \
             --sign "$SIGNING_IDENTITY" "$app"
@@ -100,7 +101,8 @@ jobs:
           umask 077
           trap 'rm -f "$NOTARY_KEY_PATH" "$NOTARIZATION_ZIP_PATH"' EXIT
           printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
-          ditto -c -k --keepParent .build/release-artifacts/Record.app \
+          COPYFILE_DISABLE=1 ditto --norsrc --noextattr -c -k --keepParent \
+            .build/release-artifacts/Record.app \
             "$NOTARIZATION_ZIP_PATH"
           xcrun notarytool submit "$NOTARIZATION_ZIP_PATH" \
             --key "$NOTARY_KEY_PATH" --key-id "$APPLE_API_KEY_ID" \
