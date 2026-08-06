@@ -22,5 +22,9 @@
     <string>Record captures microphone audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
     <key>NSAudioCaptureUsageDescription</key>
     <string>Record captures system audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Record can place your camera in a local screen recording when you enable the camera overlay. Video never leaves this Mac.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Record captures the screen, windows, or apps you select and saves the recording locally. Video never leaves this Mac.</string>
 </dict>
 </plist>

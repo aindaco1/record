@@ -10,6 +10,8 @@
 - [ ] Added or updated deterministic tests
 - [ ] Completed applicable hardware checks from `docs/testing.md`
 - [ ] No recording data, transcript content, credentials, or model assets added
+- [ ] Reviewed dependency changes for network, telemetry, process, and file access
+- [ ] No product-network API or entitlement added (or a user-approved ADR is linked)
 
 ## Security and performance impact
 

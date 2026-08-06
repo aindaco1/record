@@ -14,6 +14,11 @@ Record currently targets macOS 15+ on Apple Silicon with Swift 6.
 5. Avoid new dependencies when an Apple framework or a small local type is
    sufficient.
 
+Dependency changes require an explicit review for network clients, telemetry,
+process launching, file access, and implicit model downloads. Product targets
+must pass `scripts/ci/check-local-only.sh`; do not weaken its patterns or add a
+network entitlement without a user-approved replacement for ADR 0002.
+
 Run the same entry point CI uses:
 
 ```sh

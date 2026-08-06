@@ -31,6 +31,10 @@ codesign --remove-signature "$app_path/Contents/MacOS/record"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" \
     "$app_path/Contents/Info.plist"
 
+# Cloud-synced workspaces can attach Finder/resource-fork metadata that makes
+# an otherwise valid bundle fail strict code-sign verification.
+xattr -cr "$app_path"
+
 architectures="$(lipo -archs "$app_path/Contents/MacOS/record")"
 if [[ "$architectures" != "arm64" ]]; then
     echo "expected an arm64-only binary, found: $architectures" >&2

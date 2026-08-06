@@ -4,6 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
+./scripts/ci/check-local-only.sh
+./scripts/ci/test-local-only-guard.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Tests/RecordCoreTests
 swift package resolve

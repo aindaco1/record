@@ -63,6 +63,13 @@ jobs:
           plutil -lint .build/release-artifacts/Record.app/Contents/Info.plist
           test "$(lipo -archs .build/release-artifacts/Record.app/Contents/MacOS/record)" = arm64
 
+      - name: Validate sandbox boundary
+        run: |
+          app=.build/release-artifacts/Record.app
+          codesign --force --sign - \
+            --entitlements Configuration/Record.entitlements "$app"
+          ./scripts/ci/check-signed-entitlements.sh "$app"
+
       - name: Verify ZIP and DMG packaging
         run: ./scripts/ci/verify-package.sh
 

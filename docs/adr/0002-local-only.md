@@ -21,4 +21,6 @@ updates happen outside Record through GitHub or Homebrew.
 - Remote wallpaper URLs from the old desktop-icons plugin are not supported.
 - Network dependencies in core product targets require a new ADR and explicit
   user approval.
+- Signed app artifacts enable App Sandbox but intentionally omit client and
+  server network entitlements. CI verifies the embedded signing policy.
 - CI may access package and tool registries; CI never processes user media.

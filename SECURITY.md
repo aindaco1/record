@@ -16,6 +16,8 @@ arbitrary code execution, permissions, signing, plugins, or recording data.
 - Completion hooks never invoke a shell and require absolute executables.
 - Model inference requires verified local assets; missing assets must fail
   closed rather than silently downloading.
+- Signed app artifacts use App Sandbox without incoming or outgoing network
+  entitlements; CI checks both source calls and embedded entitlements.
 - Third-party extensions do not execute inside the capture process.
 - Session metadata and derived artifacts use atomic writes.
 - Release workflows use least-privilege permissions, protected environments,

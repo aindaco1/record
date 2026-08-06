@@ -77,8 +77,10 @@ jobs:
         run: |
           app=.build/release-artifacts/Record.app
           codesign --force --options runtime --timestamp \
+            --entitlements Configuration/Record.entitlements \
             --sign "$SIGNING_IDENTITY" "$app"
           codesign --verify --deep --strict --verbose=2 "$app"
+          ./scripts/ci/check-signed-entitlements.sh "$app"
 
       - name: Notarize app
         env:
