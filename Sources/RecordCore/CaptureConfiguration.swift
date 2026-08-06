@@ -83,6 +83,30 @@ public struct CameraOverlayConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+/// Capture-only privacy protections. These settings never mutate system
+/// preferences and automatically end when the ScreenCaptureKit stream stops.
+public struct CapturePrivacyConfiguration: Codable, Equatable, Sendable {
+    public var hideNotifications: Bool
+    public var hideMenuBar: Bool
+    public var hideDesktopItems: Bool
+
+    public init(
+        hideNotifications: Bool = true,
+        hideMenuBar: Bool = true,
+        hideDesktopItems: Bool = true
+    ) {
+        self.hideNotifications = hideNotifications
+        self.hideMenuBar = hideMenuBar
+        self.hideDesktopItems = hideDesktopItems
+    }
+}
+
+public enum CapturePrivacyFeature: String, CaseIterable, Sendable {
+    case notifications
+    case menuBar
+    case desktopItems
+}
+
 public struct CaptureConfiguration: Codable, Equatable, Sendable {
     public var source: CaptureSource
     public var outputSize: CaptureOutputSize
@@ -91,6 +115,7 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
     public var highlightClicks: Bool
     public var audio: CaptureAudioConfiguration
     public var camera: CameraOverlayConfiguration?
+    public var privacy: CapturePrivacyConfiguration
 
     public init(
         source: CaptureSource,
@@ -99,7 +124,8 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
         showCursor: Bool = true,
         highlightClicks: Bool = false,
         audio: CaptureAudioConfiguration = .init(),
-        camera: CameraOverlayConfiguration? = nil
+        camera: CameraOverlayConfiguration? = nil,
+        privacy: CapturePrivacyConfiguration = .init()
     ) {
         self.source = source
         self.outputSize = outputSize
@@ -108,6 +134,32 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
         self.highlightClicks = highlightClicks
         self.audio = audio
         self.camera = camera
+        self.privacy = privacy
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case source
+        case outputSize
+        case frameRate
+        case showCursor
+        case highlightClicks
+        case audio
+        case camera
+        case privacy
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        source = try container.decode(CaptureSource.self, forKey: .source)
+        outputSize = try container.decode(CaptureOutputSize.self, forKey: .outputSize)
+        frameRate = try container.decode(CaptureFrameRate.self, forKey: .frameRate)
+        showCursor = try container.decode(Bool.self, forKey: .showCursor)
+        highlightClicks = try container.decode(Bool.self, forKey: .highlightClicks)
+        audio = try container.decode(CaptureAudioConfiguration.self, forKey: .audio)
+        camera = try container.decodeIfPresent(CameraOverlayConfiguration.self, forKey: .camera)
+        privacy =
+            try container.decodeIfPresent(CapturePrivacyConfiguration.self, forKey: .privacy)
+            ?? .init()
     }
 
     public func validate() throws {

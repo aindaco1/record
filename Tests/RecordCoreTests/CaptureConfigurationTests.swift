@@ -1,3 +1,4 @@
+import Foundation
 import RecordCore
 import XCTest
 
@@ -90,5 +91,27 @@ final class CaptureConfigurationTests: XCTestCase {
                 .invalidCameraIdentifier
             )
         }
+    }
+
+    func testLegacyConfigurationDecodesWithSafePrivacyDefaults() throws {
+        let configuration = CaptureConfiguration(
+            source: .display(id: 1),
+            outputSize: .init(width: 1_920, height: 1_080),
+            privacy: .init(
+                hideNotifications: false,
+                hideMenuBar: false,
+                hideDesktopItems: false
+            )
+        )
+        let encoded = try JSONEncoder().encode(configuration)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "privacy")
+
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(CaptureConfiguration.self, from: legacyData)
+
+        XCTAssertEqual(decoded.privacy, CapturePrivacyConfiguration())
     }
 }

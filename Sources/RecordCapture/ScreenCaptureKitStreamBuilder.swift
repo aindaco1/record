@@ -27,7 +27,7 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
             )
             let inventory = Self.inventory(from: content)
             try inventory.resolve(configuration.source)
-            let filter = try Self.filter(for: configuration.source, in: content)
+            let filter = try Self.filter(for: configuration, in: content)
             let router = ScreenCaptureOutputRouter(sink: sink) { failure in
                 onEvent(.failed(failure))
             }
@@ -93,23 +93,42 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
     }
 
     private static func filter(
-        for source: CaptureSource,
+        for configuration: CaptureConfiguration,
         in content: SCShareableContent
     ) throws -> SCContentFilter {
+        let source = configuration.source
         switch source {
         case .display(let id), .region(let id, _):
             guard let display = content.displays.first(where: { $0.displayID == id }) else {
                 throw ScreenCaptureAdapterError.sourceUnavailable(source)
             }
-            let ownBundleIdentifier = Bundle.main.bundleIdentifier
+            let plan = ScreenCaptureFilterPlan(
+                privacy: configuration.privacy,
+                ownBundleIdentifier: Bundle.main.bundleIdentifier,
+                availableApplicationBundleIdentifiers: Set(
+                    content.applications.map(\.bundleIdentifier)
+                ),
+                windows: content.windows.map {
+                    .init(
+                        id: $0.windowID,
+                        ownerBundleIdentifier: $0.owningApplication?.bundleIdentifier,
+                        layer: $0.windowLayer
+                    )
+                }
+            )
             let excludedApplications = content.applications.filter {
-                $0.bundleIdentifier == ownBundleIdentifier
+                plan.excludedApplicationBundleIdentifiers.contains($0.bundleIdentifier)
             }
-            return SCContentFilter(
+            let exceptedWindows = content.windows.filter {
+                plan.exceptedWindowIDs.contains($0.windowID)
+            }
+            let filter = SCContentFilter(
                 display: display,
                 excludingApplications: excludedApplications,
-                exceptingWindows: []
+                exceptingWindows: exceptedWindows
             )
+            filter.includeMenuBar = plan.includeMenuBar
+            return filter
 
         case .application(let bundleIdentifier, let displayID):
             guard let display = content.displays.first(where: { $0.displayID == displayID }) else {

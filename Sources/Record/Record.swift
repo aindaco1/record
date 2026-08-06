@@ -108,6 +108,7 @@ final class AppController {
     private let menuBar = MenuBarController()
     private let transcription = TranscriptionCoordinator()
     private let exportDirectoryAccess = ExportDirectoryAccess()
+    private let capturePrivacyPreferences = CapturePrivacyPreferences()
     private let recordingNamePreferences = RecordingNamePreferences()
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
@@ -123,6 +124,7 @@ final class AppController {
         self.root = root
         menuBar.onToggle = { [weak self] in self?.toggle() }
         menuBar.onStartAudioOnly = { [weak self] in self?.startAudioSession() }
+        menuBar.onToggleCapturePrivacy = { [weak self] in self?.toggleCapturePrivacy($0) }
         menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
         menuBar.onEditRecordingNameTemplate = { [weak self] in
             self?.editRecordingNameTemplate()
@@ -135,6 +137,7 @@ final class AppController {
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        refreshCapturePrivacyMenu()
         refreshRecordingNameMenu()
         refreshGifskiMenu()
         refreshTranscriptionEngineMenu()
@@ -210,7 +213,8 @@ final class AppController {
         menuBar.updatePreparingScreenRecording()
         videoStartTask = Task { [weak self, newSession] in
             do {
-                let configuration = try VideoCaptureProfile.mainDisplayConfiguration()
+                var configuration = try VideoCaptureProfile.mainDisplayConfiguration()
+                configuration.privacy = self?.capturePrivacyPreferences.configuration ?? .init()
                 try await newSession.start(configuration: configuration)
                 guard let self else { return }
                 self.videoStartTask = nil
@@ -400,6 +404,16 @@ final class AppController {
     private func reportRecordingStartFailure(_ error: Error) {
         FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
         notifyUser(title: "Record — recording failed", body: "\(error)")
+    }
+
+    private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
+        guard activeRecording == nil else { return }
+        capturePrivacyPreferences.toggle(feature)
+        refreshCapturePrivacyMenu()
+    }
+
+    private func refreshCapturePrivacyMenu() {
+        menuBar.updateCapturePrivacy(capturePrivacyPreferences.configuration)
     }
 
     private func toggleRecordingName() {

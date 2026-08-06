@@ -1,4 +1,5 @@
 import AppKit
+import RecordCore
 
 /// Status bar item in the top-right of the menu bar. Shows recording state at
 /// a glance and provides the only persistent control surface for the daemon
@@ -10,6 +11,9 @@ final class MenuBarController {
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
+    private let hideNotificationsItem: NSMenuItem
+    private let hideMenuBarItem: NSMenuItem
+    private let hideDesktopItemsItem: NSMenuItem
     private let recordingNameItem: NSMenuItem
     private let recordingNameTemplateItem: NSMenuItem
     private let gifskiItem: NSMenuItem
@@ -20,6 +24,7 @@ final class MenuBarController {
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
+    var onToggleCapturePrivacy: ((CapturePrivacyFeature) -> Void)?
     var onToggleRecordingName: (() -> Void)?
     var onEditRecordingNameTemplate: (() -> Void)?
     var onOpenLastVideoInGifski: (() -> Void)?
@@ -62,6 +67,26 @@ final class MenuBarController {
         let pluginsItem = NSMenuItem(title: "Plugins", action: nil, keyEquivalent: "")
         let pluginsMenu = NSMenu(title: "Plugins")
         pluginsMenu.autoenablesItems = false
+        hideNotificationsItem = Self.privacyMenuItem(
+            title: "Hide Notifications from Capture",
+            feature: .notifications,
+            toolTip:
+                "Capture-only. Notification sounds can still be recorded unless Focus is enabled."
+        )
+        pluginsMenu.addItem(hideNotificationsItem)
+        hideMenuBarItem = Self.privacyMenuItem(
+            title: "Hide Menu Bar (including Clock)",
+            feature: .menuBar,
+            toolTip: "Capture-only. Does not change SystemUIServer or macOS preferences."
+        )
+        pluginsMenu.addItem(hideMenuBarItem)
+        hideDesktopItemsItem = Self.privacyMenuItem(
+            title: "Hide Desktop Items from Capture",
+            feature: .desktopItems,
+            toolTip: "Capture-only. Existing Finder windows remain visible."
+        )
+        pluginsMenu.addItem(hideDesktopItemsItem)
+        pluginsMenu.addItem(.separator())
         recordingNameItem = NSMenuItem(
             title: "Rename Finished Recording",
             action: #selector(toggleRecordingNameClicked),
@@ -135,6 +160,9 @@ final class MenuBarController {
         for item in [
             toggleItem,
             audioOnlyItem,
+            hideNotificationsItem,
+            hideMenuBarItem,
+            hideDesktopItemsItem,
             recordingNameItem,
             recordingNameTemplateItem,
             gifskiItem,
@@ -169,6 +197,7 @@ final class MenuBarController {
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
+        setCapturePrivacyItemsEnabled(!recording)
         statusItem.button?.contentTintColor = recording ? .systemRed : nil
     }
 
@@ -177,6 +206,7 @@ final class MenuBarController {
         toggleItem.title = "Preparing screen recording…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
+        setCapturePrivacyItemsEnabled(false)
         statusItem.button?.contentTintColor = .systemOrange
     }
 
@@ -185,6 +215,13 @@ final class MenuBarController {
         toggleItem.title = "Stopping recording…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
+        setCapturePrivacyItemsEnabled(false)
+    }
+
+    func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {
+        hideNotificationsItem.state = configuration.hideNotifications ? .on : .off
+        hideMenuBarItem.state = configuration.hideMenuBar ? .on : .off
+        hideDesktopItemsItem.state = configuration.hideDesktopItems ? .on : .off
     }
 
     func updateRecordingName(enabled: Bool, template: String) {
@@ -256,8 +293,36 @@ final class MenuBarController {
         return image
     }
 
+    private static func privacyMenuItem(
+        title: String,
+        feature: CapturePrivacyFeature,
+        toolTip: String
+    ) -> NSMenuItem {
+        let item = NSMenuItem(
+            title: title,
+            action: #selector(toggleCapturePrivacyClicked),
+            keyEquivalent: ""
+        )
+        item.representedObject = feature.rawValue
+        item.toolTip = toolTip
+        return item
+    }
+
+    private func setCapturePrivacyItemsEnabled(_ enabled: Bool) {
+        hideNotificationsItem.isEnabled = enabled
+        hideMenuBarItem.isEnabled = enabled
+        hideDesktopItemsItem.isEnabled = enabled
+    }
+
     @objc private func toggleClicked() { onToggle?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
+    @objc private func toggleCapturePrivacyClicked(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let feature = CapturePrivacyFeature(rawValue: rawValue)
+        else { return }
+        onToggleCapturePrivacy?(feature)
+    }
     @objc private func toggleRecordingNameClicked() { onToggleRecordingName?() }
     @objc private func editRecordingNameTemplateClicked() { onEditRecordingNameTemplate?() }
     @objc private func openLastVideoInGifskiClicked() { onOpenLastVideoInGifski?() }

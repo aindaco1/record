@@ -10,9 +10,10 @@ cd "$repo_root"
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AudioSessionInspector.swift \
+    Sources/Record/CapturePrivacyPreferences.swift \
     Sources/Record/ExportDirectoryAccess.swift Sources/Record/FluidAudioOfflinePolicy.swift \
     Sources/Record/FinishedVideoExporter.swift Sources/Record/GifskiHandoff.swift \
-    Sources/Record/RecordingMode.swift \
+    Sources/Record/RecordingMode.swift Sources/Record/UI/MenuBarController.swift \
     Sources/Record/RecordingNamePreferences.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
     Sources/Record/Transcription/TranscriptionCoordinator.swift \
