@@ -41,20 +41,7 @@ actor TranscriptionCoordinator {
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
     func resumePending(root: URL) {
         guard Config.transcriptionEnabled() else { return }
-        guard
-            let entries = try? FileManager.default.contentsOfDirectory(
-                at: root, includingPropertiesForKeys: nil
-            )
-        else { return }
-
-        let fm = FileManager.default
-        let pending =
-            entries
-            .filter {
-                SessionMeta.isFinalized($0)
-                    && !fm.fileExists(atPath: $0.appendingPathComponent("transcript.json").path)
-            }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        let pending = Self.pendingSessionDirectories(root: root)
         for dir in pending where !queue.contains(dir) {
             queue.append(dir)
         }
@@ -65,6 +52,30 @@ actor TranscriptionCoordinator {
                 ))
         }
         drainIfIdle()
+    }
+
+    static func pendingSessionDirectories(
+        root: URL,
+        fileManager: FileManager = .default
+    ) -> [URL] {
+        guard
+            let entries = try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: nil
+            )
+        else { return [] }
+
+        return entries.filter { directory in
+            guard SessionMeta.isFinalized(directory) else { return false }
+            guard
+                !fileManager.fileExists(
+                    atPath: directory.appendingPathComponent("transcript.json").path
+                )
+            else { return false }
+            guard let metadata = try? SessionMeta.read(from: directory) else { return false }
+            return !metadata.tracks.isEmpty
+        }
+        .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     // MARK: -

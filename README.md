@@ -7,9 +7,10 @@ NewKap without Electron, cloud processing, or arbitrary plugins in the capture
 process.
 
 > [!IMPORTANT]
-> Record is pre-alpha. The inherited Quill audio recorder builds and its new
-> core is tested, but screen/video capture and the native app bundle are still
-> being implemented. Do not rely on it as the only recorder for important work.
+> Record is pre-alpha. Audio-only and main-display video recording are
+> integrated in the native app bundle, but the hardware matrix, source picker,
+> camera, editor, and plugins are still in progress. Do not rely on it as the
+> only recorder for important work.
 
 ## Product constraints
 
@@ -35,15 +36,21 @@ swift run record doctor
 swift run record
 ```
 
-The current binary records microphone and system audio into independently
-recoverable CAF tracks. A session starts with an atomic `session.json`
-manifest and is finalized before transcription is queued.
+**Start screen recording** captures the main display at 30 fps, includes the
+cursor, microphone, and system audio, and writes a hardware-encoded HEVC/AAC
+QuickTime file capped at 4K. **Start audio-only recording** keeps the inherited
+Quill workflow: microphone and system audio are written to independently
+recoverable CAF tracks and queued for local transcription after finalization.
+Every session starts with an atomic `session.json` manifest.
 
 Raw, crash-recoverable sessions stay in Record's private session storage.
 Finished NewKap-style video exports default to the real Desktop. Because
 Record is sandboxed, the menu's **Export folder: Desktop…** item asks for
 one-time folder approval and persists an app-scoped security bookmark. Record
-does not grant itself broad home-directory access.
+does not grant itself broad home-directory access. The first screen recording
+opens that picker if no destination has been approved. A crash-recoverable raw
+`recording.mov` remains in private session storage; the Desktop copy is written
+through a hidden partial file and renamed only after a complete copy.
 
 For a real sandboxed app-bundle launch and the current manual audio checklist,
 see [Testing](docs/testing.md). The project-local `./script/build_and_run.sh`

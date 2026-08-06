@@ -13,6 +13,8 @@ regressions run on every pull request.
   draining, and shared-timeline mapping under delay, gaps, and clock regression
 - hardware-required HEVC/AAC writer settings, collision-safe partial paths, and
   empty-segment finalization without publishing invalid media
+- display-profile 4K/even-dimension bounds, video-session orchestration,
+  failure manifests, idempotent stops, and atomic non-overwriting exports
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
 - deterministic folder collision handling
@@ -28,10 +30,10 @@ capability denial.
 
 ## Manual smoke test available now
 
-The current integrated build supports the menu-bar lifecycle plus microphone
-and system-audio recording. Screen video, camera overlays, source selection,
+The current integrated build supports main-display video plus the inherited
+audio-only workflow. Camera overlays, source selection, pause/resume, editing,
 and NewKap-style plugins are not yet integrated, so those rows in the hardware
-matrix are future acceptance criteria rather than claims about this build.
+matrix remain future acceptance criteria.
 
 Use synthetic or non-sensitive content for development recordings:
 
@@ -39,15 +41,20 @@ Use synthetic or non-sensitive content for development recordings:
    This builds arm64, assembles the real app bundle, signs it ad hoc with the
    reviewed sandbox entitlements, verifies those embedded entitlements, and
    leaves Record running. A feather should appear in the menu bar.
-2. Choose **Start recording**. Grant microphone and Screen & System Audio
-   Recording access to Record if macOS prompts. If macOS requests a relaunch,
-   quit Record from its menu and rerun the command.
-3. Speak into the selected microphone while playing a known local audio clip
-   for at least 15 seconds. Confirm the feather turns red, the menu shows an
-   increasing elapsed time, and **Start recording** becomes **Stop recording**.
-4. Stop recording, confirm the menu returns to idle, and choose **Open
-   recordings folder**. Do not force-quit while the stop is finalizing.
-5. Inspect the new session with
+2. Choose **Start screen recording**. On first use, approve Desktop in the
+   export-folder picker. Grant microphone and Screen & System Audio Recording
+   access to Record if macOS prompts. If macOS requests a relaunch, quit Record
+   from its menu and rerun the command.
+3. Move a test window, speak into the selected microphone, and play a known
+   local audio clip for at least 15 seconds. Confirm the feather turns red, the
+   menu shows an increasing elapsed time, and the command becomes **Stop
+   recording**.
+4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
+   `Record YYYY-MM-DD HH.mm.ss.mov` appears on Desktop, opens in QuickTime,
+   shows the main display at the expected aspect ratio, and contains both the
+   microphone and played system audio. Record keeps the raw `recording.mov` in
+   **Open session storage** for recovery.
+5. Repeat with **Start audio-only recording**, then inspect that session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
    finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
    readable durations, and nonnegative synchronization offsets.
@@ -83,22 +90,24 @@ for the real test:
 ./script/build_and_run.sh --verify
 ```
 
-Stop a short recording and confirm `transcript.json` and `transcript.md` appear
-in its session directory. For the optional MacWhisper path, first run
-`./scripts/setup/install-macwhisper-cli.sh`, copy the example configuration
-from the README, choose a local model shown by `mw models list`, and repeat the
-same check. Restore `engine` to `parakeet` afterward. A failed track must be
-reported in `transcribe.log` without deleting either CAF file, and a job where
-every available track fails must not create a successful transcript.
+Stop a short audio-only recording and confirm `transcript.json` and
+`transcript.md` appear in its session directory. For the optional MacWhisper
+path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
+**Transcription → MacWhisper (Small)** in the feather menu and repeat the
+audio-only check. Switch back with **Parakeet (Default)**. A failed track must
+be reported in `transcribe.log` without deleting either CAF file, and a job
+where every available track fails must not create a successful transcript.
+Video-session audio extraction/transcription is a follow-up; selecting an
+engine currently affects audio-only sessions.
 
 ## Export folder access
 
 In the signed sandboxed app, choose **Export folder: Desktop…** from the menu,
-approve Desktop, quit, and relaunch. The menu should still show Desktop and no
-new prompt should appear. Move or revoke the selected folder, relaunch, and
-confirm Record resets the saved grant without changing or deleting raw session
-media. Finished video export is not wired yet; this check covers the persistent
-NewKap-style destination boundary it will use.
+approve Desktop, record a short video, quit, and relaunch. The menu should still
+show Desktop, the video should export without another prompt, and the raw
+session copy should remain private. Move or revoke the selected folder,
+relaunch, and confirm Record resets the saved grant without changing or
+deleting raw session media.
 
 ## macOS hardware matrix
 

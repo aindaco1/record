@@ -9,12 +9,14 @@ final class MenuBarController {
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
+    private let audioOnlyItem: NSMenuItem
     private let transcriptionEngineItem: NSMenuItem
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
 
     var onToggle: (() -> Void)?
+    var onStartAudioOnly: (() -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
@@ -38,11 +40,18 @@ final class MenuBarController {
         menu.addItem(.separator())
 
         toggleItem = NSMenuItem(
-            title: "Start recording",
+            title: "Start screen recording",
             action: #selector(toggleClicked),
             keyEquivalent: "r"
         )
         menu.addItem(toggleItem)
+
+        audioOnlyItem = NSMenuItem(
+            title: "Start audio-only recording",
+            action: #selector(audioOnlyClicked),
+            keyEquivalent: ""
+        )
+        menu.addItem(audioOnlyItem)
 
         transcriptionEngineItem = NSMenuItem(
             title: "Transcription: Parakeet",
@@ -94,6 +103,7 @@ final class MenuBarController {
 
         for item in [
             toggleItem,
+            audioOnlyItem,
             parakeetEngineItem,
             macWhisperEngineItem,
             openFolder,
@@ -117,10 +127,30 @@ final class MenuBarController {
     /// menu bar shows only the feather (red while recording); the elapsed
     /// counter lives in the menu's state label. Call once a second while
     /// recording.
-    func update(recording: Bool, elapsed: String?) {
-        stateLabel.title = recording ? "● recording · \(elapsed ?? "0:00")" : "idle"
-        toggleItem.title = recording ? "Stop recording" : "Start recording"
+    func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
+        stateLabel.title =
+            recording
+            ? "● \(mode.displayName) recording · \(elapsed ?? "0:00")"
+            : "idle"
+        toggleItem.title = recording ? "Stop recording" : "Start screen recording"
+        toggleItem.isEnabled = true
+        audioOnlyItem.isEnabled = !recording
         statusItem.button?.contentTintColor = recording ? .systemRed : nil
+    }
+
+    func updatePreparingScreenRecording() {
+        stateLabel.title = "preparing screen recording…"
+        toggleItem.title = "Preparing screen recording…"
+        toggleItem.isEnabled = false
+        audioOnlyItem.isEnabled = false
+        statusItem.button?.contentTintColor = .systemOrange
+    }
+
+    func updateStoppingRecording() {
+        stateLabel.title = "stopping recording…"
+        toggleItem.title = "Stopping recording…"
+        toggleItem.isEnabled = false
+        audioOnlyItem.isEnabled = false
     }
 
     /// Show transcription progress/failure as a second status line in the
@@ -179,6 +209,7 @@ final class MenuBarController {
     }
 
     @objc private func toggleClicked() { onToggle?() }
+    @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func transcriptionEngineClicked(_ sender: NSMenuItem) {
         guard
             let rawValue = sender.representedObject as? String,

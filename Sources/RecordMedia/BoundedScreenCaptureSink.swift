@@ -57,6 +57,10 @@ public struct MediaTrackIngressSnapshot: Equatable, Sendable {
 public struct MediaIngressSnapshot: Equatable, Sendable {
     public let tracks: [ScreenCaptureSampleKind: MediaTrackIngressSnapshot]
 
+    public init(tracks: [ScreenCaptureSampleKind: MediaTrackIngressSnapshot] = [:]) {
+        self.tracks = tracks
+    }
+
     public subscript(kind: ScreenCaptureSampleKind) -> MediaTrackIngressSnapshot {
         tracks[kind] ?? MediaTrackIngressSnapshot()
     }

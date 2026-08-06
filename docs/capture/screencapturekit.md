@@ -58,10 +58,11 @@ failure event rather than repeated logs containing private source details.
 
 ## Current limits
 
-- The adapter is not yet connected to the menu or existing audio-only daemon.
-- `RecordMedia` provides the bounded sample handoff, common A/V anchor, and
-  hardware-required AVAssetWriter segment path. Hardware/TCC and recovery-matrix
-  validation remain before integration.
+- The menu's first vertical slice captures the main display at 30 fps with the
+  cursor, system audio, and microphone. It uses the bounded sample handoff,
+  common A/V anchor, hardware-required writer, and atomic session manifest.
+- Window/application/region selection and 60 fps controls are follow-up UI;
+  the adapter and typed configuration already support them.
 - Camera capture/compositing and the system content-sharing picker are separate
   follow-up slices.
 - Hardware/TCC validation is intentionally not part of ordinary CI. It must

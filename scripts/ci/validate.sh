@@ -11,8 +11,11 @@ swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AudioSessionInspector.swift \
     Sources/Record/ExportDirectoryAccess.swift Sources/Record/FluidAudioOfflinePolicy.swift \
+    Sources/Record/FinishedVideoExporter.swift Sources/Record/RecordingMode.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
+    Sources/Record/Transcription/TranscriptionCoordinator.swift \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
+    Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoRecordingSession.swift \
     Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests
 swift package resolve
 git diff --exit-code -- Package.resolved
