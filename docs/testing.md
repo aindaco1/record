@@ -17,6 +17,7 @@ regressions run on every pull request.
   failure manifests, idempotent stops, and atomic non-overwriting exports
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
+- interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
 - local-only source/entitlement guards and FluidAudio network denial

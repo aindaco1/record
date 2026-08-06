@@ -70,7 +70,12 @@ final class AudioSessionInspectorTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: fixture.directory) }
         var manifest = try SessionManifest.read(from: fixture.directory)
         manifest.tracks[0].filename = "../mic.caf"
-        try manifest.write(to: fixture.directory)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(manifest).write(
+            to: fixture.directory.appendingPathComponent("session.json"),
+            options: .atomic
+        )
 
         XCTAssertThrowsError(
             try AudioSessionInspector.inspect(sessionDirectory: fixture.directory)

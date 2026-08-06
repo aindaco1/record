@@ -27,7 +27,7 @@ actor TranscriptionCoordinator {
     }
 
     /// Queue a finished session. With transcription disabled in config, the
-    /// The completion hook still fires — it just gets an untranscribed folder.
+    /// completion hook still fires — it just gets an untranscribed folder.
     func enqueue(_ sessionDir: URL) {
         guard Config.transcriptionEnabled() else {
             runHook(for: sessionDir)
@@ -40,6 +40,21 @@ actor TranscriptionCoordinator {
     /// Scan the recordings root for finalized sessions that were never
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
     func resumePending(root: URL) {
+        let recovery = SessionRecovery.recover(in: root)
+        if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty {
+            let interruptedCount = recovery.interrupted.count
+            let failedCount = recovery.failed.count
+            let message =
+                "recovered \(interruptedCount) interrupted and marked "
+                + "\(failedCount) empty session(s) failed\n"
+            FileHandle.standardError.write(Data(message.utf8))
+        }
+        for failure in recovery.errors {
+            let directory = failure.directory.lastPathComponent
+            let message =
+                "warning: could not recover \(directory): \(failure.description)\n"
+            FileHandle.standardError.write(Data(message.utf8))
+        }
         guard Config.transcriptionEnabled() else { return }
         let pending = Self.pendingSessionDirectories(root: root)
         for dir in pending where !queue.contains(dir) {
@@ -263,17 +278,20 @@ private struct SessionMeta {
 
     enum MetaError: Error, CustomStringConvertible {
         case unreadable(URL)
+        case unsafeTrackFilename(String)
 
         var description: String {
             switch self {
             case .unreadable(let url): return "can't parse \(url.path)"
+            case .unsafeTrackFilename(let filename):
+                return "unsafe track filename in legacy session: \(filename)"
             }
         }
     }
 
     static func read(from dir: URL) throws -> SessionMeta {
         if let manifest = try? SessionManifest.read(from: dir) {
-            guard manifest.state == .finalized else {
+            guard manifest.state == .finalized || manifest.state == .interrupted else {
                 throw MetaError.unreadable(dir.appendingPathComponent("session.json"))
             }
             let tracks = manifest.tracks.compactMap { track -> Track? in
@@ -309,9 +327,15 @@ private struct SessionMeta {
         let offsets = json["start_offset_ms"] as? [String: Int] ?? [:]
         var tracks: [Track] = []
         if let mic = files["mic"] {
+            guard SessionPathPolicy.isSafeRelativeFilename(mic) else {
+                throw MetaError.unsafeTrackFilename(mic)
+            }
             tracks.append(Track(file: mic, speaker: "me", offsetMs: offsets["mic"] ?? 0))
         }
         if let system = files["system"] {
+            guard SessionPathPolicy.isSafeRelativeFilename(system) else {
+                throw MetaError.unsafeTrackFilename(system)
+            }
             tracks.append(Track(file: system, speaker: "them", offsetMs: offsets["system"] ?? 0))
         }
         return SessionMeta(tracks: tracks)
@@ -319,7 +343,7 @@ private struct SessionMeta {
 
     static func isFinalized(_ dir: URL) -> Bool {
         if let manifest = try? SessionManifest.read(from: dir) {
-            return manifest.state == .finalized
+            return manifest.state == .finalized || manifest.state == .interrupted
         }
         return FileManager.default.fileExists(
             atPath: dir.appendingPathComponent("meta.json").path

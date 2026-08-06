@@ -54,7 +54,12 @@ enum AudioSessionInspector {
     }
 
     static func inspect(sessionDirectory: URL) throws -> AudioSessionInspection {
-        let manifest = try SessionManifest.read(from: sessionDirectory)
+        let manifest: SessionManifest
+        do {
+            manifest = try SessionManifest.read(from: sessionDirectory)
+        } catch SessionManifest.ManifestError.unsafeTrackFilename(let filename) {
+            throw InspectionError.unsafeFilename(filename)
+        }
         guard manifest.state == .finalized else {
             throw InspectionError.notFinalized(manifest.state)
         }
