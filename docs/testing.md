@@ -6,6 +6,7 @@ regressions run on every pull request.
 ## Automated on every pull request
 
 - typed configuration defaults and validation
+- capture configuration limits and lifecycle command/effect transitions
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
 - deterministic folder collision handling

@@ -35,9 +35,10 @@ flowchart LR
   editor.
 - `record`: diagnostic and automation CLI sharing the same command layer.
 
-Only `RecordCore` exists as a separate module today; the remaining boundaries
-are migration targets and must be introduced without duplicating commands or
-data models.
+Only `RecordCore` exists as a separate module today. It now owns typed capture
+configuration and the pure command/effect lifecycle; the remaining boundaries
+are migration targets and must execute those effects without duplicating state
+or data models.
 
 ## Session format
 
