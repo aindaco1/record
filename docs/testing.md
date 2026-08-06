@@ -13,9 +13,11 @@ regressions run on every pull request.
 - debug tests plus an arm64 release build and architecture check
 - Swift formatting for new modular code
 
-Future pure tests will cover transcript merging, edit-operation serialization,
-frame-timestamp normalization, queue backpressure, segment recovery, recording
-name templates, click-event mapping, and plugin capability denial.
+Pure tests also cover recording-name template parsing, escaping, sanitization,
+UTF-8 bounds, and collision handling. Future pure tests will cover transcript
+merging, edit-operation serialization, frame-timestamp normalization, queue
+backpressure, segment recovery, click-event mapping, and plugin capability
+denial.
 
 ## macOS hardware matrix
 
