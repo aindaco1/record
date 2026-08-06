@@ -4,12 +4,13 @@ enum FinishedVideoExporter {
     enum ExportError: Error, Equatable {
         case invalidSource
         case destinationUnavailable
+        case invalidName
     }
 
     static func export(
         sourceURL: URL,
         to directory: URL,
-        startedAt: Date,
+        preferredBaseName: String,
         fileManager: FileManager = .default
     ) throws -> URL {
         var isDirectory = ObjCBool(false)
@@ -27,12 +28,23 @@ enum FinishedVideoExporter {
             throw ExportError.destinationUnavailable
         }
 
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let baseName = "Record \(formatter.string(from: startedAt))"
+        guard !preferredBaseName.isEmpty,
+            preferredBaseName.count <= 120,
+            preferredBaseName
+                == preferredBaseName.trimmingCharacters(
+                    in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "."))
+                ),
+            preferredBaseName.rangeOfCharacter(from: .controlCharacters) == nil,
+            preferredBaseName != ".",
+            preferredBaseName != "..",
+            !preferredBaseName.contains("/"),
+            !preferredBaseName.contains(":"),
+            URL(fileURLWithPath: preferredBaseName).lastPathComponent == preferredBaseName
+        else {
+            throw ExportError.invalidName
+        }
+
+        let baseName = preferredBaseName
         let finalURL = availableURL(baseName: baseName, in: directory, fileManager: fileManager)
         let partialURL = directory.appendingPathComponent(
             ".\(baseName).\(UUID().uuidString).partial.mov",

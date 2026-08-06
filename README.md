@@ -52,6 +52,17 @@ opens that picker if no destination has been approved. A crash-recoverable raw
 `recording.mov` remains in private session storage; the Desktop copy is written
 through a hidden partial file and renamed only after a complete copy.
 
+The built-in **Plugins → Rename Finished Recording** behavior is enabled by
+default. Its template editor accepts `{date}`, `{time}`, `{color}`,
+`{adjective}`, `{animal}`, `{country}`, `{name}`, `{starWars}`, and optional
+`{clipboard}` tokens. Names are sanitized, bounded, and collision-safe. Record
+does not read the clipboard unless the active template explicitly contains the
+clipboard token.
+
+When the locally installed Gifski app is available, **Plugins → Open Last Video
+in Gifski** hands off the most recent finished MOV through `NSWorkspace`. Record
+does not bundle or download Gifski, run a shell, or add network access.
+
 For a real sandboxed app-bundle launch and the current manual audio checklist,
 see [Testing](docs/testing.md). The project-local `./script/build_and_run.sh`
 entrypoint is also available as the Codex `Run` action.

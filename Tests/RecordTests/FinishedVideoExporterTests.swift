@@ -6,17 +6,15 @@ final class FinishedVideoExporterTests: XCTestCase {
     func testExportCopiesAtomicallyAndNeverOverwrites() throws {
         let fixture = try makeFixture(sourceData: Data("video".utf8))
         defer { try? FileManager.default.removeItem(at: fixture.root) }
-        let startedAt = Date(timeIntervalSince1970: 0)
-
         let first = try FinishedVideoExporter.export(
             sourceURL: fixture.source,
             to: fixture.destination,
-            startedAt: startedAt
+            preferredBaseName: "Record Test"
         )
         let second = try FinishedVideoExporter.export(
             sourceURL: fixture.source,
             to: fixture.destination,
-            startedAt: startedAt
+            preferredBaseName: "Record Test"
         )
 
         XCTAssertNotEqual(first, second)
@@ -36,10 +34,25 @@ final class FinishedVideoExporterTests: XCTestCase {
             try FinishedVideoExporter.export(
                 sourceURL: fixture.source,
                 to: fixture.destination,
-                startedAt: Date()
+                preferredBaseName: "Record Test"
             )
         ) { error in
             XCTAssertEqual(error as? FinishedVideoExporter.ExportError, .invalidSource)
+        }
+    }
+
+    func testExportRejectsAnUnsafeName() throws {
+        let fixture = try makeFixture(sourceData: Data("video".utf8))
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+
+        XCTAssertThrowsError(
+            try FinishedVideoExporter.export(
+                sourceURL: fixture.source,
+                to: fixture.destination,
+                preferredBaseName: "../private"
+            )
+        ) { error in
+            XCTAssertEqual(error as? FinishedVideoExporter.ExportError, .invalidName)
         }
     }
 

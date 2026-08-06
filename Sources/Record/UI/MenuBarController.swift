@@ -10,6 +10,9 @@ final class MenuBarController {
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
+    private let recordingNameItem: NSMenuItem
+    private let recordingNameTemplateItem: NSMenuItem
+    private let gifskiItem: NSMenuItem
     private let transcriptionEngineItem: NSMenuItem
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
@@ -17,6 +20,9 @@ final class MenuBarController {
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
+    var onToggleRecordingName: (() -> Void)?
+    var onEditRecordingNameTemplate: (() -> Void)?
+    var onOpenLastVideoInGifski: (() -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
@@ -52,6 +58,31 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         menu.addItem(audioOnlyItem)
+
+        let pluginsItem = NSMenuItem(title: "Plugins", action: nil, keyEquivalent: "")
+        let pluginsMenu = NSMenu(title: "Plugins")
+        pluginsMenu.autoenablesItems = false
+        recordingNameItem = NSMenuItem(
+            title: "Rename Finished Recording",
+            action: #selector(toggleRecordingNameClicked),
+            keyEquivalent: ""
+        )
+        pluginsMenu.addItem(recordingNameItem)
+        recordingNameTemplateItem = NSMenuItem(
+            title: "Recording Name Template…",
+            action: #selector(editRecordingNameTemplateClicked),
+            keyEquivalent: ""
+        )
+        pluginsMenu.addItem(recordingNameTemplateItem)
+        pluginsMenu.addItem(.separator())
+        gifskiItem = NSMenuItem(
+            title: "Open Last Video in Gifski",
+            action: #selector(openLastVideoInGifskiClicked),
+            keyEquivalent: ""
+        )
+        pluginsMenu.addItem(gifskiItem)
+        pluginsItem.submenu = pluginsMenu
+        menu.addItem(pluginsItem)
 
         transcriptionEngineItem = NSMenuItem(
             title: "Transcription: Parakeet",
@@ -104,6 +135,9 @@ final class MenuBarController {
         for item in [
             toggleItem,
             audioOnlyItem,
+            recordingNameItem,
+            recordingNameTemplateItem,
+            gifskiItem,
             parakeetEngineItem,
             macWhisperEngineItem,
             openFolder,
@@ -151,6 +185,20 @@ final class MenuBarController {
         toggleItem.title = "Stopping recording…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
+    }
+
+    func updateRecordingName(enabled: Bool, template: String) {
+        recordingNameItem.state = enabled ? .on : .off
+        recordingNameTemplateItem.isEnabled = enabled
+        recordingNameTemplateItem.toolTip = template
+    }
+
+    func updateGifski(available: Bool, hasFinishedVideo: Bool) {
+        gifskiItem.isEnabled = available && hasFinishedVideo
+        gifskiItem.title =
+            available
+            ? "Open Last Video in Gifski"
+            : "Gifski Not Installed"
     }
 
     /// Show transcription progress/failure as a second status line in the
@@ -210,6 +258,9 @@ final class MenuBarController {
 
     @objc private func toggleClicked() { onToggle?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
+    @objc private func toggleRecordingNameClicked() { onToggleRecordingName?() }
+    @objc private func editRecordingNameTemplateClicked() { onEditRecordingNameTemplate?() }
+    @objc private func openLastVideoInGifskiClicked() { onOpenLastVideoInGifski?() }
     @objc private func transcriptionEngineClicked(_ sender: NSMenuItem) {
         guard
             let rawValue = sender.representedObject as? String,

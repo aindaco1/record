@@ -25,8 +25,7 @@ regressions run on every pull request.
 - Swift formatting for new modular code
 
 Future pure tests will cover transcript merging, edit-operation serialization,
-segment recovery, recording name templates, click-event mapping, and plugin
-capability denial.
+segment recovery, click-event mapping, and plugin capability denial.
 
 ## Manual smoke test available now
 
@@ -50,7 +49,7 @@ Use synthetic or non-sensitive content for development recordings:
    menu shows an increasing elapsed time, and the command becomes **Stop
    recording**.
 4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
-   `Record YYYY-MM-DD HH.mm.ss.mov` appears on Desktop, opens in QuickTime,
+   template-named `.mov` appears on Desktop, opens in QuickTime,
    shows the main display at the expected aspect ratio, and contains both the
    microphone and played system audio. Record keeps the raw `recording.mov` in
    **Open session storage** for recovery.
@@ -63,6 +62,16 @@ Use synthetic or non-sensitive content for development recordings:
    channel leakage, distortion, timing drift, or the wrong input device.
 7. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
+
+Open **Plugins → Recording Name Template…**, test date/time and bundled-word
+tokens, then use a synthetic clipboard value with `{clipboard}`. Confirm unsafe
+path punctuation is removed, a duplicate name receives a numeric suffix, and
+disabling **Rename Finished Recording** restores the plain legacy name. Never
+use sensitive clipboard content in a development test.
+
+With Gifski installed, record and stop a short synthetic video, then choose
+**Plugins → Open Last Video in Gifski**. Confirm Gifski receives the existing
+MOV and Record neither downloads a helper nor creates another media copy.
 
 Also exercise these negative paths before a release candidate:
 

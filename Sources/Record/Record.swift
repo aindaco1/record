@@ -2,6 +2,7 @@ import AppKit
 import ArgumentParser
 import Foundation
 import RecordCapture
+import RecordCore
 import RecordMedia
 
 @main
@@ -107,6 +108,7 @@ final class AppController {
     private let menuBar = MenuBarController()
     private let transcription = TranscriptionCoordinator()
     private let exportDirectoryAccess = ExportDirectoryAccess()
+    private let recordingNamePreferences = RecordingNamePreferences()
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
     private var ticker: Timer?
@@ -114,11 +116,18 @@ final class AppController {
     private var videoStopTask: Task<Void, Never>?
     private var pendingVideoStop = false
     private var quitAfterStop = false
+    private var videoExportName: String?
+    private var lastFinishedVideoURL: URL?
 
     init(root: URL) {
         self.root = root
         menuBar.onToggle = { [weak self] in self?.toggle() }
         menuBar.onStartAudioOnly = { [weak self] in self?.startAudioSession() }
+        menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
+        menuBar.onEditRecordingNameTemplate = { [weak self] in
+            self?.editRecordingNameTemplate()
+        }
+        menuBar.onOpenLastVideoInGifski = { [weak self] in self?.openLastVideoInGifski() }
         menuBar.onSelectTranscriptionEngine = { [weak self] in
             self?.selectTranscriptionEngine($0)
         }
@@ -126,6 +135,8 @@ final class AppController {
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        refreshRecordingNameMenu()
+        refreshGifskiMenu()
         refreshTranscriptionEngineMenu()
         restoreExportFolderAccess()
 
@@ -190,6 +201,10 @@ final class AppController {
             return
         }
 
+        videoExportName = recordingNamePreferences.renderName(
+            at: newSession.startedAt,
+            clipboard: NSPasteboard.general.string(forType: .string)
+        )
         activeRecording = .video(newSession)
         pendingVideoStop = false
         menuBar.updatePreparingScreenRecording()
@@ -294,6 +309,10 @@ final class AppController {
     ) {
         videoStopTask = nil
         pendingVideoStop = false
+        let preferredExportName =
+            videoExportName
+            ?? RecordingNameTemplate.legacyValue.render(at: session.startedAt)
+        videoExportName = nil
         if case .video(let active) = activeRecording, active === session {
             activeRecording = nil
         }
@@ -303,7 +322,11 @@ final class AppController {
         case .success(let outcome):
             logIngress(outcome.ingress)
             if outcome.state == .finalized, let mediaURL = outcome.mediaURL {
-                publishVideo(mediaURL, startedAt: session.startedAt)
+                lastFinishedVideoURL = publishVideo(
+                    mediaURL,
+                    preferredBaseName: preferredExportName
+                )
+                refreshGifskiMenu()
             } else {
                 notifyUser(
                     title: "Record — video preserved",
@@ -321,31 +344,33 @@ final class AppController {
         terminateIfRequested()
     }
 
-    private func publishVideo(_ mediaURL: URL, startedAt: Date) {
+    private func publishVideo(_ mediaURL: URL, preferredBaseName: String) -> URL {
         guard let exportDirectoryLease else {
             notifyUser(
                 title: "Record — video ready",
                 body: "Saved in session storage. Choose an export folder for automatic copies."
             )
-            return
+            return mediaURL
         }
         do {
             let exportedURL = try FinishedVideoExporter.export(
                 sourceURL: mediaURL,
                 to: exportDirectoryLease.url,
-                startedAt: startedAt
+                preferredBaseName: preferredBaseName
             )
             FileHandle.standardError.write(Data("○ video exported → \(exportedURL.path)\n".utf8))
             notifyUser(
                 title: "Record — video ready",
                 body: "Saved to \(exportedURL.deletingLastPathComponent().lastPathComponent)."
             )
+            return exportedURL
         } catch {
             FileHandle.standardError.write(Data("video export failed: \(error)\n".utf8))
             notifyUser(
                 title: "Record — export failed",
                 body: "The original video remains in session storage."
             )
+            return mediaURL
         }
     }
 
@@ -366,6 +391,7 @@ final class AppController {
             activeRecording = nil
         }
         pendingVideoStop = false
+        videoExportName = nil
         menuBar.update(recording: false, elapsed: nil)
         reportRecordingStartFailure(error)
         terminateIfRequested()
@@ -374,6 +400,72 @@ final class AppController {
     private func reportRecordingStartFailure(_ error: Error) {
         FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
         notifyUser(title: "Record — recording failed", body: "\(error)")
+    }
+
+    private func toggleRecordingName() {
+        recordingNamePreferences.isEnabled.toggle()
+        refreshRecordingNameMenu()
+    }
+
+    private func editRecordingNameTemplate() {
+        let input = NSTextField(string: recordingNamePreferences.template.rawValue)
+        input.frame = NSRect(x: 0, y: 0, width: 420, height: 24)
+        input.placeholderString = "{date} at {time} - {color} {animal}"
+
+        let alert = NSAlert()
+        alert.messageText = "Recording Name Template"
+        alert.informativeText =
+            "Tokens: {date}, {time}, {clipboard}, {color}, {adjective}, {animal}, "
+            + "{country}, {name}, {starWars}. Clipboard is read only when requested."
+        alert.accessoryView = input
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        do {
+            try recordingNamePreferences.setTemplate(input.stringValue)
+            recordingNamePreferences.isEnabled = true
+            refreshRecordingNameMenu()
+        } catch {
+            let failure = NSAlert()
+            failure.alertStyle = .warning
+            failure.messageText = "Invalid Recording Name Template"
+            failure.informativeText = "Use only the supported tokens and balanced braces."
+            failure.runModal()
+        }
+    }
+
+    private func refreshRecordingNameMenu() {
+        menuBar.updateRecordingName(
+            enabled: recordingNamePreferences.isEnabled,
+            template: recordingNamePreferences.template.rawValue
+        )
+    }
+
+    private func refreshGifskiMenu() {
+        menuBar.updateGifski(
+            available: GifskiHandoff.isAvailable,
+            hasFinishedVideo: lastFinishedVideoURL != nil
+        )
+    }
+
+    private func openLastVideoInGifski() {
+        guard let lastFinishedVideoURL else { return }
+        do {
+            try GifskiHandoff.open(videoURL: lastFinishedVideoURL) { result in
+                if case .failure = result {
+                    notifyUser(
+                        title: "Record — Gifski unavailable",
+                        body: "The video was preserved and can be opened manually."
+                    )
+                }
+            }
+        } catch {
+            notifyUser(
+                title: "Record — Gifski unavailable",
+                body: "Install Gifski or record another local video."
+            )
+        }
     }
 
     private func logIngress(_ snapshot: MediaIngressSnapshot) {
