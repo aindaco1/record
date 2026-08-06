@@ -12,6 +12,15 @@ mkdir -p "$safe"
 printf '%s\n' 'import Foundation' 'let value = "local"' > "$safe/Safe.swift"
 "$guard" "$safe" "$entitlements"
 
+empty="$temporary_root/empty"
+mkdir -p "$empty"
+"$guard" "$empty" "$entitlements"
+
+ignored="$temporary_root/ignored"
+mkdir -p "$ignored"
+printf '%s\n' 'import Network' > "$ignored/Fixture.txt"
+"$guard" "$ignored" "$entitlements"
+
 assert_rejected() {
     local name="$1"
     local source="$2"

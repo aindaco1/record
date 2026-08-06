@@ -37,7 +37,7 @@ for key in com.apple.security.network.client com.apple.security.network.server; 
     fi
 done
 
-if plutil -p "$entitlements" | rg --quiet 'com[.]apple[.]security[.]temporary-exception[.]network'; then
+if plutil -p "$entitlements" | grep -Eq 'com[.]apple[.]security[.]temporary-exception[.]network'; then
     echo "Record must not carry temporary network exceptions" >&2
     exit 1
 fi

@@ -10,9 +10,15 @@ if [[ ! -d "$source_root" ]]; then
     exit 1
 fi
 
-source_globs=(
-    --glob '*.swift'
-    --glob '*.{c,cc,cpp,h,hpp,m,mm}'
+source_files=()
+while IFS= read -r -d '' source_file; do
+    source_files+=("$source_file")
+done < <(
+    find "$source_root" -type f \( \
+        -name '*.swift' -o \
+        -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o \
+        -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \
+    \) -print0
 )
 
 forbidden_imports='^[[:space:]]*(import|@import)[[:space:]]+(CFNetwork|FoundationNetworking|Network|NetworkExtension|WebKit)([;.[:space:]]|$)'
@@ -29,8 +35,12 @@ for pattern in \
     "$forbidden_urls" \
     "$forbidden_tools"
 do
+    if [[ "${#source_files[@]}" -eq 0 ]]; then
+        break
+    fi
+
     set +e
-    matches="$(rg --line-number --with-filename "${source_globs[@]}" "$pattern" "$source_root")"
+    matches="$(grep -EnH "$pattern" "${source_files[@]}")"
     search_status=$?
     set -e
     if [[ "$search_status" -eq 0 ]]; then
