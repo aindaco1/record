@@ -18,6 +18,7 @@ actor TranscriptionCoordinator {
     private var queue: [URL] = []
     private var draining = false
     private var engine: TranscriptionEngine?
+    private var engineSelection: TranscriptionSelection?
     private var lastFailure: String?
     private var statusHandler: (@Sendable (Status) -> Void)?
 
@@ -94,6 +95,7 @@ actor TranscriptionCoordinator {
         }
         await engine?.release()
         engine = nil
+        engineSelection = nil
         publish(lastFailure.map { .failed(session: $0) } ?? .idle)
         draining = false
         // An enqueue that landed between the loop exiting and the release
@@ -156,35 +158,36 @@ actor TranscriptionCoordinator {
     }
 
     private func preparedEngine() async throws -> TranscriptionEngine {
-        if let engine { return engine }
-        let configured = Config.transcriptionEngine()
+        let selection = Config.transcriptionSelection()
+        if let engine, engineSelection == selection { return engine }
+        await engine?.release()
+        engine = nil
+        engineSelection = nil
+
         let newEngine: TranscriptionEngine
-        switch configured {
-        case "parakeet":
-            let configuredModel = Config.transcriptionModel() ?? ParakeetModelID.v3.rawValue
-            let selection = try ParakeetModelID(configurationValue: configuredModel)
-            newEngine = ParakeetEngine(selection: selection)
-        case "macwhisper":
+        switch selection.engine {
+        case .parakeet:
+            let model = try ParakeetModelID(configurationValue: selection.model)
+            newEngine = ParakeetEngine(selection: model)
+        case .macwhisper:
             guard
                 let executable = MacWhisperExecutable.resolve(
-                    configuredPath: Config.transcriptionExecutable()
+                    configuredPath: selection.executable
                 )
             else {
                 throw MacWhisperEngine.EngineError.executableMissing(
-                    URL(fileURLWithPath: Config.transcriptionExecutable() ?? "mw")
+                    URL(fileURLWithPath: selection.executable ?? "mw")
                 )
             }
-            let model = Config.transcriptionModel() ?? ""
             newEngine = try MacWhisperEngine(
                 executable: executable,
-                model: model,
-                language: Config.transcriptionLanguage()
+                model: selection.model,
+                language: selection.language
             )
-        default:
-            throw AppConfiguration.ConfigurationError.unsupportedTranscriptionEngine(configured)
         }
         try await newEngine.prepare()
         engine = newEngine
+        engineSelection = selection
         return newEngine
     }
 

@@ -93,10 +93,14 @@ final class AppController {
     init(root: URL) {
         self.root = root
         menuBar.onToggle = { [weak self] in self?.toggle() }
+        menuBar.onSelectTranscriptionEngine = { [weak self] in
+            self?.selectTranscriptionEngine($0)
+        }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        refreshTranscriptionEngineMenu()
         restoreExportFolderAccess()
 
         Task { [transcription, root] in
@@ -185,6 +189,20 @@ final class AppController {
         case .failed(let name):
             menuBar.updateTranscription("transcription failed · \(name)")
         }
+    }
+
+    private func selectTranscriptionEngine(_ engine: TranscriptionEngineOption) {
+        TranscriptionPreferences.select(engine)
+        refreshTranscriptionEngineMenu()
+    }
+
+    private func refreshTranscriptionEngineMenu() {
+        menuBar.updateTranscriptionEngine(
+            Config.transcriptionSelection().engine,
+            macWhisperAvailable: MacWhisperExecutable.resolve(
+                configuredPath: Config.transcriptionExecutable()
+            ) != nil
+        )
     }
 
     private func tick() {

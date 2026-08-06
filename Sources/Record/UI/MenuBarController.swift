@@ -9,9 +9,13 @@ final class MenuBarController {
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
+    private let transcriptionEngineItem: NSMenuItem
+    private let parakeetEngineItem: NSMenuItem
+    private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
 
     var onToggle: (() -> Void)?
+    var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
     var onQuit: (() -> Void)?
@@ -40,6 +44,31 @@ final class MenuBarController {
         )
         menu.addItem(toggleItem)
 
+        transcriptionEngineItem = NSMenuItem(
+            title: "Transcription: Parakeet",
+            action: nil,
+            keyEquivalent: ""
+        )
+        let transcriptionMenu = NSMenu(title: "Transcription")
+        transcriptionMenu.autoenablesItems = false
+        parakeetEngineItem = NSMenuItem(
+            title: "Parakeet (Default)",
+            action: #selector(transcriptionEngineClicked),
+            keyEquivalent: ""
+        )
+        parakeetEngineItem.representedObject = TranscriptionEngineOption.parakeet.rawValue
+        transcriptionMenu.addItem(parakeetEngineItem)
+        macWhisperEngineItem = NSMenuItem(
+            title: "MacWhisper (Small)",
+            action: #selector(transcriptionEngineClicked),
+            keyEquivalent: ""
+        )
+        macWhisperEngineItem.representedObject =
+            TranscriptionEngineOption.macwhisper.rawValue
+        transcriptionMenu.addItem(macWhisperEngineItem)
+        transcriptionEngineItem.submenu = transcriptionMenu
+        menu.addItem(transcriptionEngineItem)
+
         let openFolder = NSMenuItem(
             title: "Open session storage",
             action: #selector(openFolderClicked),
@@ -63,7 +92,14 @@ final class MenuBarController {
         )
         menu.addItem(quit)
 
-        for item in [toggleItem, openFolder, exportFolderItem, quit] {
+        for item in [
+            toggleItem,
+            parakeetEngineItem,
+            macWhisperEngineItem,
+            openFolder,
+            exportFolderItem,
+            quit,
+        ] {
             item.target = self
         }
 
@@ -93,6 +129,24 @@ final class MenuBarController {
     func updateTranscription(_ text: String?) {
         transcriptionLabel.title = text ?? ""
         transcriptionLabel.isHidden = text == nil
+    }
+
+    func updateTranscriptionEngine(
+        _ engine: TranscriptionEngineOption,
+        macWhisperAvailable: Bool
+    ) {
+        transcriptionEngineItem.title = "Transcription: \(engine.displayName)"
+        parakeetEngineItem.state = engine == .parakeet ? .on : .off
+        macWhisperEngineItem.state = engine == .macwhisper ? .on : .off
+        macWhisperEngineItem.isEnabled = macWhisperAvailable
+        macWhisperEngineItem.title =
+            macWhisperAvailable
+            ? "MacWhisper (Small)"
+            : "MacWhisper (helper unavailable)"
+        macWhisperEngineItem.toolTip =
+            macWhisperAvailable
+            ? "Uses the installed local MacWhisper Small model"
+            : "Run scripts/setup/install-macwhisper-cli.sh first"
     }
 
     /// Show the default or approved destination for finished exports. An
@@ -125,6 +179,13 @@ final class MenuBarController {
     }
 
     @objc private func toggleClicked() { onToggle?() }
+    @objc private func transcriptionEngineClicked(_ sender: NSMenuItem) {
+        guard
+            let rawValue = sender.representedObject as? String,
+            let engine = TranscriptionEngineOption(rawValue: rawValue)
+        else { return }
+        onSelectTranscriptionEngine?(engine)
+    }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
     @objc private func quitClicked() { onQuit?() }

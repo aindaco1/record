@@ -27,19 +27,23 @@ enum Config {
     }
 
     static func transcriptionEngine() -> String {
-        current.transcription.engine
+        transcriptionSelection().engine.rawValue
     }
 
     static func transcriptionModel() -> String? {
-        current.transcription.model
+        transcriptionSelection().model
     }
 
     static func transcriptionExecutable() -> String? {
-        current.transcription.executable
+        transcriptionSelection().executable
     }
 
     static func transcriptionLanguage() -> String {
-        current.transcription.language
+        transcriptionSelection().language
+    }
+
+    static func transcriptionSelection() -> TranscriptionSelection {
+        TranscriptionPreferences.effectiveSelection(configuration: current.transcription)
     }
 
     static func micVoiceProcessing() -> Bool {

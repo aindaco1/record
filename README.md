@@ -79,7 +79,13 @@ Install Record's signed user-script copy first:
 ./scripts/setup/install-macwhisper-cli.sh
 ```
 
-Then select it in the configuration:
+After installation, choose **Transcription → MacWhisper (Small)** from Record's
+menu-bar menu. The selection applies to the next session that begins
+transcription and persists across launches. Choose **Parakeet (Default)** to
+switch back. JSON configuration remains available for advanced model and
+language choices.
+
+For an advanced model or language override, use the configuration file:
 
 ```json
 {
