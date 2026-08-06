@@ -27,8 +27,8 @@ Run the fast source and test gate:
 
 Before handing off a branch, run the complete local equivalent of the hosted
 CI jobs. It checks the toolchain, uses rootless Podman for pinned workflow and
-shell linting, runs tests, builds arm64, assembles the sandboxed app, and mounts
-both release packages:
+shell linting, runs normal and sanitizer tests, builds arm64, assembles the
+sandboxed app, and mounts both release packages:
 
 ```sh
 ./scripts/ci/local-gate.sh

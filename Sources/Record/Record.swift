@@ -7,7 +7,7 @@ struct RecordCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "record",
         abstract: "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
-        subcommands: [Run.self, Doctor.self, Install.self],
+        subcommands: [Run.self, Doctor.self, Install.self, InspectSession.self],
         defaultSubcommand: Run.self
     )
 }

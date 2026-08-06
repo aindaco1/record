@@ -30,4 +30,4 @@ podman run --rm --pull=missing \
     --entrypoint /bin/shellcheck \
     --volume "$repo_root:/workspace:ro" --workdir /workspace \
     "$shellcheck_image" \
-    scripts/ci/*.sh scripts/release/*.sh
+    script/*.sh scripts/ci/*.sh scripts/qa/*.sh scripts/release/*.sh

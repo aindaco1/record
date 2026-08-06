@@ -38,6 +38,10 @@ The current binary records microphone and system audio into independently
 recoverable CAF tracks. A session starts with an atomic `session.json`
 manifest and is finalized before transcription is queued.
 
+For a real sandboxed app-bundle launch and the current manual audio checklist,
+see [Testing](docs/testing.md). The project-local `./script/build_and_run.sh`
+entrypoint is also available as the Codex `Run` action.
+
 Optional configuration lives at `~/.config/record/config.json`:
 
 ```json

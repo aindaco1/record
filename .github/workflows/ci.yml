@@ -57,6 +57,17 @@ jobs:
           RECORD_BUILD_NUMBER: ${{ github.run_number }}
         run: ./scripts/ci/package-gate.sh
 
+  sanitizers:
+    name: Swift sanitizer tests
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Run ThreadSanitizer and AddressSanitizer
+        run: ./scripts/ci/sanitizers.sh
+
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
