@@ -5,8 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 swift format lint --strict --configuration .swift-format --recursive \
-    Package.swift Sources/RecordCore Sources/RecordCapture \
-    Tests/RecordCoreTests Tests/RecordCaptureTests
+    Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
+    Tests/RecordCoreTests Tests/RecordCaptureTests Tests/RecordMediaTests
 swift package resolve
 git diff --exit-code -- Package.resolved
 swift test

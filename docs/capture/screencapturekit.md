@@ -59,8 +59,8 @@ failure event rather than repeated logs containing private source details.
 ## Current limits
 
 - The adapter is not yet connected to the menu or existing audio-only daemon.
-- `RecordMedia` still needs the bounded sample queues, common A/V anchor,
-  VideoToolbox/AVAssetWriter path, and segmented crash-safe output.
+- `RecordMedia` provides the bounded sample handoff and common A/V anchor; it
+  still needs the VideoToolbox/AVAssetWriter path and crash-safe segments.
 - Camera capture/compositing and the system content-sharing picker are separate
   follow-up slices.
 - Hardware/TCC validation is intentionally not part of ordinary CI. It must

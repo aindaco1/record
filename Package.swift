@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "RecordCore", targets: ["RecordCore"]),
         .library(name: "RecordCapture", targets: ["RecordCapture"]),
+        .library(name: "RecordMedia", targets: ["RecordMedia"]),
         .executable(name: "record", targets: ["Record"]),
     ],
     dependencies: [
@@ -18,6 +19,10 @@ let package = Package(
         .target(
             name: "RecordCapture",
             dependencies: ["RecordCore"]
+        ),
+        .target(
+            name: "RecordMedia",
+            dependencies: ["RecordCapture", "RecordCore"]
         ),
         .executableTarget(
             name: "Record",
@@ -46,6 +51,10 @@ let package = Package(
         .testTarget(
             name: "RecordCaptureTests",
             dependencies: ["RecordCapture", "RecordCore"]
+        ),
+        .testTarget(
+            name: "RecordMediaTests",
+            dependencies: ["RecordCapture", "RecordCore", "RecordMedia"]
         ),
     ]
 )

@@ -38,7 +38,8 @@ flowchart LR
 
 `RecordCore` owns typed capture configuration and the pure command/effect
 lifecycle. `RecordCapture` translates those types into ScreenCaptureKit without
-duplicating session state. The remaining modules are migration targets and
+duplicating session state. `RecordMedia` owns the bounded asynchronous handoff
+and common media timeline. The remaining modules are migration targets and
 must preserve those boundaries.
 
 ## Session format
