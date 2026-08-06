@@ -19,16 +19,19 @@ process launching, file access, and implicit model downloads. Product targets
 must pass `scripts/ci/check-local-only.sh`; do not weaken its patterns or add a
 network entitlement without a user-approved replacement for ADR 0002.
 
-Run the same entry point CI uses:
+Run the fast source and test gate:
 
 ```sh
 ./scripts/ci/validate.sh
 ```
 
-Optional portable workflow and shell linting uses rootless Podman:
+Before handing off a branch, run the complete local equivalent of the hosted
+CI jobs. It checks the toolchain, uses rootless Podman for pinned workflow and
+shell linting, runs tests, builds arm64, assembles the sandboxed app, and mounts
+both release packages:
 
 ```sh
-./scripts/ci/container-lint.sh
+./scripts/ci/local-gate.sh
 ```
 
 Hardware capture changes must also complete the manual capture matrix in

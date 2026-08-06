@@ -51,27 +51,11 @@ jobs:
       - name: Validate
         run: ./scripts/ci/validate.sh
 
-      - name: Assemble unsigned app bundle
+      - name: Build and verify distributable structure
         env:
           RECORD_VERSION: 0.0.0-ci
           RECORD_BUILD_NUMBER: ${{ github.run_number }}
-        run: ./scripts/release/build-app.sh
-
-      - name: Validate bundle structure
-        run: |
-          test -x .build/release-artifacts/Record.app/Contents/MacOS/record
-          plutil -lint .build/release-artifacts/Record.app/Contents/Info.plist
-          test "$(lipo -archs .build/release-artifacts/Record.app/Contents/MacOS/record)" = arm64
-
-      - name: Validate sandbox boundary
-        run: |
-          app=.build/release-artifacts/Record.app
-          codesign --force --sign - \
-            --entitlements Configuration/Record.entitlements "$app"
-          ./scripts/ci/check-signed-entitlements.sh "$app"
-
-      - name: Verify ZIP and DMG packaging
-        run: ./scripts/ci/verify-package.sh
+        run: ./scripts/ci/package-gate.sh
 
   dependency-review:
     name: Dependency review

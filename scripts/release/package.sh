@@ -24,7 +24,8 @@ hdiutil create -quiet -volname Record -srcfolder "$staging_path" \
 rm -rf "$staging_path"
 
 cd "$artifacts_root"
-shasum -a 256 Record.zip Record.dmg > SHA256SUMS
 install -m 0644 "$repo_root/Package.resolved" Package.resolved
+"$repo_root/scripts/release/write-build-metadata.sh"
+"$repo_root/scripts/release/checksum-artifacts.sh"
 
 echo "$artifacts_root"
