@@ -1,5 +1,3 @@
-import CoreMedia
-import CoreVideo
 import Dispatch
 import RecordCapture
 import RecordCore
@@ -19,11 +17,11 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
             processor: processor
         )
 
-        sink.consume(try sample(value: 1))
+        sink.consume(try makeTestSample(value: 1))
         XCTAssertEqual(processor.started.wait(timeout: .now() + 2), .success)
-        sink.consume(try sample(value: 2))
-        sink.consume(try sample(value: 3))
-        sink.consume(try sample(value: 4))
+        sink.consume(try makeTestSample(value: 2))
+        sink.consume(try makeTestSample(value: 3))
+        sink.consume(try makeTestSample(value: 4))
 
         let congested = sink.snapshot()[.screen]
         XCTAssertEqual(congested.pending, 2)
@@ -50,11 +48,11 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
             onFailure: { reported.record($0) }
         )
 
-        sink.consume(try sample(value: 1))
+        sink.consume(try makeTestSample(value: 1))
         await XCTAssertThrowsErrorAsync(try await sink.finish()) { error in
             XCTAssertEqual(error as? MediaIngressError, .processingFailed(expected))
         }
-        sink.consume(try sample(value: 2))
+        sink.consume(try makeTestSample(value: 2))
 
         XCTAssertEqual(reported.failure(), expected)
         let snapshot = sink.snapshot()[.screen]
@@ -87,7 +85,7 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
             configuration: try MediaIngressConfiguration(),
             processor: processor
         )
-        sink.consume(try sample(value: 1))
+        sink.consume(try makeTestSample(value: 1))
         XCTAssertEqual(processor.started.wait(timeout: .now() + 2), .success)
 
         let firstFinish = Task { try await sink.finish() }
@@ -100,57 +98,21 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
         XCTAssertEqual(processor.values(), [1])
     }
 
-    private func sample(value: Int64) throws -> ScreenCaptureSample {
-        let presentationTime = CMTime(value: value, timescale: 60)
-        var pixelBuffer: CVPixelBuffer?
-        let pixelStatus = CVPixelBufferCreate(
-            kCFAllocatorDefault,
-            2,
-            2,
-            kCVPixelFormatType_32BGRA,
-            nil,
-            &pixelBuffer
+    func testProcessorDropsAreDistinctFromIngressBackpressure() async throws {
+        let sink = BoundedScreenCaptureSink(
+            configuration: try MediaIngressConfiguration(),
+            processor: DroppingProcessor()
         )
-        guard pixelStatus == kCVReturnSuccess, let pixelBuffer else {
-            throw TestSampleError.creationFailed(pixelStatus)
-        }
 
-        var formatDescription: CMVideoFormatDescription?
-        let formatStatus = CMVideoFormatDescriptionCreateForImageBuffer(
-            allocator: kCFAllocatorDefault,
-            imageBuffer: pixelBuffer,
-            formatDescriptionOut: &formatDescription
-        )
-        guard formatStatus == noErr, let formatDescription else {
-            throw TestSampleError.creationFailed(formatStatus)
-        }
+        sink.consume(try makeTestSample(value: 1))
+        try await sink.finish()
 
-        var timing = CMSampleTimingInfo(
-            duration: CMTime(value: 1, timescale: 60),
-            presentationTimeStamp: presentationTime,
-            decodeTimeStamp: .invalid
-        )
-        var sampleBuffer: CMSampleBuffer?
-        let sampleStatus = CMSampleBufferCreateReadyWithImageBuffer(
-            allocator: kCFAllocatorDefault,
-            imageBuffer: pixelBuffer,
-            formatDescription: formatDescription,
-            sampleTiming: &timing,
-            sampleBufferOut: &sampleBuffer
-        )
-        guard sampleStatus == noErr, let sampleBuffer else {
-            throw TestSampleError.creationFailed(sampleStatus)
-        }
-        return ScreenCaptureSample(
-            kind: .screen,
-            timestamp: try ScreenCaptureTimestamp(validating: presentationTime),
-            buffer: sampleBuffer
-        )
+        let snapshot = sink.snapshot()[.screen]
+        XCTAssertEqual(snapshot.processed, 0)
+        XCTAssertEqual(snapshot.droppedByProcessor, 1)
+        XCTAssertEqual(snapshot.droppedForBackpressure, 0)
     }
-}
 
-private enum TestSampleError: Error {
-    case creationFailed(OSStatus)
 }
 
 private final class BlockingProcessor: MediaSampleProcessing, @unchecked Sendable {
@@ -161,7 +123,7 @@ private final class BlockingProcessor: MediaSampleProcessing, @unchecked Sendabl
     private var processedValues: [Int64] = []
     private var isFirst = true
 
-    func process(_ sample: ScreenCaptureSample) {
+    func process(_ sample: ScreenCaptureSample) -> MediaSampleProcessingResult {
         lock.lock()
         let shouldBlock = isFirst
         isFirst = false
@@ -173,6 +135,7 @@ private final class BlockingProcessor: MediaSampleProcessing, @unchecked Sendabl
         lock.lock()
         processedValues.append(sample.timestamp.time.value)
         lock.unlock()
+        return .consumed
     }
 
     func values() -> [Int64] {
@@ -190,8 +153,14 @@ private final class FailingProcessor: MediaSampleProcessing, @unchecked Sendable
         self.failure = failure
     }
 
-    func process(_ sample: ScreenCaptureSample) throws {
+    func process(_ sample: ScreenCaptureSample) throws -> MediaSampleProcessingResult {
         throw MediaSampleProcessingFailure(failure)
+    }
+}
+
+private final class DroppingProcessor: MediaSampleProcessing, @unchecked Sendable {
+    func process(_ sample: ScreenCaptureSample) -> MediaSampleProcessingResult {
+        .dropped(.writerBackpressure)
     }
 }
 

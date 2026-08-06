@@ -47,6 +47,7 @@ public struct MediaTrackIngressSnapshot: Equatable, Sendable {
     public fileprivate(set) var received = 0
     public fileprivate(set) var processed = 0
     public fileprivate(set) var droppedForBackpressure = 0
+    public fileprivate(set) var droppedByProcessor = 0
     public fileprivate(set) var discardedAfterFailure = 0
     public fileprivate(set) var rejectedAfterFinish = 0
     public fileprivate(set) var pending = 0
@@ -74,9 +75,19 @@ public struct MediaSampleProcessingFailure: Error, Equatable, Sendable {
     }
 }
 
+public enum MediaSampleDropReason: String, Equatable, Sendable {
+    case writerBackpressure
+    case trackDisabled
+}
+
+public enum MediaSampleProcessingResult: Equatable, Sendable {
+    case consumed
+    case dropped(MediaSampleDropReason)
+}
+
 public protocol MediaSampleProcessing: AnyObject, Sendable {
     /// Runs on the media worker, never on a ScreenCaptureKit callback queue.
-    func process(_ sample: ScreenCaptureSample) throws
+    func process(_ sample: ScreenCaptureSample) throws -> MediaSampleProcessingResult
 }
 
 private final class MediaTrackIngressState {
@@ -216,9 +227,14 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
             lock.unlock()
 
             do {
-                try processor.process(sample)
+                let result = try processor.process(sample)
                 lock.lock()
-                track.snapshot.processed += 1
+                switch result {
+                case .consumed:
+                    track.snapshot.processed += 1
+                case .dropped:
+                    track.snapshot.droppedByProcessor += 1
+                }
                 lock.unlock()
             } catch {
                 fail(error, failedKind: kind)

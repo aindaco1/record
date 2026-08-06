@@ -11,6 +11,8 @@ regressions run on every pull request.
   timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
 - fixed-capacity media ingress eviction, metrics, failure cleanup, deterministic
   draining, and shared-timeline mapping under delay, gaps, and clock regression
+- hardware-required HEVC/AAC writer settings, collision-safe partial paths, and
+  empty-segment finalization without publishing invalid media
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
 - deterministic folder collision handling
