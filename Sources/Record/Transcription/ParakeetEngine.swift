@@ -38,6 +38,7 @@ actor ParakeetEngine: TranscriptionEngine {
     }
 
     func prepare() async throws {
+        FluidAudioOfflinePolicy.enforce()
         guard manager == nil else { return }
         let cache = AsrModels.defaultCacheDirectory(for: version)
         guard AsrModels.modelsExist(at: cache, version: version) else {

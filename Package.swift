@@ -38,5 +38,12 @@ let package = Package(
             name: "RecordCoreTests",
             dependencies: ["RecordCore"]
         ),
+        .testTarget(
+            name: "RecordTests",
+            dependencies: [
+                "Record",
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ]
+        ),
     ]
 )

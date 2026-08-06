@@ -18,6 +18,8 @@ arbitrary code execution, permissions, signing, plugins, or recording data.
   closed rather than silently downloading.
 - Signed app artifacts use App Sandbox without incoming or outgoing network
   entitlements; CI checks both source calls and embedded entitlements.
+- FluidAudio is forced into offline mode before model preparation, and a test
+  requires its network surface to fail with `networkDisabled`.
 - Third-party extensions do not execute inside the capture process.
 - Session metadata and derived artifacts use atomic writes.
 - Release workflows use least-privilege permissions, protected environments,

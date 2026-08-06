@@ -22,6 +22,7 @@ struct Run: ParsableCommand {
     var out: String?
 
     func run() throws {
+        FluidAudioOfflinePolicy.enforce()
         // ArgumentParser invokes run() on the main thread; promote that fact
         // to the type system so AppKit calls are cleanly isolated.
         try MainActor.assumeIsolated { try runMain() }
@@ -66,6 +67,7 @@ struct Doctor: ParsableCommand {
     )
 
     func run() throws {
+        FluidAudioOfflinePolicy.enforce()
         let checks = DoctorReport.run(recordingsRoot: Config.resolveRoot(cliOverride: nil))
         DoctorReport.print(checks)
         if !DoctorReport.allOK(checks) {

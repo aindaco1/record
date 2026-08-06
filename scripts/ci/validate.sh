@@ -7,7 +7,8 @@ cd "$repo_root"
 ./scripts/ci/check-local-only.sh
 ./scripts/ci/test-local-only-guard.sh
 swift format lint --strict --configuration .swift-format --recursive \
-    Package.swift Sources/RecordCore Tests/RecordCoreTests
+    Package.swift Sources/RecordCore Sources/Record/FluidAudioOfflinePolicy.swift \
+    Tests/RecordCoreTests Tests/RecordTests
 swift package resolve
 git diff --exit-code -- Package.resolved
 swift test

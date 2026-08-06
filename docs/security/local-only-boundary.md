@@ -13,12 +13,15 @@ update path.
 2. The distributed app is sandboxed. It intentionally omits both outgoing and
    incoming network entitlements, so linked dependency code cannot initiate a
    connection even if it contains a downloader.
-3. Release signing embeds the reviewed entitlement file, and CI extracts the
+3. Record enables FluidAudio's offline mode at every executable entry point
+   and immediately before model preparation. A test calls FluidAudio's public
+   download surface and requires its typed `networkDisabled` failure.
+4. Release signing embeds the reviewed entitlement file, and CI extracts the
    signed entitlements to verify the actual artifact rather than trusting only
    source configuration.
-4. Models enter through a user-selected local-file import. A missing model
+5. Models enter through a user-selected local-file import. A missing model
    fails closed and is never fetched by the application.
-5. Plugin capabilities do not include networking. Future plugin helpers must
+6. Plugin capabilities do not include networking. Future plugin helpers must
    use the same network-denying sandbox policy.
 
 FluidAudio currently contains download-capable APIs even though Record calls

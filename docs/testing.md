@@ -10,6 +10,7 @@ regressions run on every pull request.
 - session state transitions and atomic manifest round trips
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
+- local-only source/entitlement guards and FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
 - Swift formatting for new modular code
 
