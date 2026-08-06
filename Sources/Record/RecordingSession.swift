@@ -21,6 +21,7 @@ final class RecordingSession {
         )
         manifest = SessionManifest(
             id: id,
+            ownerProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
             startedAt: startedAt,
             tracks: [
                 .init(kind: .microphone, filename: "mic.caf", speaker: "me"),

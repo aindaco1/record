@@ -8,6 +8,7 @@ regressions run on every pull request.
 - typed configuration defaults and validation
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
+- interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
 - debug tests plus an arm64 release build and architecture check

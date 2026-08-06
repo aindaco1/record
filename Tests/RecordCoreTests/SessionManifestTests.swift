@@ -62,6 +62,35 @@ final class SessionManifestTests: XCTestCase {
         XCTAssertEqual(second.lastPathComponent, "2023.11.14-2213-2")
     }
 
+    func testManifestRejectsTrackPathsThatEscapeTheSession() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let traversal = SessionManifest(
+            startedAt: Date(),
+            tracks: [.init(kind: .microphone, filename: "../outside.caf")]
+        )
+        let duplicate = SessionManifest(
+            startedAt: Date(),
+            tracks: [
+                .init(kind: .microphone, filename: "audio.caf"),
+                .init(kind: .systemAudio, filename: "audio.caf"),
+            ]
+        )
+
+        XCTAssertThrowsError(try traversal.write(to: directory)) { error in
+            XCTAssertEqual(
+                error as? SessionManifest.ManifestError,
+                .unsafeTrackFilename("../outside.caf")
+            )
+        }
+        XCTAssertThrowsError(try duplicate.write(to: directory)) { error in
+            XCTAssertEqual(
+                error as? SessionManifest.ManifestError,
+                .duplicateTrackFilename("audio.caf")
+            )
+        }
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("RecordCoreTests-\(UUID().uuidString)", isDirectory: true)
