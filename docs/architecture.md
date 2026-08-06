@@ -25,8 +25,9 @@ flowchart LR
 
 - `RecordCore`: versioned configuration, session manifests, commands, edit
   operations, model identifiers, and plugin lifecycle state.
-- `RecordCapture`: ScreenCaptureKit, microphone, system audio, camera, cursor,
-  and click-event adapters.
+- `RecordCapture`: ScreenCaptureKit source resolution, bounded stream
+  configuration, microphone/system-audio routing, raw timestamp validation,
+  cursor/click settings, and the future camera adapter.
 - `RecordMedia`: bounded queues, Metal composition, hardware encoding,
   segmentation, muxing, and non-destructive export.
 - `RecordTranscription`: local engines and transcript merge behavior.
@@ -35,9 +36,11 @@ flowchart LR
   editor.
 - `record`: diagnostic and automation CLI sharing the same command layer.
 
-Only `RecordCore` exists as a separate module today; the remaining boundaries
-are migration targets and must be introduced without duplicating commands or
-data models.
+`RecordCore` owns typed capture configuration and the pure command/effect
+lifecycle. `RecordCapture` translates those types into ScreenCaptureKit without
+duplicating session state. `RecordMedia` owns the bounded asynchronous handoff,
+common media timeline, and independently finalized hardware-encoded segments.
+The remaining modules are migration targets and must preserve those boundaries.
 
 ## Session format
 

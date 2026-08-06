@@ -6,6 +6,8 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "RecordCore", targets: ["RecordCore"]),
+        .library(name: "RecordCapture", targets: ["RecordCapture"]),
+        .library(name: "RecordMedia", targets: ["RecordMedia"]),
         .executable(name: "record", targets: ["Record"]),
     ],
     dependencies: [
@@ -14,10 +16,20 @@ let package = Package(
     ],
     targets: [
         .target(name: "RecordCore"),
+        .target(
+            name: "RecordCapture",
+            dependencies: ["RecordCore"]
+        ),
+        .target(
+            name: "RecordMedia",
+            dependencies: ["RecordCapture", "RecordCore"]
+        ),
         .executableTarget(
             name: "Record",
             dependencies: [
+                "RecordCapture",
                 "RecordCore",
+                "RecordMedia",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ],
@@ -44,6 +56,14 @@ let package = Package(
                 "Record",
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ]
+        ),
+        .testTarget(
+            name: "RecordCaptureTests",
+            dependencies: ["RecordCapture", "RecordCore"]
+        ),
+        .testTarget(
+            name: "RecordMediaTests",
+            dependencies: ["RecordCapture", "RecordCore", "RecordMedia"]
         ),
     ]
 )

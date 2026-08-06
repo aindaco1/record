@@ -8,11 +8,12 @@ cd "$repo_root"
 ./scripts/ci/test-local-only-guard.sh
 ./scripts/ci/test-model-installer.sh
 swift format lint --strict --configuration .swift-format --recursive \
-    Package.swift Sources/RecordCore Sources/Record/AudioSessionInspector.swift \
+    Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
+    Sources/Record/AudioSessionInspector.swift \
     Sources/Record/ExportDirectoryAccess.swift Sources/Record/FluidAudioOfflinePolicy.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
-    Tests/RecordCoreTests Tests/RecordTests
+    Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests
 swift package resolve
 git diff --exit-code -- Package.resolved
 swift test

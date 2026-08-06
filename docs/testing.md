@@ -6,6 +6,13 @@ regressions run on every pull request.
 ## Automated on every pull request
 
 - typed configuration defaults and validation
+- capture configuration limits and lifecycle command/effect transitions
+- ScreenCaptureKit plan translation, source resolution, failure mapping,
+  timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
+- fixed-capacity media ingress eviction, metrics, failure cleanup, deterministic
+  draining, and shared-timeline mapping under delay, gaps, and clock regression
+- hardware-required HEVC/AAC writer settings, collision-safe partial paths, and
+  empty-segment finalization without publishing invalid media
 - model identifier validation and local-only failure behavior
 - session state transitions and atomic manifest round trips
 - deterministic folder collision handling
@@ -16,8 +23,8 @@ regressions run on every pull request.
 - Swift formatting for new modular code
 
 Future pure tests will cover transcript merging, edit-operation serialization,
-frame-timestamp normalization, queue backpressure, segment recovery, recording
-name templates, click-event mapping, and plugin capability denial.
+segment recovery, recording name templates, click-event mapping, and plugin
+capability denial.
 
 ## Manual smoke test available now
 
