@@ -3,9 +3,9 @@ import ArgumentParser
 import Foundation
 
 @main
-struct Quill: ParsableCommand {
+struct RecordCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "quill",
+        commandName: "record",
         abstract: "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
         subcommands: [Run.self, Doctor.self, Install.self],
         defaultSubcommand: Run.self
@@ -54,7 +54,7 @@ struct Run: ParsableCommand {
         signal(SIGINT, SIG_IGN)
 
         FileHandle.standardError.write(Data(
-            "quill up · recordings → \(root.path) · ^C to quit\n".utf8
+            "Record up · recordings → \(root.path) · ^C to quit\n".utf8
         ))
         app.run()
     }
@@ -123,7 +123,7 @@ final class AppController {
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
-            notifyUser(title: "quill — recording failed", body: "\(error)")
+            notifyUser(title: "Record — recording failed", body: "\(error)")
             return
         }
 
@@ -135,7 +135,20 @@ final class AppController {
 
     private func stopSession() {
         guard let session else { return }
-        session.stop()
+        let finalized: Bool
+        do {
+            try session.stop()
+            finalized = true
+        } catch {
+            finalized = false
+            FileHandle.standardError.write(Data(
+                "recording finalization failed: \(error)\n".utf8
+            ))
+            notifyUser(
+                title: "Record — finalization failed",
+                body: "The media was preserved, but session recovery is required."
+            )
+        }
         let elapsed = Self.format(Date().timeIntervalSince(session.startedAt))
         FileHandle.standardError.write(Data(
             "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
@@ -145,8 +158,10 @@ final class AppController {
         ticker = nil
         menuBar.update(recording: false, elapsed: nil)
 
-        let dir = session.dir
-        Task { [transcription] in await transcription.enqueue(dir) }
+        if finalized {
+            let dir = session.dir
+            Task { [transcription] in await transcription.enqueue(dir) }
+        }
     }
 
     private func showTranscription(_ status: TranscriptionCoordinator.Status) {

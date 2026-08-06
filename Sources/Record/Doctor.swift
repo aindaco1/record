@@ -1,6 +1,7 @@
 import AVFoundation
 import FluidAudio
 import Foundation
+import RecordCore
 
 enum CheckStatus {
     case ok
@@ -39,7 +40,7 @@ enum DoctorReport {
             return Check(
                 name: "microphone",
                 status: .fail("denied"),
-                remediation: "System Settings → Privacy & Security → Microphone → enable for quill (or your terminal)"
+                remediation: "System Settings → Privacy & Security → Microphone → enable for Record (or your terminal)"
             )
         @unknown default:
             return Check(name: "microphone", status: .fail("unknown state"), remediation: nil)
@@ -86,14 +87,25 @@ enum DoctorReport {
                 remediation: nil
             )
         }
-        let cache = AsrModels.defaultCacheDirectory(for: .v2)
-        if AsrModels.modelsExist(at: cache, version: .v2) {
+        let selection: ParakeetModelID
+        do {
+            selection = try ParakeetModelID(configurationValue: Config.transcriptionModel())
+        } catch {
+            return Check(
+                name: "transcription",
+                status: .fail(String(describing: error)),
+                remediation: "choose v2 or v3 in the Record configuration"
+            )
+        }
+        let version: AsrModelVersion = selection == .v2 ? .v2 : .v3
+        let cache = AsrModels.defaultCacheDirectory(for: version)
+        if AsrModels.modelsExist(at: cache, version: version) {
             return Check(name: "transcription", status: .ok, remediation: nil)
         }
         return Check(
             name: "transcription",
-            status: .warn("parakeet models not downloaded (~600 MB)"),
-            remediation: "downloads automatically on first transcription — record a short test session while online"
+            status: .warn("local \(selection.rawValue) model is missing"),
+            remediation: "import the model into Record before an important session; Record never downloads models automatically"
         )
     }
 

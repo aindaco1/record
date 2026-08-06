@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a reproducible Record defect without including private media.
+title: "bug: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach private recordings, transcripts, credentials, or model files.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened?
+      description: Include the expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Use synthetic or non-sensitive inputs.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Record version or commit
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: macOS and Mac model
+      placeholder: macOS 15.x, MacBook Pro M3 Pro
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Remove paths, transcript text, clipboard data, and identifiers.
