@@ -229,10 +229,10 @@ final class AppController {
         refreshRecentRecordingMenu()
         let restoredExportRoot = exportDirectoryLease?.url
 
-        Task { [transcription, root] in
-            await transcription.setStatusHandler { status in
-                Task { @MainActor [weak self] in
-                    self?.showTranscription(status)
+        Task { [transcription, root, self] in
+            await transcription.setStatusHandler { [weak controller = self] status in
+                Task { @MainActor [controller] in
+                    controller?.showTranscription(status)
                 }
             }
             await transcription.resumePending(root: root)

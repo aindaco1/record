@@ -18,6 +18,13 @@ This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45
   is a public preview hosted on macOS 26 with the macOS 27 SDK. It is useful for
   compiler and SDK diagnostics, but it cannot exercise macOS 27 runtime or TCC
   behavior. Its CI result stays advisory until GitHub marks the image GA.
+- Xcode 27 beta 4's Swift Build engine compiles Record but does not stage the
+  transitive Sparkle binary framework beside `RecordTests`, so its test helper
+  cannot load that bundle. The defect is reported upstream as
+  [swift-package-manager#10384](https://github.com/swiftlang/swift-package-manager/issues/10384).
+  The preview lane still compiles with Swift Build, then runs the complete suite
+  and release build with SwiftPM's native engine. Remove that split after the
+  upstream packaging defect is fixed and a full default-engine run passes.
 - macOS 27 can require Apple's
   [background-inference entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.background-tasks.continued-processing.inference)
   for Neural Engine work while an app is inactive. Parakeet currently uses
@@ -30,10 +37,11 @@ This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45
 
 ## Automated preview gate
 
-The `xcode-27-compatibility` CI job runs the same `scripts/ci/validate.sh` entry
-point used by stable CI. It must remain DRY and content-free. While the runner
-is in preview, failures are triaged and linked to #45 but do not block a pull
-request. At Xcode 27 GA:
+The `xcode-27-compatibility` CI job uses the same `scripts/ci/validate.sh` entry
+point as stable CI, selecting only SwiftPM's build engine through a validated
+environment option. It must remain DRY and content-free. While the runner is in
+preview, failures are triaged and linked to #45 but do not block a pull request.
+At Xcode 27 GA:
 
 1. pin the supported GA runner/toolchain;
 2. remove `continue-on-error` after one green run;
