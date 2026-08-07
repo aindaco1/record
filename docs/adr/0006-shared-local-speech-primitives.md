@@ -23,6 +23,8 @@ Expose a `RecordSpeech` SwiftPM library product containing:
 - the fail-closed FluidAudio offline policy;
 - a typed Parakeet transcriber that accepts only an already-present local model
   directory and returns stable token and word timing values;
+- the same pinned Parakeet v3 file allowlist and streaming SHA-256 verifier used
+  by Record's model importer;
 - a bounded offline diarization adapter that returns anonymous cluster turns
   and caps the result at six speakers.
 

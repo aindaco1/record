@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 @testable import Record
 import RecordCore
+import RecordSpeech
 import XCTest
 
 final class ParakeetModelInstallerTests: XCTestCase {

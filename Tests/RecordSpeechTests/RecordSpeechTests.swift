@@ -27,4 +27,13 @@ final class RecordSpeechTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(ParakeetTranscriptResult.self, from: JSONEncoder().encode(result)), result)
         XCTAssertEqual(ParakeetTranscriber.defaultModelDirectory(for: .v3).lastPathComponent, "parakeet-tdt-0.6b-v3")
     }
+
+    func testSharedModelVerifierRejectsAnIncompleteModel() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try ParakeetModelVerifier.validateV3(at: root)) { error in
+            XCTAssertTrue(String(describing: error).contains("Preprocessor.mlmodelc/coremldata.bin is missing"))
+        }
+    }
 }

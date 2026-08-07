@@ -67,6 +67,7 @@ let package = Package(
             name: "RecordTests",
             dependencies: [
                 "Record",
+                "RecordSpeech",
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ]
         ),
