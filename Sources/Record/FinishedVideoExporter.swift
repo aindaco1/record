@@ -1,4 +1,5 @@
 import Foundation
+import RecordCore
 
 enum FinishedVideoExporter {
     enum ExportError: Error, Equatable {
@@ -28,17 +29,11 @@ enum FinishedVideoExporter {
             throw ExportError.destinationUnavailable
         }
 
-        guard !preferredBaseName.isEmpty,
-            preferredBaseName.count <= 120,
+        guard LocalFileNamePolicy.isSafeComponent(preferredBaseName),
             preferredBaseName
                 == preferredBaseName.trimmingCharacters(
                     in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "."))
                 ),
-            preferredBaseName.rangeOfCharacter(from: .controlCharacters) == nil,
-            preferredBaseName != ".",
-            preferredBaseName != "..",
-            !preferredBaseName.contains("/"),
-            !preferredBaseName.contains(":"),
             URL(fileURLWithPath: preferredBaseName).lastPathComponent == preferredBaseName
         else {
             throw ExportError.invalidName

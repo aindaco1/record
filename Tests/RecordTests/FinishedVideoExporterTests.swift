@@ -56,6 +56,21 @@ final class FinishedVideoExporterTests: XCTestCase {
         }
     }
 
+    func testExportRejectsANameOverTheUTF8ByteLimit() throws {
+        let fixture = try makeFixture(sourceData: Data("video".utf8))
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+
+        XCTAssertThrowsError(
+            try FinishedVideoExporter.export(
+                sourceURL: fixture.source,
+                to: fixture.destination,
+                preferredBaseName: String(repeating: "🙂", count: 51)
+            )
+        ) { error in
+            XCTAssertEqual(error as? FinishedVideoExporter.ExportError, .invalidName)
+        }
+    }
+
     private func makeFixture(sourceData: Data) throws -> (
         root: URL,
         source: URL,

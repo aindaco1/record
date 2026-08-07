@@ -60,4 +60,17 @@ final class RecordingNameTemplateTests: XCTestCase {
         XCTAssertEqual(long.render(at: Date()).count, 120)
         XCTAssertEqual(empty.render(at: Date(), clipboard: "///"), "Record")
     }
+
+    func testRenderedNameIsBoundedByUTF8BytesWithoutSplittingCharacters() throws {
+        let template = try RecordingNameTemplate(validating: "{clipboard}")
+
+        let rendered = template.render(
+            at: Date(timeIntervalSince1970: 0),
+            clipboard: String(repeating: "🙂", count: 100)
+        )
+
+        XCTAssertEqual(rendered.count, 50)
+        XCTAssertEqual(rendered.utf8.count, RecordingNameTemplate.maximumRenderedUTF8Bytes)
+        XCTAssertTrue(LocalFileNamePolicy.isSafeComponent(rendered))
+    }
 }

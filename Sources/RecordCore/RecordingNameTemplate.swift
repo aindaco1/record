@@ -8,7 +8,8 @@ public struct RecordingNameTemplate: Equatable, Sendable {
         validating: "Record {date} {time}"
     )
     public static let maximumTemplateLength = 512
-    public static let maximumRenderedLength = 120
+    public static let maximumRenderedLength = LocalFileNamePolicy.maximumCharacters
+    public static let maximumRenderedUTF8Bytes = LocalFileNamePolicy.maximumUTF8Bytes
 
     public let rawValue: String
 
@@ -172,7 +173,7 @@ public struct RecordingNameTemplate: Equatable, Sendable {
             in: .whitespacesAndNewlines.union(
                 CharacterSet(charactersIn: ".")
             ))
-        let bounded = String(trimmed.prefix(maximumRenderedLength))
+        let bounded = LocalFileNamePolicy.boundedPrefix(of: trimmed)
             .trimmingCharacters(
                 in: .whitespacesAndNewlines.union(
                     CharacterSet(charactersIn: ".")
