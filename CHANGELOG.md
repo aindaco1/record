@@ -13,6 +13,11 @@ All notable changes to Record are documented here. Record follows
   continues to use the same local-only implementation through a thin app
   adapter, and sibling Dust Wave tools can reuse it without forking model code.
 
+### Fixed
+
+- Preserve source audio duration when FluidAudio reports a zero-duration
+  Parakeet result.
+
 ## [1.0.2] - 2026-08-07
 
 ### Added
@@ -39,9 +44,6 @@ All notable changes to Record are documented here. Record follows
   team, hardened runtime, and designated requirement across updates.
 
 ### Fixed
-
-- Preserve source audio duration when FluidAudio reports a zero-duration
-  Parakeet result.
 
 - Open at Login remains actionable when ServiceManagement initially reports
   `.notFound` for an app that is already installed in Applications.
