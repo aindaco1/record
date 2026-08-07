@@ -28,12 +28,26 @@
     <string>NSApplication</string>
     <key>NSUserNotificationAlertStyle</key>
     <string>alert</string>
+    <key>SUFeedURL</key>
+    <string>https://github.com/aindaco1/record/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>SmB+aHRo7wfeJAr21p/IlXiDylp6ObIt/uorKzAZfFU=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
+    <key>SUAllowsAutomaticUpdates</key>
+    <false/>
+    <key>SUEnableInstallerLauncherService</key>
+    <true/>
+    <key>SUEnableDownloaderService</key>
+    <true/>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
     <key>NSMicrophoneUsageDescription</key>
     <string>Record captures microphone audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
     <key>NSAudioCaptureUsageDescription</key>
     <string>Record captures system audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
-    <key>NSCameraUsageDescription</key>
-    <string>Record can place your camera in a local screen recording when you enable the camera overlay. Video never leaves this Mac.</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>Record captures the screen, windows, or apps you select and saves the recording locally. Video never leaves this Mac.</string>
 </dict>

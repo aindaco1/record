@@ -7,6 +7,8 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcription Model")
         XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Export folder…")
         XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
+        XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
+        XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
     }
 
     func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {

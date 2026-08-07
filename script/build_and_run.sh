@@ -112,15 +112,11 @@ signing_identity="$(
 )"
 if [[ -n "$signing_identity" ]]; then
     echo "Signing local app with stable identity $signing_identity"
-    codesign --force --options runtime --timestamp=none \
-        --sign "$signing_identity" \
-        --entitlements Configuration/Record.entitlements "$staging_app"
+    ./scripts/release/sign-app.sh "$staging_app" "$signing_identity" none
 else
     echo "warning: no Apple signing identity found; TCC grants will not survive rebuilds" >&2
-    codesign --force --sign - \
-        --entitlements Configuration/Record.entitlements "$staging_app"
+    ./scripts/release/sign-app.sh "$staging_app" - none
 fi
-./scripts/ci/check-signed-entitlements.sh "$staging_app"
 
 if [[ -x "$lsregister" ]]; then
     "$lsregister" -u "$app_bundle" >/dev/null 2>&1 || true

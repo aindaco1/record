@@ -11,6 +11,8 @@ final class MenuBarController {
     static let transcriptionModelMenuTitle = "Transcription Model"
     static let openTempSessionMenuTitle = "Open temp session"
     static let exportFolderMenuTitle = "Export folder…"
+    static let checkForUpdatesMenuTitle = "Check for Updates…"
+    static let launchAtLoginMenuTitle = "Open at Login"
 
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
@@ -27,6 +29,8 @@ final class MenuBarController {
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
+    private let checkForUpdatesItem: NSMenuItem
+    private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
 
     var onToggle: (() -> Void)?
@@ -38,6 +42,8 @@ final class MenuBarController {
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
+    var onCheckForUpdates: (() -> Void)?
+    var onToggleLaunchAtLogin: (() -> Void)?
     var onQuit: (() -> Void)?
 
     init() {
@@ -157,6 +163,22 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
+        checkForUpdatesItem = NSMenuItem(
+            title: Self.checkForUpdatesMenuTitle,
+            action: #selector(checkForUpdatesClicked),
+            keyEquivalent: ""
+        )
+        menu.addItem(checkForUpdatesItem)
+
+        launchAtLoginItem = NSMenuItem(
+            title: Self.launchAtLoginMenuTitle,
+            action: #selector(toggleLaunchAtLoginClicked),
+            keyEquivalent: ""
+        )
+        menu.addItem(launchAtLoginItem)
+
+        menu.addItem(.separator())
+
         let quit = NSMenuItem(
             title: "Quit Record",
             action: #selector(quitClicked),
@@ -177,6 +199,8 @@ final class MenuBarController {
             macWhisperEngineItem,
             openFolder,
             exportFolderItem,
+            checkForUpdatesItem,
+            launchAtLoginItem,
             quit,
         ] {
             item.target = self
@@ -291,6 +315,24 @@ final class MenuBarController {
     func updateExportDirectory(_ url: URL) {
         exportFolderItem.title = Self.exportFolderMenuTitle
         exportFolderItem.toolTip = url.path
+    }
+
+    func updateLaunchAtLogin(_ state: LaunchAtLoginState) {
+        launchAtLoginItem.title = Self.launchAtLoginMenuTitle
+        launchAtLoginItem.isEnabled = state != .unavailable
+        launchAtLoginItem.state =
+            switch state {
+            case .disabled, .unavailable: .off
+            case .enabled: .on
+            case .requiresApproval: .mixed
+            }
+        launchAtLoginItem.toolTip =
+            switch state {
+            case .disabled: "Open Record automatically after you sign in"
+            case .enabled: "Record will open automatically after you sign in"
+            case .requiresApproval: "Click to approve Record in Login Items"
+            case .unavailable: "Move Record to Applications, then reopen it"
+            }
     }
 
     // NewKap's MIT-licensed 2x menu-bar ring is embedded to preserve Record's
@@ -417,5 +459,7 @@ final class MenuBarController {
     }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
+    @objc private func checkForUpdatesClicked() { onCheckForUpdates?() }
+    @objc private func toggleLaunchAtLoginClicked() { onToggleLaunchAtLogin?() }
     @objc private func quitClicked() { onQuit?() }
 }

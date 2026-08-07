@@ -23,20 +23,25 @@ regressions run on every pull request.
 - interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
+- native login-item state mapping and fail-closed approval handling
+- update menu wiring plus package checks for the Sparkle framework, feed
+  configuration, signature requirements, XPC Mach services, and main-app
+  network-entitlement denial
 - local-only source/entitlement guards and FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
 - the complete suite under ThreadSanitizer and AddressSanitizer
 - Swift formatting for new modular code
 
-Future pure tests will cover transcript merging, edit-operation serialization,
-segment recovery, click-event mapping, and plugin capability denial.
+Future pure tests will cover edit-operation serialization, segment recovery,
+click-event mapping, and out-of-process plugin capability denial.
 
 ## Manual smoke test available now
 
-The current integrated build supports main-display video plus the inherited
-audio-only workflow. Camera overlays, source selection, pause/resume, editing,
-and NewKap-style plugins are not yet integrated, so those rows in the hardware
-matrix remain future acceptance criteria.
+The current integrated build supports main-display video, audio-only recording,
+and the capture-privacy, recording-name, and Gifski handoff plugins. Camera
+overlays, source selection, pause/resume, editing, and an external plugin host
+are not yet integrated, so those rows in the hardware matrix remain future
+acceptance criteria.
 
 Use synthetic or non-sensitive content for development recordings:
 
@@ -85,6 +90,11 @@ Use synthetic or non-sensitive content for development recordings:
    confirm **Transcript ready** opens that same folder.
 9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
+
+Choose **Open at Login**, confirm Record appears in System Settings → General →
+Login Items, then disable it again. If macOS reports that approval is required,
+the menu should show a mixed state and open the Login Items pane without
+re-registering repeatedly.
 
 Open **Plugins → Recording Name Template…**, test date/time and bundled-word
 tokens, then use a synthetic clipboard value with `{clipboard}`. Confirm unsafe
@@ -143,6 +153,18 @@ working copy should be removed only after its Desktop copy validates. Click the
 completion and transcript notifications and confirm Finder selects each Desktop
 session. Move or revoke the selected folder, relaunch, and confirm Record resets
 the saved grant without changing or deleting unexported private session media.
+
+## Update checks
+
+Update cryptography and packaging are automated by
+`scripts/release/generate-appcast.sh` and the release gate. After publishing a
+release, install the prior notarized version on a clean test account, choose
+**Check for Updates…**, and verify the new version, release notes, download,
+replacement, and relaunch. Confirm a same-version check reports no update.
+
+Do not test against an unsigned ad hoc archive. The production feed must reject
+an archive with a changed byte, a feed with a changed byte after signing, an
+unexpected signing key, or a missing Developer ID/notarization chain.
 
 ## macOS hardware matrix
 

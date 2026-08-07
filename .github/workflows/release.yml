@@ -47,8 +47,12 @@ jobs:
               "$RUNNER_TEMP/Record-notarization.zip"
           } >> "$GITHUB_ENV"
 
-      - name: Validate tag
-        run: ./scripts/release/validate-tag.sh "$RELEASE_TAG"
+      - name: Validate signed tag
+        run: |
+          git config gpg.format ssh
+          git config gpg.ssh.allowedSignersFile \
+            "$GITHUB_WORKSPACE/.github/allowed_signers"
+          ./scripts/release/validate-tag.sh "$RELEASE_TAG"
 
       - name: Validate source
         run: ./scripts/ci/validate.sh
@@ -63,7 +67,7 @@ jobs:
 
       - name: Import signing identity
         env:
-          CERTIFICATE_P12_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_P12_BASE64: ${{ secrets.CERTIFICATE_P12_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.RELEASE_KEYCHAIN_PASSWORD }}
         run: |
@@ -85,16 +89,11 @@ jobs:
           SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
         run: |
           app=.build/release-artifacts/Record.app
-          xattr -cr "$app"
-          codesign --force --options runtime --timestamp \
-            --entitlements Configuration/Record.entitlements \
-            --sign "$SIGNING_IDENTITY" "$app"
-          codesign --verify --deep --strict --verbose=2 "$app"
-          ./scripts/ci/check-signed-entitlements.sh "$app"
+          ./scripts/release/sign-app.sh "$app" "$SIGNING_IDENTITY" timestamp
 
       - name: Notarize app
         env:
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
@@ -113,7 +112,7 @@ jobs:
       - name: Package release
         env:
           SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
@@ -128,7 +127,16 @@ jobs:
           xcrun stapler staple "$dmg"
           xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+
+      - name: Generate signed update feed
+        env:
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+        run: ./scripts/release/generate-appcast.sh "$RELEASE_TAG"
+
+      - name: Finalize checksums
+        run: |
           ./scripts/release/checksum-artifacts.sh
+          (cd .build/release-artifacts && shasum -a 256 -c SHA256SUMS)
 
       # actions/attest-build-provenance v2, pinned to a reviewed commit.
       - name: Attest artifacts
@@ -137,6 +145,7 @@ jobs:
           subject-path: |
             .build/release-artifacts/Record.zip
             .build/release-artifacts/Record.dmg
+            .build/release-artifacts/appcast.xml
 
       - name: Publish GitHub release
         env:
@@ -145,10 +154,13 @@ jobs:
           gh release create "$RELEASE_TAG" \
             .build/release-artifacts/Record.zip \
             .build/release-artifacts/Record.dmg \
+            .build/release-artifacts/appcast.xml \
             .build/release-artifacts/SHA256SUMS \
             .build/release-artifacts/Package.resolved \
             .build/release-artifacts/BUILD-METADATA.txt \
-            --verify-tag --generate-notes --title "Record $RELEASE_TAG"
+            --verify-tag \
+            --notes-file "docs/releases/${RELEASE_TAG#v}.md" \
+            --title "Record ${RELEASE_TAG#v}"
 
       - name: Remove temporary signing material
         if: always()

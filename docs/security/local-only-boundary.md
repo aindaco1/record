@@ -2,17 +2,18 @@
 
 Record treats recordings, transcripts, clipboard-derived names, plugin state,
 diagnostics, and file metadata as private local data. The product has no
-accounts, telemetry, cloud transcription, upload, model download, or in-app
-update path.
+accounts, telemetry, cloud transcription, upload, or model download path.
+Its only in-app network operation is an explicit signed software-update check.
 
 ## Defense in depth
 
 1. Product-source CI rejects common Apple networking frameworks, client APIs,
    raw sockets, remote URL construction, telemetry SDKs, and network command
    execution. The guard has its own positive and negative fixture tests.
-2. The distributed app is sandboxed. It intentionally omits both outgoing and
-   incoming network entitlements, so linked dependency code cannot initiate a
-   connection even if it contains a downloader.
+2. The distributed main app is sandboxed and intentionally omits both outgoing
+   and incoming network entitlements. Sparkle's separately sandboxed downloader
+   and installer XPC services are the narrow exception for an explicit update
+   request; the appcast and archive both require Ed25519 signatures.
 3. Record enables FluidAudio's offline mode at every executable entry point
    and immediately before model preparation. A test calls FluidAudio's public
    download surface and requires its typed `networkDisabled` failure.
@@ -29,6 +30,10 @@ update path.
    arguments without evaluation. This deliberately runs outside Record's
    sandbox because MacWhisper's CLI requires its local Unix socket. It does not
    persist history and never runs as an automatic fallback.
+8. Automatic and background update checks are disabled. The updater contacts
+   only Record's public GitHub release feed after **Check for Updates…** and
+   installs only a Developer ID signed, Apple-notarized release whose Sparkle
+   signatures match the public key embedded in Record.
 
 FluidAudio currently contains download-capable APIs even though Record calls
 only its local existence and loading APIs. This is why the sandbox boundary is
@@ -38,16 +43,12 @@ behavior before merge.
 
 ## Required capabilities
 
-The app sandbox permits microphone and camera input plus read/write access to
-locations explicitly selected by the user. Persistent access uses app-scoped
-security bookmarks. Screen and system-audio capture remain protected by macOS
-privacy consent and their Info.plist usage descriptions; they do not require a
-network entitlement.
-
-The preferences UI must migrate arbitrary configured output paths to a folder
-picker and store a security-scoped bookmark before sandboxed releases. Until
-that is complete, sandbox failures are product errors and must not be worked
-around with broad temporary exceptions.
+The app sandbox permits microphone input plus read/write access to locations
+explicitly selected by the user. Persistent access uses app-scoped security
+bookmarks. Record 1.0 deliberately omits camera access until that feature is
+implemented. Screen and system-audio capture remain protected by macOS privacy
+consent and their Info.plist usage descriptions; they do not require a network
+entitlement.
 
 Finished session exports default to Desktop, but Desktop is only a suggested location
 until the user approves it through Record's folder picker. The resulting
@@ -62,6 +63,9 @@ direct session root.
 - CI and release hosts use the network to fetch reviewed source dependencies,
   actions, signing/notarization services, and publish artifacts. They never
   receive user recordings or application diagnostics.
+- An explicit update check discloses the ordinary connection metadata of a
+  request to GitHub but never includes recording data, transcript text,
+  clipboard content, session metadata, or a Record account identifier.
 - The developer-only Parakeet setup script downloads one immutable model
   revision outside the app sandbox. The model is installed into Record's local
   container; the shipping app neither contains nor calls the downloader.

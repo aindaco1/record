@@ -91,7 +91,9 @@ final class RecordApplicationDelegate: NSObject, NSApplicationDelegate {
         ) == true {
             return .terminateCancel
         }
-        return .terminateNow
+        return controller?.prepareForTermination() == false
+            ? .terminateCancel
+            : .terminateNow
     }
 }
 
@@ -140,6 +142,8 @@ final class AppController {
 
     private let root: URL
     private let menuBar = MenuBarController()
+    private let updateController = AppUpdateController()
+    private let launchAtLoginController = LaunchAtLoginController()
     private let notifications: RecordNotificationCenter
     private let transcription: TranscriptionCoordinator
     private let recordingPermission: RecordingPermissionController
@@ -191,12 +195,15 @@ final class AppController {
         }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
+        menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
+        menuBar.onToggleLaunchAtLogin = { [weak self] in self?.toggleLaunchAtLogin() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
         refreshCapturePrivacyMenu()
         refreshRecordingNameMenu()
         refreshGifskiMenu()
         refreshTranscriptionEngineMenu()
+        refreshLaunchAtLoginMenu()
         restoreExportFolderAccess()
         let restoredExportRoot = exportDirectoryLease?.url
 
@@ -240,6 +247,17 @@ final class AppController {
         if activeRecording != nil {
             stopSession()
         }
+    }
+
+    /// Route every termination request through the same finalization path as
+    /// the Quit menu. This also protects an active capture if an updater asks
+    /// Record to relaunch after installing a signed release.
+    func prepareForTermination() -> Bool {
+        guard activeRecording != nil || sessionPublishTask != nil else {
+            return true
+        }
+        shutdown()
+        return false
     }
 
     private func toggle() {
@@ -819,6 +837,52 @@ final class AppController {
     private func openFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
+    }
+
+    private func checkForUpdates() {
+        NSApp.activate(ignoringOtherApps: true)
+        updateController.checkForUpdates()
+    }
+
+    private func toggleLaunchAtLogin() {
+        let previousState = launchAtLoginController.state
+        do {
+            let state = try launchAtLoginController.toggle()
+            refreshLaunchAtLoginMenu()
+            if state == .requiresApproval, previousState != .requiresApproval {
+                presentLaunchAtLoginApproval()
+            }
+        } catch {
+            refreshLaunchAtLoginMenu()
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = "Record couldn’t change Login Items"
+            alert.informativeText =
+                "You can manage Record manually in System Settings → General → Login Items."
+            alert.addButton(withTitle: "Open Login Items")
+            alert.addButton(withTitle: "Cancel")
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() == .alertFirstButtonReturn {
+                launchAtLoginController.openSystemSettings()
+            }
+        }
+    }
+
+    private func refreshLaunchAtLoginMenu() {
+        menuBar.updateLaunchAtLogin(launchAtLoginController.state)
+    }
+
+    private func presentLaunchAtLoginApproval() {
+        let alert = NSAlert()
+        alert.messageText = "Approve Record at Login"
+        alert.informativeText =
+            "macOS needs your approval before Record can open automatically after sign-in."
+        alert.addButton(withTitle: "Open Login Items")
+        alert.addButton(withTitle: "Later")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            launchAtLoginController.openSystemSettings()
+        }
     }
 
     func handleTerminationRequest(

@@ -9,16 +9,15 @@ fails.
 
 ```mermaid
 flowchart LR
-    Picker["Menu / content picker"] --> Command["Record command layer"]
+    Menu["Menu-bar commands"] --> Command["Record command layer"]
     Command --> Capture["ScreenCaptureKit + AVFoundation"]
     Capture --> Buffers["Bounded sample queues"]
-    Buffers --> Compose["Metal compositing"]
-    Compose --> Encode["VideoToolbox / AVAssetWriter"]
+    Buffers --> Encode["VideoToolbox / AVAssetWriter"]
     Encode --> Segments["Finalized media segments"]
     Segments --> Session["Atomic session manifest"]
-    Session --> Editor["Non-destructive editor"]
     Session --> Transcript["Local transcription"]
-    Session --> Plugins["Capability-limited plugin host"]
+    Session --> Export["Validated atomic export"]
+    Session --> Plugins["Built-in capability services"]
 ```
 
 ## Modules
@@ -30,25 +29,31 @@ flowchart LR
   cursor/click settings, and the future camera adapter.
 - `RecordMedia`: bounded queues, Metal composition, hardware encoding,
   segmentation, muxing, and non-destructive export.
-- `RecordTranscription`: local engines and transcript merge behavior.
-- `RecordPlugins`: built-in services and the future out-of-process host.
-- `RecordUI`: AppKit status item and SwiftUI picker, settings, history, and
-  editor.
+- `Record` application target: AppKit menu-bar UI, local transcription
+  adapters, built-in plugin services, signed updates, and login registration.
 - `record`: diagnostic and automation CLI sharing the same command layer.
 
 `RecordCore` owns typed capture configuration and the pure command/effect
 lifecycle. `RecordCapture` translates those types into ScreenCaptureKit without
 duplicating session state. `RecordMedia` owns the bounded asynchronous handoff,
 common media timeline, and independently finalized hardware-encoded segments.
-The remaining modules are migration targets and must preserve those boundaries.
+Future source pickers, editing, camera, and out-of-process extensions must
+preserve those boundaries rather than moving mutable state into the menu layer.
+
+## Application services
+
+Sparkle's standard updater owns the manual GitHub release check. Its downloader
+and installer run in the framework's sandboxed XPC services; the main Record
+process retains no network entitlement. `SMAppService.mainApp` owns optional
+login registration, so Record does not install a custom LaunchAgent.
 
 ## Session format
 
-Each session is a directory containing an atomically updated `session.json`,
-append-only diagnostic events, short finalized raw segments, derived exports,
-and transcripts. Raw segments are immutable. Trimming, speed changes, masks,
-camera placement, and annotations are stored as edit operations so exporting
-never destroys the source.
+Each current session is a directory containing an atomically updated
+`session.json`, independently finalized source media, optional local
+transcripts, and bounded diagnostic logs. Source media remains immutable.
+Future trimming, speed changes, masks, camera placement, and annotations must
+be stored as non-destructive edit operations rather than rewriting that source.
 
 The current screen-capture segment is deliberately split into
 `recording.mov`, `system.caf`, and `mic.caf`. The movie contains video only;
@@ -84,9 +89,9 @@ stateDiagram-v2
 - Never re-encode merely to pause, resume, recover, or concatenate compatible
   segments.
 
-Reference acceptance gates include a 30-minute 4K60 recording without
-sustained dropped frames, less than 50 ms A/V drift over one hour, and recovery
-from forced termination at every session phase.
+Long-duration and 4K60 acceptance gates remain roadmap criteria for source and
+frame-rate controls. Current release gates exercise the implemented 30 fps main
+display path plus independent audio tracks and recovery states.
 
 ## DRY boundaries
 

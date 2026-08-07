@@ -22,6 +22,6 @@ verification_app="$temporary_root/Record.app"
 # workspace. Verify an attribute-free byte-for-byte bundle copy so strict
 # signing checks measure the artifact contents rather than sync metadata.
 ditto --norsrc --noextattr "$app_path" "$verification_app"
-codesign --verify --strict "$verification_app"
+codesign --verify --deep --strict "$verification_app"
 codesign --display --entitlements "$embedded" --xml "$verification_app"
 "$repo_root/scripts/ci/check-entitlements.sh" "$embedded"

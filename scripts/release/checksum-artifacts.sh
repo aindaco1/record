@@ -10,6 +10,10 @@ required_artifacts=(
     BUILD-METADATA.txt
 )
 
+if [[ -f "$artifacts_root/appcast.xml" ]]; then
+    required_artifacts+=(appcast.xml)
+fi
+
 for artifact in "${required_artifacts[@]}"; do
     if [[ ! -f "$artifacts_root/$artifact" ]]; then
         echo "missing release artifact: $artifact" >&2

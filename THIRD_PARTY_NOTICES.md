@@ -8,13 +8,18 @@ Runtime Swift package dependencies and their licenses are recorded by
 `Package.resolved` and their upstream repositories:
 
 - Apple Swift Argument Parser — Apache License 2.0
-- FluidAudio — MIT License
+- FluidAudio — Apache License 2.0
+- Sparkle — permissive licenses reproduced from its upstream `LICENSE`
+
+The assembled app includes the complete dependency licenses in
+`Contents/Resources/Licenses`.
 
 [NewKap](https://github.com/MuntasirMalek/NewKap) and the locally installed Kap
 plugins informed product behavior and architecture research. Record embeds
-NewKap's `build/icon.icns` and `static/menubarDefaultTemplate@2x.png` from
-commit `33571acc90a1982acc125a669769adcbef8aa0de`. NewKap is distributed under
-the following MIT license:
+NewKap's `static/menubarDefaultTemplate@2x.png` from commit
+`33571acc90a1982acc125a669769adcbef8aa0de`. Record's application icon comes
+from its own canonical `AppIcon.svg`. NewKap is distributed under the following
+MIT license:
 
 Copyright (c) Wulkano hello@wulkano.com (https://wulkano.com)
 

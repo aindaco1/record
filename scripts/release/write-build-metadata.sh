@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 artifacts_root="$repo_root/.build/release-artifacts"
-app_path="$artifacts_root/Record.app"
+app_path="${RECORD_APP_PATH:-$artifacts_root/Record.app}"
 metadata_path="$artifacts_root/BUILD-METADATA.txt"
 
 if [[ ! -d "$app_path" ]]; then

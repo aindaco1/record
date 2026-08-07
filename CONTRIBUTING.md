@@ -17,7 +17,9 @@ Record currently targets macOS 15+ on Apple Silicon with Swift 6.
 Dependency changes require an explicit review for network clients, telemetry,
 process launching, file access, and implicit model downloads. Product targets
 must pass `scripts/ci/check-local-only.sh`; do not weaken its patterns or add a
-network entitlement without a user-approved replacement for ADR 0002.
+main-app network entitlement without a user-approved replacement for ADR 0002.
+Sparkle is a reviewed exception whose network access remains isolated in its
+sandboxed downloader service under ADR 0004.
 
 Run the fast source and test gate:
 
@@ -37,6 +39,13 @@ sandboxed app, and mounts both release packages:
 Hardware capture changes must also complete the manual capture matrix in
 `docs/testing.md`. Never put recordings, transcripts, credentials, signing
 material, or model files in fixtures or build artifacts.
+
+Regenerate `Record.icns` from the canonical, reviewable SVG only when the
+artwork changes:
+
+```sh
+./scripts/release/generate-icon.sh
+```
 
 ## Pull requests
 
