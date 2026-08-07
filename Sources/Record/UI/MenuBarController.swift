@@ -28,10 +28,13 @@ final class MenuBarController {
     private let transcriptionEngineItem: NSMenuItem
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
+    private let parakeetModelSetupItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
     private let checkForUpdatesItem: NSMenuItem
     private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
+
+    var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
@@ -40,6 +43,7 @@ final class MenuBarController {
     var onEditRecordingNameTemplate: (() -> Void)?
     var onOpenLastVideoInGifski: (() -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
+    var onSetUpParakeetModel: (() -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
@@ -144,6 +148,13 @@ final class MenuBarController {
         macWhisperEngineItem.representedObject =
             TranscriptionEngineOption.macwhisper.rawValue
         transcriptionMenu.addItem(macWhisperEngineItem)
+        transcriptionMenu.addItem(.separator())
+        parakeetModelSetupItem = NSMenuItem(
+            title: "Set Up Parakeet Model…",
+            action: #selector(setUpParakeetModelClicked),
+            keyEquivalent: ""
+        )
+        transcriptionMenu.addItem(parakeetModelSetupItem)
         transcriptionEngineItem.submenu = transcriptionMenu
         menu.addItem(transcriptionEngineItem)
 
@@ -197,6 +208,7 @@ final class MenuBarController {
             gifskiItem,
             parakeetEngineItem,
             macWhisperEngineItem,
+            parakeetModelSetupItem,
             openFolder,
             exportFolderItem,
             checkForUpdatesItem,
@@ -295,19 +307,18 @@ final class MenuBarController {
 
     func updateTranscriptionEngine(
         _ engine: TranscriptionEngineOption,
-        macWhisperAvailable: Bool
+        macWhisperAvailable: Bool,
+        parakeetModelAvailable: Bool
     ) {
         parakeetEngineItem.state = engine == .parakeet ? .on : .off
         macWhisperEngineItem.state = engine == .macwhisper ? .on : .off
+        macWhisperEngineItem.isHidden = !macWhisperAvailable
         macWhisperEngineItem.isEnabled = macWhisperAvailable
-        macWhisperEngineItem.title =
-            macWhisperAvailable
-            ? "MacWhisper (Small)"
-            : "MacWhisper (helper unavailable)"
-        macWhisperEngineItem.toolTip =
-            macWhisperAvailable
-            ? "Uses the installed local MacWhisper Small model"
-            : "Run scripts/setup/install-macwhisper-cli.sh first"
+        macWhisperEngineItem.title = "MacWhisper (Small)"
+        macWhisperEngineItem.toolTip = "Uses the installed local MacWhisper Small model"
+        parakeetModelSetupItem.isHidden = parakeetModelAvailable
+        parakeetModelSetupItem.toolTip =
+            "Download from FluidInference and import a verified local Parakeet model"
     }
 
     /// Show the default or approved destination for finished exports. An
@@ -331,12 +342,12 @@ final class MenuBarController {
             case .disabled: "Open Record automatically after you sign in"
             case .enabled: "Record will open automatically after you sign in"
             case .requiresApproval: "Click to approve Record in Login Items"
-            case .unavailable: "Move Record to Applications, then reopen it"
+            case .unavailable: "Open at Login is unavailable for this copy of Record"
             }
     }
 
-    // NewKap's MIT-licensed 2x menu-bar ring is embedded to preserve Record's
-    // single-binary LaunchAgent installation. Provenance lives in
+    // NewKap's MIT-licensed 2x menu-bar ring is embedded so the signed app has
+    // no mutable external status-image dependency. Provenance lives in
     // THIRD_PARTY_NOTICES.md.
     private static let menuBarImageBase64 = """
         iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAzNJREFU
@@ -457,6 +468,7 @@ final class MenuBarController {
         else { return }
         onSelectTranscriptionEngine?(engine)
     }
+    @objc private func setUpParakeetModelClicked() { onSetUpParakeetModel?() }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
     @objc private func checkForUpdatesClicked() { onCheckForUpdates?() }

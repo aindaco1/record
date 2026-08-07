@@ -16,7 +16,8 @@ regressions run on every pull request.
 - display-profile 4K/even-dimension bounds, video-session orchestration,
   bounded fresh-stream startup retries, classified failure manifests,
   idempotent stops, atomic whole-session exports, and contained source cleanup
-- model identifier validation and local-only failure behavior
+- model identifier validation, local-only failure behavior, pinned SHA-256
+  verification, symbolic-link rejection, and atomic model replacement
 - command-scoped permission ordering, exact TCC service selection, and
   one-shot recording-intent recovery across a privacy restart
 - session state transitions and atomic manifest round trips
@@ -24,6 +25,7 @@ regressions run on every pull request.
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
 - native login-item state mapping and fail-closed approval handling
+- stable Developer ID bundle/team/designated-requirement checks for TCC grants
 - update menu wiring plus package checks for the Sparkle framework, feed
   configuration, signature requirements, XPC Mach services, and main-app
   network-entitlement denial
@@ -94,7 +96,8 @@ Use synthetic or non-sensitive content for development recordings:
 Choose **Open at Login**, confirm Record appears in System Settings → General →
 Login Items, then disable it again. If macOS reports that approval is required,
 the menu should show a mixed state and open the Login Items pane without
-re-registering repeatedly.
+re-registering repeatedly. A first `.notFound` state must still leave the menu
+item enabled so registration can proceed.
 
 Open **Plugins → Recording Name Template…**, test date/time and bundled-word
 tokens, then use a synthetic clipboard value with `{clipboard}`. Confirm unsafe
@@ -143,6 +146,14 @@ Screen and audio-only sessions use the same independent CAF inputs for local
 transcription; selecting an engine affects whichever finalized session is
 queued next.
 
+For the first-run path, temporarily move the sandbox's Parakeet v3 cache aside,
+launch Record, and confirm the setup prompt appears without blocking recording.
+Download the exact pinned revision from `docs/models/parakeet.md`, import it,
+and confirm pending transcription resumes. Modify one byte in a disposable
+download and confirm Record rejects it without changing an existing installed
+model. The MacWhisper menu choice must be absent when either MacWhisper, its
+bundled `mw`, or Record's user-script bridge is missing.
+
 ## Export folder access
 
 In the signed sandboxed app, choose **Export folder…** from the menu, approve
@@ -161,6 +172,13 @@ Update cryptography and packaging are automated by
 release, install the prior notarized version on a clean test account, choose
 **Check for Updates…**, and verify the new version, release notes, download,
 replacement, and relaunch. Confirm a same-version check reports no update.
+
+Before updating, grant all three Record privacy services and capture a short
+screen and audio-only session. After updating 1.0.0 to 1.0.1, confirm the
+toggles still identify Record as enabled and neither recording mode repeats an
+already-approved prompt. Run
+`./scripts/ci/check-tcc-identity.sh /Applications/Record.app` on both builds;
+the reported bundle/team pair and designated requirement must match.
 
 Do not test against an unsigned ad hoc archive. The production feed must reject
 an archive with a changed byte, a feed with a changed byte after signing, an

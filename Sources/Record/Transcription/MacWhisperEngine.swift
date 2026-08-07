@@ -229,11 +229,16 @@ actor MacWhisperEngine: TranscriptionEngine {
 
 enum MacWhisperExecutable {
     static let installedName = "record-macwhisper"
+    static let bundleIdentifier = "com.goodsnooze.MacWhisper"
 
     static var applicationScript: URL? {
         FileManager.default.urls(for: .applicationScriptsDirectory, in: .userDomainMask)
             .first?
             .appendingPathComponent(installedName)
+    }
+
+    static var bundledApplicationScript: URL? {
+        Bundle.main.resourceURL?.appendingPathComponent(installedName)
     }
 
     static var isSandboxed: Bool {
@@ -244,21 +249,90 @@ enum MacWhisperExecutable {
     }
 
     static func resolve(configuredPath: String?) -> URL? {
+        resolve(
+            configuredPath: configuredPath,
+            sandboxed: isSandboxed,
+            applicationScript: applicationScript,
+            installedCLI: installedApplicationCLI(),
+            helperIsTrusted: applicationScriptMatchesBundle
+        )
+    }
+
+    static func installBundledApplicationScriptIfNeeded(
+        source: URL? = bundledApplicationScript,
+        destination: URL? = applicationScript,
+        fileManager: FileManager = .default
+    ) throws {
+        guard let source, let destination else { return }
+        guard fileManager.isReadableFile(atPath: source.path) else { return }
+        if fileManager.fileExists(atPath: destination.path) {
+            return
+        }
+        try fileManager.createDirectory(
+            at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let staging = destination.deletingLastPathComponent().appendingPathComponent(
+            ".record-macwhisper-\(UUID().uuidString)"
+        )
+        defer { try? fileManager.removeItem(at: staging) }
+        try fileManager.copyItem(at: source, to: staging)
+        try fileManager.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: staging.path
+        )
+        try fileManager.moveItem(at: staging, to: destination)
+    }
+
+    /// MacWhisper is an optional integration, not a generic arbitrary-command
+    /// hook. Require both the signed app's bundled `mw` CLI and Record's
+    /// sandbox-safe user-script helper before advertising it in production.
+    static func resolve(
+        configuredPath: String?,
+        sandboxed: Bool,
+        applicationScript: URL?,
+        installedCLI: URL?,
+        isExecutable: (String) -> Bool = FileManager.default.isExecutableFile(atPath:),
+        helperIsTrusted: (URL) -> Bool = applicationScriptMatchesBundle
+    ) -> URL? {
+        guard let installedCLI, isExecutable(installedCLI.path) else { return nil }
         let configured = configuredPath.map { URL(fileURLWithPath: $0) }
         let candidates: [URL]
-        if isSandboxed {
-            candidates = [applicationScript].compactMap { $0 }
+        if sandboxed {
+            candidates = [applicationScript].compactMap { $0 }.filter(helperIsTrusted)
         } else {
             candidates = [
                 configured,
                 applicationScript,
                 URL(fileURLWithPath: "/opt/homebrew/bin/mw"),
-                URL(fileURLWithPath: "/Applications/MacWhisper.app/Contents/MacOS/mw"),
+                installedCLI,
             ].compactMap { $0 }
         }
-        return
-            candidates
-            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        return candidates.first { isExecutable($0.path) }
+    }
+
+    static func installedApplicationCLI(
+        fileManager: FileManager = .default
+    ) -> URL? {
+        let candidates = [
+            URL(fileURLWithPath: "/Applications/MacWhisper.app", isDirectory: true)
+        ]
+        return candidates.compactMap { applicationURL -> URL? in
+            guard
+                Bundle(url: applicationURL)?.bundleIdentifier == bundleIdentifier
+            else { return nil }
+            let cli = applicationURL.appendingPathComponent("Contents/MacOS/mw")
+            return fileManager.isExecutableFile(atPath: cli.path) ? cli : nil
+        }.first
+    }
+
+    static func applicationScriptMatchesBundle(_ candidate: URL) -> Bool {
+        guard let bundledApplicationScript else { return false }
+        guard FileManager.default.isReadableFile(atPath: candidate.path),
+            FileManager.default.isReadableFile(atPath: bundledApplicationScript.path)
+        else { return false }
+        return (try? Data(contentsOf: candidate, options: .mappedIfSafe))
+            == (try? Data(contentsOf: bundledApplicationScript, options: .mappedIfSafe))
     }
 
     static func isApplicationScript(_ url: URL) -> Bool {

@@ -11,6 +11,24 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
     }
 
+    func testMacWhisperIsAbsentUnlessTheIntegrationIsAvailable() {
+        let menu = MenuBarController()
+
+        menu.updateTranscriptionEngine(
+            .parakeet,
+            macWhisperAvailable: false,
+            parakeetModelAvailable: true
+        )
+        XCTAssertFalse(menu.isMacWhisperMenuItemVisible)
+
+        menu.updateTranscriptionEngine(
+            .parakeet,
+            macWhisperAvailable: true,
+            parakeetModelAvailable: true
+        )
+        XCTAssertTrue(menu.isMacWhisperMenuItemVisible)
+    }
+
     func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {
         let image = try XCTUnwrap(MenuBarController.menuBarImage())
 

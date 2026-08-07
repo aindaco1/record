@@ -23,6 +23,10 @@ notarized, and accompanied by SHA-256 checksums and build provenance.
 
 Record has no Dock icon. Open it from the ring in the menu bar.
 
+To uninstall, turn off **Open at Login**, quit Record, and move Record.app to
+the Trash. Remove Record's container only if you also want to delete its
+preferences, temporary recovery sessions, and installed transcription model.
+
 ## Use
 
 - **Start screen recording** records the main display to a video-only
@@ -46,23 +50,29 @@ recoverable.
 ## Local transcription
 
 Parakeet v3 is the default transcription engine. Record never downloads a
-model at runtime. Development and personal installations can install the
-pinned model into Record's local container with:
+model itself. If the verified model is missing, Record offers a setup prompt
+and **Transcription Model → Set Up Parakeet Model…**. Download the pinned model
+from FluidInference, then let Record verify every file and atomically import it
+into local storage. See the [Parakeet setup guide](docs/models/parakeet.md).
+
+Development checkouts can install the same pinned model directly with:
 
 ```sh
 ./scripts/setup/install-parakeet-model.sh
 ```
 
-If MacWhisper and its `mw` CLI are already installed, first install Record's
-validated user-script bridge:
+If MacWhisper and its bundled `mw` CLI are installed, Record provisions its
+own bundled, content-checked user-script bridge. Development checkouts can
+install the same bridge explicitly with:
 
 ```sh
 ./scripts/setup/install-macwhisper-cli.sh
 ```
 
-Then choose **Transcription Model → MacWhisper (Small)**. Record validates the
-MacWhisper application signature before each invocation and never falls back
-silently from one engine to another.
+Choose **Transcription Model → MacWhisper (Small)**. This option is absent
+unless MacWhisper, its bundled `mw`, and Record's sandbox helper are all
+available. Record validates the MacWhisper application signature before each
+invocation and never falls back silently from one engine to another.
 
 ## Built-in plugins
 
@@ -119,8 +129,10 @@ boundaries.
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 - [Advanced configuration](docs/configuration.md)
+- [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
 - [Quill migration record](docs/migration/quill-triage.md)
+- [Current GitHub issue triage](docs/project/issue-triage-2026-08-07.md)
 - [Support](SUPPORT.md)
 
 ## Provenance and license

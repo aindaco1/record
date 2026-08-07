@@ -24,11 +24,19 @@ final class SystemLaunchAtLoginService: LaunchAtLoginServicing {
     }
 
     var state: LaunchAtLoginState {
-        switch service.status {
+        Self.state(for: service.status)
+    }
+
+    /// `SMAppService.mainApp` can report `.notFound` before the first
+    /// registration even for a correctly installed application. Registration
+    /// is the authoritative eligibility check, so keep the menu actionable and
+    /// let `register()` surface a concrete macOS error if one exists.
+    static func state(for status: SMAppService.Status) -> LaunchAtLoginState {
+        switch status {
         case .notRegistered: .disabled
         case .enabled: .enabled
         case .requiresApproval: .requiresApproval
-        case .notFound: .unavailable
+        case .notFound: .disabled
         @unknown default: .unavailable
         }
     }

@@ -91,6 +91,9 @@ jobs:
           app=.build/release-artifacts/Record.app
           ./scripts/release/sign-app.sh "$app" "$SIGNING_IDENTITY" timestamp
 
+      - name: Verify stable privacy identity
+        run: ./scripts/ci/check-tcc-identity.sh .build/release-artifacts/Record.app
+
       - name: Notarize app
         env:
           APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
