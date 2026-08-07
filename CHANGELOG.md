@@ -10,12 +10,25 @@ All notable changes to Record are documented here. Record follows
 
 - A persistent **Screen source** mode with the main-display fast path, Apple's
   display/application/window picker, and a display-local custom-region overlay.
+- An advisory Xcode 27 / Swift 6.4 CI lane and a signed-app macOS 27 beta/RC
+  compatibility gate without raising Record's macOS 15 deployment target.
+- Crash-safe screen-recording pause/resume with immutable video, system-audio,
+  and microphone segments plus a captured-time menu counter.
+
+### Changed
+
+- Final screen export joins compatible HEVC segments through AVFoundation's
+  passthrough composition and remuxes AAC packets into the canonical CAF files
+  without re-encoding either audio source.
 
 ### Security
 
 - System-picker filters remain memory-only: Record persists only the selection
   mode and never stores application names, window titles, source identifiers,
   or region geometry.
+- Pause/resume journals contain only segment indices, relative times, track
+  kinds, and local filenames; captured content and source metadata never enter
+  the manifest or CI logs.
 
 ## [1.0.3] - 2026-08-07
 

@@ -25,6 +25,9 @@ regressions run on every pull request.
   one-shot recording-intent recovery across a privacy restart, including
   one-time transfer of the successful audio-only permission tap into capture
 - session state transitions and atomic manifest round trips
+- immutable pause/resume segment naming, manifest events, idempotent rotation,
+  stop/rotation serialization, passthrough codec preservation, CAF packet
+  remuxing, and paused-time exclusion
 - interrupted-session recovery, playable-partial promotion, byte-preserving
   corrupt quarantine, content-free recovery summaries, live-process protection,
   at-most-once completion-hook claims, and path traversal rejection
@@ -43,15 +46,17 @@ regressions run on every pull request.
 - debug tests plus an arm64 release build and architecture check
 - the complete suite under ThreadSanitizer and AddressSanitizer
 - Swift formatting for new modular code
+- an advisory Xcode 27 / Swift 6.4 compatibility build while GitHub's runner
+  remains in public preview; stable Xcode remains authoritative for releases
 
-Future pure tests will cover edit-operation serialization, segment recovery,
-click-event mapping, and out-of-process plugin capability denial.
+Future pure tests will cover edit-operation serialization, click-event mapping,
+and out-of-process plugin capability denial.
 
 ## Manual smoke test available now
 
 The current integrated build supports main-display, application, window, and
-region video; audio-only recording; and the capture-privacy, recording-name,
-and Gifski handoff plugins. Camera overlays, pause/resume, editing, and an
+region video; screen pause/resume; audio-only recording; and the capture-privacy,
+recording-name, and Gifski handoff plugins. Camera overlays, editing, and an
 external plugin host are not yet integrated, so those rows in the hardware
 matrix remain future acceptance criteria.
 
@@ -77,35 +82,39 @@ Use synthetic or non-sensitive content for development recordings:
    local audio clip for at least 15 seconds. Confirm the ring pulses white (or
    remains steady white when Reduce Motion is enabled), the menu shows an
    increasing elapsed time, and the command becomes **Stop recording**.
-4. Stop recording and wait for **saving recording…** to return to idle. Confirm
+4. Choose **Pause screen recording**, wait several seconds, then resume. Repeat
+   twice. The white pulse must stop while paused, the captured-time counter must
+   not advance, and the menu must disable conflicting actions during each
+   rotation. Stop once while paused in a second disposable recording.
+5. Stop recording and wait for **saving recording…** to return to idle. Confirm
    a template-named session directory appears on Desktop containing
    `session.json`, video-only `recording.mov`, and independently playable
    `mic.caf` and `system.caf`. Open the MOV in QuickTime and confirm the main
    display has the expected aspect ratio; the mic file should contain your
    voice and the system file the played clip. Confirm the finalized private
    working directory no longer appears in **Open temp session**.
-5. Revoke **System Audio Recording Only**, then choose **Start audio-only
+6. Revoke **System Audio Recording Only**, then choose **Start audio-only
    recording**. Record should request microphone access when needed, followed
    by System Audio Recording Only. It must not request screen capture. After a
    changed toggle, confirm Record replaces its process and begins the requested
    audio-only recording without creating a failed session first.
-6. Inspect the audio-only session with
+7. Inspect the audio-only session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
    finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
    readable durations, and nonnegative synchronization offsets.
-7. Listen to `mic.caf` and `system.caf`. The microphone track should contain
+8. Listen to `mic.caf` and `system.caf`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
    Repeat once without headphones while the test clip plays through speakers.
    The raw mic may contain residual bleed, but the readable transcript should
    not duplicate aligned system dialogue; if suppression occurs,
    `transcript.raw.json` must retain the unsuppressed segments.
-8. Confirm the complete audio-only session appears in the approved Desktop
+9. Confirm the complete audio-only session appears in the approved Desktop
    folder, its private working directory is removed, and **Audio recording
    ready** opens the exported folder in Finder. When transcription completes,
    confirm **Transcript ready** opens that same folder. Quit and reopen Record,
    then choose **Open last recording** and confirm Finder reveals that session.
-9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
+10. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
 Repeat the screen flow with each **Screen source** mode. For the system picker,
@@ -146,6 +155,9 @@ Also exercise these negative paths before a release candidate:
   retries must remain bounded and stopping must not leave an input tap alive;
 - interrupt a recording with sleep/wake, then with Quit Record, and inspect the
   resulting session each time;
+- force termination once while paused, once while resuming, and once while a
+  segment is finalizing; relaunch must retain every completed immutable segment
+  and a second recovery scan must be a no-op;
 - in a disposable temp session, force termination while each independent media
   writer has a hidden `.partial` file. Relaunch: playable containers should be
   promoted, invalid containers should appear intact under
@@ -155,6 +167,12 @@ Also exercise these negative paths before a release candidate:
 Never paste a recording, transcript, model, or private path into a public issue.
 Report the app commit, macOS version, Mac model, permission state, duration,
 track formats from the inspector, and a description using synthetic content.
+
+For macOS 27 beta/RC acceptance, also follow
+`docs/testing/macos-27-readiness.md`. CI on the `xcode-27` preview image checks
+the new SDK and compiler, but it runs on a macOS 26 host and cannot replace TCC,
+ScreenCaptureKit, audio-route, login-item, notification, update, or inactive-app
+Parakeet tests on a real macOS 27 installation.
 
 ## Transcription engine checks
 

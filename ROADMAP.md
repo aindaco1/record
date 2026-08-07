@@ -18,6 +18,8 @@ Priorities may change as real recordings expose better opportunities.
 - Display, window, application, and region source selection.
 - Pause and resume with lossless segment concatenation.
 - Representative USB, Bluetooth, and call-length microphone-route acceptance.
+- macOS 27 / Xcode 27 compatibility validation without raising the macOS 15
+  deployment target or moving signed releases onto a beta toolchain.
 
 ## Next
 

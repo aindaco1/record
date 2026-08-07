@@ -57,6 +57,26 @@ jobs:
           RECORD_BUILD_NUMBER: ${{ github.run_number }}
         run: ./scripts/ci/package-gate.sh
 
+  xcode-27-compatibility:
+    name: Xcode 27 compatibility (preview)
+    runs-on: xcode-27
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      # Public-preview runner: compile/test signal only. Stable Xcode remains
+      # authoritative for release packaging until Xcode 27 reaches GA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Report preview toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Validate Swift 6.4 and the macOS 27 SDK
+        run: ./scripts/ci/validate.sh
+
   sanitizers:
     name: Swift sanitizer tests
     runs-on: macos-15
