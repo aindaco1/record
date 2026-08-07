@@ -6,6 +6,23 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-08-07
+
+### Added
+
+- **Open last recording** reveals the newest finalized or interrupted session
+  from approved storage without maintaining a separate history database.
+- Interrupted-session recovery posts one content-free summary notification with
+  direct access to temporary recovery storage.
+- Failed local transcriptions expose an explicit one-click retry action without
+  requiring Record to restart or modifying the recording.
+
+### Changed
+
+- Consolidated speculative feature epics into the ROADMAP so the active issue
+  backlog represents concrete reliability and distribution work.
+- Removed the final stale LaunchAgent reference from the SwiftPM manifest.
+
 ## [1.0.1] - 2026-08-07
 
 ### Added
@@ -55,6 +72,7 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/aindaco1/record/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/aindaco1/record/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/aindaco1/record/releases/tag/v1.0.0

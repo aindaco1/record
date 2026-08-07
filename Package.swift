@@ -38,9 +38,8 @@ let package = Package(
             // The app assembler installs these directly into Record.app.
             exclude: ["Info.plist", "Resources"],
             linkerSettings: [
-                // Embed Info.plist into the binary so TCC can attribute the
-                // system-audio-capture permission to Record itself when it
-                // runs as a LaunchAgent (no .app bundle to carry a plist).
+                // Keep direct CLI diagnostics attributable to Record even
+                // when the executable is invoked outside the app bundle.
                 .unsafeFlags([
                     "-Xlinker", "-sectcreate",
                     "-Xlinker", "__TEXT",

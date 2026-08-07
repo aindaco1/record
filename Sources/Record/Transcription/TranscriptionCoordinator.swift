@@ -1,6 +1,23 @@
 import Foundation
 import RecordCore
 
+struct TranscriptionRetryState: Equatable, Sendable {
+    private(set) var failedDirectory: URL?
+
+    mutating func recordFailure(in directory: URL) {
+        failedDirectory = directory.standardizedFileURL
+    }
+
+    mutating func clear() {
+        failedDirectory = nil
+    }
+
+    mutating func takeFailure() -> URL? {
+        defer { failedDirectory = nil }
+        return failedDirectory
+    }
+}
+
 /// Post-recording pipeline: a serial queue of session folders to transcribe.
 /// mic.caf → "me", system.caf → "them"; each track's segments are shifted by
 /// its start offset, merged by timestamp, and written as transcript.json
@@ -19,7 +36,7 @@ actor TranscriptionCoordinator {
     private var draining = false
     private var engine: TranscriptionEngine?
     private var engineSelection: TranscriptionSelection?
-    private var lastFailure: String?
+    private var retryState = TranscriptionRetryState()
     private var statusHandler: (@Sendable (Status) -> Void)?
     private let notificationHandler: @Sendable (RecordNotification) -> Void
 
@@ -40,8 +57,19 @@ actor TranscriptionCoordinator {
             runHook(for: sessionDir)
             return
         }
-        queue.append(sessionDir)
+        appendIfNeeded(sessionDir)
         drainIfIdle()
+    }
+
+    /// Retry the most recent failed job without requiring an app restart or
+    /// touching the recording. Returns false when there is nothing to retry.
+    @discardableResult
+    func retryLastFailure() -> Bool {
+        guard Config.transcriptionEnabled(), let failedDirectory = retryState.takeFailure()
+        else { return false }
+        appendIfNeeded(failedDirectory)
+        drainIfIdle()
+        return true
     }
 
     /// Scan the recordings root for finalized sessions that were never
@@ -49,6 +77,9 @@ actor TranscriptionCoordinator {
     func resumePending(root: URL, recoverInterrupted: Bool = true) {
         if recoverInterrupted {
             let recovery = SessionRecovery.recover(in: root)
+            if let notification = Self.recoveryNotification(for: recovery, root: root) {
+                notificationHandler(notification)
+            }
             if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty {
                 let interruptedCount = recovery.interrupted.count
                 let failedCount = recovery.failed.count
@@ -66,8 +97,8 @@ actor TranscriptionCoordinator {
         }
         guard Config.transcriptionEnabled() else { return }
         let pending = Self.pendingSessionDirectories(root: root)
-        for dir in pending where !queue.contains(dir) {
-            queue.append(dir)
+        for dir in pending {
+            appendIfNeeded(dir)
         }
         if !pending.isEmpty {
             FileHandle.standardError.write(
@@ -102,13 +133,52 @@ actor TranscriptionCoordinator {
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
+    static func recoveryNotification(
+        for report: SessionRecovery.Report,
+        root: URL
+    ) -> RecordNotification? {
+        let interrupted = report.interrupted.count
+        let failed = report.failed.count
+        let errors = report.errors.count
+        guard interrupted + failed + errors > 0 else { return nil }
+
+        var details: [String] = []
+        if interrupted > 0 {
+            details.append(
+                "preserved \(interrupted) interrupted recording\(interrupted == 1 ? "" : "s")"
+            )
+        }
+        if failed > 0 {
+            details.append(
+                "marked \(failed) empty session\(failed == 1 ? "" : "s") as failed"
+            )
+        }
+        if errors > 0 {
+            details.append(
+                "found \(errors) session\(errors == 1 ? "" : "s") needing manual review"
+            )
+        }
+
+        return RecordNotification(
+            title: "Recording recovery finished",
+            body: "Record \(details.joined(separator: ", ")). Click to open temp sessions.",
+            destinationDirectory: root
+        )
+    }
+
     // MARK: -
 
     private func drainIfIdle() {
         guard !draining, !queue.isEmpty else { return }
         draining = true
-        lastFailure = nil
+        retryState.clear()
         Task { await drain() }
+    }
+
+    private func appendIfNeeded(_ directory: URL) {
+        let directory = directory.standardizedFileURL
+        guard !queue.contains(directory) else { return }
+        queue.append(directory)
     }
 
     private func drain() async {
@@ -127,7 +197,7 @@ actor TranscriptionCoordinator {
                 runHook(for: dir)
             } catch {
                 log(dir, "transcription failed: \(error)")
-                lastFailure = dir.lastPathComponent
+                retryState.recordFailure(in: dir)
                 notificationHandler(
                     RecordNotification(
                         title: "Transcription couldn’t finish",
@@ -141,7 +211,10 @@ actor TranscriptionCoordinator {
         await engine?.release()
         engine = nil
         engineSelection = nil
-        publish(lastFailure.map { .failed(session: $0) } ?? .idle)
+        publish(
+            retryState.failedDirectory.map { .failed(session: $0.lastPathComponent) }
+                ?? .idle
+        )
         draining = false
         // An enqueue that landed between the loop exiting and the release
         // finishing would otherwise sit until the next enqueue.
