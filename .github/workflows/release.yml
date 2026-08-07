@@ -138,9 +138,9 @@ jobs:
           ./scripts/release/checksum-artifacts.sh
           (cd .build/release-artifacts && shasum -a 256 -c SHA256SUMS)
 
-      # actions/attest-build-provenance v2, pinned to a reviewed commit.
+      # actions/attest-build-provenance v4.2.2, pinned to a verified commit.
       - name: Attest artifacts
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: |
             .build/release-artifacts/Record.zip

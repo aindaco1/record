@@ -25,9 +25,9 @@ jobs:
         with:
           persist-credentials: false
 
-      # github/codeql-action v3, pinned to a reviewed commit.
+      # github/codeql-action v4.37.6, pinned to a verified commit.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b
+        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3
         with:
           languages: swift
           build-mode: manual
@@ -36,6 +36,6 @@ jobs:
         run: swift build -c release --arch arm64
 
       - name: Analyze
-        uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b
+        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3
         with:
           category: /language:swift
