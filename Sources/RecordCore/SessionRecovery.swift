@@ -99,7 +99,10 @@ public enum SessionRecovery {
                     )
                 }
 
-                let hasPreservedMedia = manifest.tracks.contains { track in
+                let recoverableTracks =
+                    manifest.tracks
+                    + (manifest.captureSegments ?? []).flatMap(\.tracks)
+                let hasPreservedMedia = recoverableTracks.contains { track in
                     let mediaURL = directory.appendingPathComponent(track.filename)
                     guard let attributes = try? fileManager.attributesOfItem(atPath: mediaURL.path),
                         let size = attributes[.size] as? NSNumber,

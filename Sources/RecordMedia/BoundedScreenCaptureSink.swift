@@ -64,6 +64,26 @@ public struct MediaIngressSnapshot: Equatable, Sendable {
     public subscript(kind: ScreenCaptureSampleKind) -> MediaTrackIngressSnapshot {
         tracks[kind] ?? MediaTrackIngressSnapshot()
     }
+
+    public func merging(_ other: Self) -> Self {
+        Self(
+            tracks: Dictionary(
+                uniqueKeysWithValues: ScreenCaptureSampleKind.allCases.map { kind in
+                    var merged = self[kind]
+                    let next = other[kind]
+                    merged.received += next.received
+                    merged.processed += next.processed
+                    merged.droppedForBackpressure += next.droppedForBackpressure
+                    merged.droppedByProcessor += next.droppedByProcessor
+                    merged.discardedAfterFailure += next.discardedAfterFailure
+                    merged.rejectedAfterFinish += next.rejectedAfterFinish
+                    merged.pending += next.pending
+                    merged.highWatermark = max(merged.highWatermark, next.highWatermark)
+                    return (kind, merged)
+                }
+            )
+        )
+    }
 }
 
 public enum MediaIngressError: Error, Equatable, Sendable {

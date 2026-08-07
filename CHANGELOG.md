@@ -6,6 +6,35 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-07
+
+### Added
+
+- A persistent **Screen source** mode with the main-display fast path, Apple's
+  display/application/window picker, and a display-local custom-region overlay.
+- An advisory Xcode 27 / Swift 6.4 CI lane and a signed-app macOS 27 beta/RC
+  compatibility gate without raising Record's macOS 15 deployment target.
+- Crash-safe screen-recording pause/resume with immutable video, system-audio,
+  and microphone segments plus a captured-time menu counter.
+
+### Changed
+
+- Final screen export joins compatible HEVC segments through AVFoundation's
+  passthrough composition and remuxes AAC packets into the canonical CAF files
+  without re-encoding either audio source.
+- The macOS release gate now health-checks rootless Podman through a user-level
+  launchd watchdog, preventing automation process cleanup from terminating the
+  VM or its `gvproxy` bridge.
+
+### Security
+
+- System-picker filters remain memory-only: Record persists only the selection
+  mode and never stores application names, window titles, source identifiers,
+  or region geometry.
+- Pause/resume journals contain only segment indices, relative times, track
+  kinds, and local filenames; captured content and source metadata never enter
+  the manifest or CI logs.
+
 ## [1.0.3] - 2026-08-07
 
 ### Added
@@ -116,7 +145,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/aindaco1/record/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/aindaco1/record/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/aindaco1/record/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/aindaco1/record/compare/v1.0.0...v1.0.1

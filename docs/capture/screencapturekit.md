@@ -6,8 +6,10 @@ session manifests, media writing, editing, or UI state.
 
 ```mermaid
 flowchart LR
+    Picker["System content picker"] --> Selection["Memory-only opaque filter"]
     Config["CaptureConfiguration"] --> Plan["ScreenCaptureStreamPlan"]
     Catalog["SCShareableContent"] --> Resolve["Explicit source resolution"]
+    Selection --> Stream
     Plan --> Stream["SCStream"]
     Resolve --> Stream
     Stream --> Router["Serial screen / system / mic callbacks"]
@@ -38,6 +40,16 @@ flowchart LR
   waits for start to finish, stops exactly once, and releases all outputs.
 - The macOS native stop-sharing control emits a typed stop request so the
   command layer finalizes normally; it is not misclassified as source failure.
+- Record uses Apple's shared content picker for display, application, and
+  independent-window choice. Only the picker mode is persisted; its opaque
+  filter, source identifiers, application names, and window titles remain in
+  memory for the pending or active recording.
+- Custom-region capture first selects a display through the system picker,
+  then uses a noncapturing overlay to produce display-local geometry. The
+  overlay never takes or stores a screenshot.
+- Picker-selected displays are resolved again immediately before capture so
+  the existing notification, menu-bar, desktop-item, and own-app exclusion
+  policy remains the one canonical display-filter implementation.
 
 The adapter uses Apple's recommended native content and stream APIs:
 [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit),
@@ -58,13 +70,12 @@ failure event rather than repeated logs containing private source details.
 
 ## Current limits
 
-- The menu's first vertical slice captures the main display at 30 fps with the
-  cursor, system audio, and microphone. It uses the bounded sample handoff,
-  common A/V anchor, hardware-required writer, and atomic session manifest.
-- Window/application/region selection and 60 fps controls are follow-up UI;
-  the adapter and typed configuration already support them.
-- Camera capture/compositing and the system content-sharing picker are separate
-  follow-up slices.
+- The menu captures the main display directly or uses the system picker for a
+  display, one application, one independent window, or a custom display-local
+  region. Every mode uses the bounded sample handoff, common A/V anchor,
+  hardware-required writer, and atomic session manifest.
+- Sixty-fps and first-class microphone controls remain follow-up UI.
+- Camera capture/compositing remains a separate follow-up slice.
 - Hardware/TCC validation is intentionally not part of ordinary CI. It must
   use synthetic, non-sensitive content on the dedicated matrix in
   `docs/testing.md`.

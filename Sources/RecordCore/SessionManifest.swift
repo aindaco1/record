@@ -45,6 +45,63 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         }
     }
 
+    /// One immutable capture interval. Segment files remain private working
+    /// media until the canonical export has been assembled and validated.
+    public struct CaptureSegment: Codable, Equatable, Sendable {
+        public var index: Int
+        public var startedAtMilliseconds: Int
+        public var endedAtMilliseconds: Int?
+        public var tracks: [Track]
+
+        public init(
+            index: Int,
+            startedAtMilliseconds: Int,
+            endedAtMilliseconds: Int? = nil,
+            tracks: [Track]
+        ) {
+            self.index = index
+            self.startedAtMilliseconds = startedAtMilliseconds
+            self.endedAtMilliseconds = endedAtMilliseconds
+            self.tracks = tracks
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case index
+            case startedAtMilliseconds = "started_at_ms"
+            case endedAtMilliseconds = "ended_at_ms"
+            case tracks
+        }
+    }
+
+    public struct CaptureEvent: Codable, Equatable, Sendable {
+        public enum Kind: String, Codable, Sendable {
+            case started
+            case paused
+            case resumed
+            case stopped
+        }
+
+        public var kind: Kind
+        public var occurredAtMilliseconds: Int
+        public var segmentIndex: Int?
+
+        public init(
+            kind: Kind,
+            occurredAtMilliseconds: Int,
+            segmentIndex: Int? = nil
+        ) {
+            self.kind = kind
+            self.occurredAtMilliseconds = occurredAtMilliseconds
+            self.segmentIndex = segmentIndex
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case kind
+            case occurredAtMilliseconds = "occurred_at_ms"
+            case segmentIndex = "segment_index"
+        }
+    }
+
     public var schemaVersion: Int
     public var id: UUID
     public var state: State
@@ -54,6 +111,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     public var tracks: [Track]
     public var failure: CaptureFailure?
     public var healthEvents: [CaptureHealthEvent]?
+    public var captureSegments: [CaptureSegment]?
+    public var captureEvents: [CaptureEvent]?
 
     public init(
         schemaVersion: Int = SessionManifest.currentSchemaVersion,
@@ -64,7 +123,9 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         endedAt: Date? = nil,
         tracks: [Track],
         failure: CaptureFailure? = nil,
-        healthEvents: [CaptureHealthEvent]? = nil
+        healthEvents: [CaptureHealthEvent]? = nil,
+        captureSegments: [CaptureSegment]? = nil,
+        captureEvents: [CaptureEvent]? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -75,6 +136,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         self.tracks = tracks
         self.failure = failure
         self.healthEvents = healthEvents
+        self.captureSegments = captureSegments
+        self.captureEvents = captureEvents
     }
 
     enum CodingKeys: String, CodingKey {
@@ -87,6 +150,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case tracks
         case failure
         case healthEvents = "capture_health"
+        case captureSegments = "capture_segments"
+        case captureEvents = "capture_events"
     }
 
     public func finalized(at end: Date, tracks finalizedTracks: [Track]) throws -> Self {
@@ -141,6 +206,9 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case unsupportedSchema(Int)
         case unsafeTrackFilename(String)
         case duplicateTrackFilename(String)
+        case invalidCaptureSegment(Int)
+        case duplicateCaptureSegment(Int)
+        case invalidCaptureEvent
     }
 
     private func transitioned(to nextState: State, at end: Date, tracks: [Track]) throws -> Self {
@@ -157,12 +225,44 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     private func validate() throws {
         var filenames: Set<String> = []
         for track in tracks {
-            guard SessionPathPolicy.isSafeRelativeFilename(track.filename) else {
-                throw ManifestError.unsafeTrackFilename(track.filename)
+            try Self.validate(track: track, filenames: &filenames)
+        }
+
+        var segmentIndices: Set<Int> = []
+        for segment in captureSegments ?? [] {
+            guard segment.index > 0,
+                segment.startedAtMilliseconds >= 0,
+                segment.endedAtMilliseconds.map({ $0 >= segment.startedAtMilliseconds }) ?? true,
+                !segment.tracks.isEmpty
+            else {
+                throw ManifestError.invalidCaptureSegment(segment.index)
             }
-            guard filenames.insert(track.filename).inserted else {
-                throw ManifestError.duplicateTrackFilename(track.filename)
+            guard segmentIndices.insert(segment.index).inserted else {
+                throw ManifestError.duplicateCaptureSegment(segment.index)
             }
+            for track in segment.tracks {
+                try Self.validate(track: track, filenames: &filenames)
+            }
+        }
+        for event in captureEvents ?? [] {
+            guard event.occurredAtMilliseconds >= 0,
+                captureSegments == nil
+                    || (event.segmentIndex.map({ segmentIndices.contains($0) }) ?? true)
+            else {
+                throw ManifestError.invalidCaptureEvent
+            }
+        }
+    }
+
+    private static func validate(
+        track: Track,
+        filenames: inout Set<String>
+    ) throws {
+        guard SessionPathPolicy.isSafeRelativeFilename(track.filename) else {
+            throw ManifestError.unsafeTrackFilename(track.filename)
+        }
+        guard filenames.insert(track.filename).inserted else {
+            throw ManifestError.duplicateTrackFilename(track.filename)
         }
     }
 }

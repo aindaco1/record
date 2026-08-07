@@ -36,6 +36,20 @@ sandboxed app, and mounts both release packages:
 ./scripts/ci/local-gate.sh
 ```
 
+On macOS, install the user-level Podman watchdog once before running the local
+gate:
+
+```sh
+./scripts/setup/install-podman-watchdog.sh
+```
+
+The watchdog starts the existing Podman machine at login and checks it every
+five minutes. It deliberately runs through launchd with an abandoned process
+group so the VM and `gvproxy` survive the one-shot start command. The local
+gate uses the official `/opt/podman` client when present and asks the watchdog
+to recover an unreachable machine; it never resets machines or prunes images,
+containers, or volumes.
+
 Hardware capture changes must also complete the manual capture matrix in
 `docs/testing.md`. Never put recordings, transcripts, credentials, signing
 material, or model files in fixtures or build artifacts.

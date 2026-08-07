@@ -72,6 +72,22 @@ final class ScreenCaptureStreamPlanTests: XCTestCase {
         )
     }
 
+    func testSystemRegionUsesTheSameDisplayLocalSourceRectanglePolicy() throws {
+        let rect = CaptureRect(x: 20, y: 40, width: 640, height: 480)
+        let plan = try ScreenCaptureStreamPlan(
+            configuration: CaptureConfiguration(
+                source: .systemRegion(rect: rect),
+                outputSize: .init(width: 1_280, height: 960)
+            )
+        )
+
+        XCTAssertEqual(plan.sourceRect, rect)
+        XCTAssertEqual(
+            plan.makeStreamConfiguration().sourceRect,
+            CGRect(x: 20, y: 40, width: 640, height: 480)
+        )
+    }
+
     func testRejectsQueueDepthOutsideScreenCaptureKitBounds() {
         let configuration = CaptureConfiguration(
             source: .display(id: 1),

@@ -51,4 +51,15 @@ final class ScreenCaptureSourceInventoryTests: XCTestCase {
             )
         }
     }
+
+    func testSystemSelectionsRequireTheirOpaquePickerFilter() {
+        XCTAssertThrowsError(
+            try inventory.resolve(.systemSelection(style: .window))
+        ) { error in
+            XCTAssertEqual(
+                error as? ScreenCaptureAdapterError,
+                .systemSelectionRequired
+            )
+        }
+    }
 }

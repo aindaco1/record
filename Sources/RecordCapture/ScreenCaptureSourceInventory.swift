@@ -60,6 +60,8 @@ public struct ScreenCaptureSourceInventory: Equatable, Sendable {
                     rect: rect
                 )
             }
+        case .systemSelection, .systemRegion:
+            throw ScreenCaptureAdapterError.systemSelectionRequired
         }
         return source
     }
@@ -73,6 +75,9 @@ public enum ScreenCaptureAdapterError: Error, Equatable {
     case invalidQueueDepth(Int)
     case sourceUnavailable(CaptureSource)
     case regionOutsideDisplay(displayID: UInt32, rect: CaptureRect)
+    case systemSelectionRequired
+    case invalidSystemSelection
+    case systemSelectionMismatch
     case captureFailed(CaptureFailure)
     case invalidState(ScreenCaptureSession.State)
 }

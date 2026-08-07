@@ -1,0 +1,7 @@
+# GitHub introduced this hosted public-preview label after actionlint's
+# built-in runner catalog was published. Keep the exception scoped to the one
+# compatibility workflow and remove it once actionlint recognizes the label.
+paths:
+  .github/workflows/ci.yml:
+    ignore:
+      - 'label "xcode-27" is unknown'

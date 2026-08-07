@@ -10,6 +10,18 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
         XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
+        XCTAssertEqual(MenuBarController.screenSourceMenuTitle, "Screen source")
+    }
+
+    func testScreenSourceMenuHasExactlyOnePersistentModeSelected() {
+        let menu = MenuBarController()
+
+        menu.updateScreenCaptureSource(.mainDisplay)
+        XCTAssertEqual(menu.selectedScreenSource, .mainDisplay)
+        menu.updateScreenCaptureSource(.systemPicker)
+        XCTAssertEqual(menu.selectedScreenSource, .systemPicker)
+        menu.updateScreenCaptureSource(.region)
+        XCTAssertEqual(menu.selectedScreenSource, .region)
     }
 
     func testRetryTranscriptionAppearsOnlyForAnActionableFailure() {
@@ -93,5 +105,28 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(animation.duration, 0.65)
         XCTAssertTrue(animation.autoreverses)
         XCTAssertEqual(animation.repeatCount, .infinity)
+    }
+
+    func testPauseControlIsScopedToScreenRecordingAndRepresentsTransitions() {
+        let menu = MenuBarController()
+
+        menu.update(recording: true, elapsed: "0:03", mode: .audioOnly)
+        XCTAssertFalse(menu.isPauseResumeVisible)
+
+        menu.update(recording: true, elapsed: "0:03", mode: .screen)
+        XCTAssertTrue(menu.isPauseResumeVisible)
+        XCTAssertTrue(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Pause screen recording")
+
+        menu.updateRotatingScreenRecording(resuming: false)
+        XCTAssertFalse(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Pausing screen recording…")
+
+        menu.updatePausedScreenRecording(elapsed: "0:03")
+        XCTAssertTrue(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Resume screen recording")
+
+        menu.update(recording: false, elapsed: nil)
+        XCTAssertFalse(menu.isPauseResumeVisible)
     }
 }

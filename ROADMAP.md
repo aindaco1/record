@@ -13,14 +13,18 @@ Priorities may change as real recordings expose better opportunities.
 - Reversible high-confidence transcript echo suppression while separate raw
   microphone and system tracks remain unchanged.
 
-## Next
+## 1.1.0
 
 - Display, window, application, and region source selection.
 - Pause and resume with lossless segment concatenation.
+- Representative USB, Bluetooth, and call-length microphone-route acceptance.
+- macOS 27 / Xcode 27 compatibility validation without raising the macOS 15
+  deployment target or moving signed releases onto a beta toolchain.
+
+## Next
+
 - First-class microphone and frame-rate selection.
 - A settings window for output, transcription, and plugin preferences.
-- Lightweight recording history and configurable shortcuts.
-- Optional Homebrew Cask after clean install/uninstall verification.
 - Direct source selection and pause/resume acceptance tests on real hardware.
 
 ## Parked ideas
@@ -35,6 +39,8 @@ umbrella issues until a real use case justifies the complexity.
 - Optional cursor-click visualization and per-source audio controls.
 - Optional first-party Whisper/translation if MacWhisper stops meeting the need.
 - An opt-in local browser speaker-metadata bridge.
+- A lightweight manifest-derived recording history and configurable global
+  shortcuts with conflict reporting and an explicit off state.
 - Localization and VoiceOver-focused accessibility review.
 
 ## Non-goals

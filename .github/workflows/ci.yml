@@ -57,6 +57,37 @@ jobs:
           RECORD_BUILD_NUMBER: ${{ github.run_number }}
         run: ./scripts/ci/package-gate.sh
 
+  xcode-27-compatibility:
+    name: Xcode 27 compatibility (preview)
+    runs-on: xcode-27
+    continue-on-error: true
+    timeout-minutes: 30
+    steps:
+      # Public-preview runner: compile/test signal only. Stable Xcode remains
+      # authoritative for release packaging until Xcode 27 reaches GA.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Report preview toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      # Swift Build is Xcode 27's new default SwiftPM engine. Compile the app
+      # with it even while its binary-framework test staging bug remains open.
+      - name: Compile with the Swift Build engine
+        run: swift build --build-system swiftbuild
+
+      - name: Validate Swift 6.4 and the macOS 27 SDK
+        env:
+          # Xcode 27 beta 4's Swift Build engine does not stage Sparkle beside
+          # executable-target test bundles. The native engine runs the complete
+          # suite; the preceding step still guards Swift Build compilation.
+          # https://github.com/swiftlang/swift-package-manager/issues/10384
+          RECORD_SWIFT_BUILD_SYSTEM: native
+        run: ./scripts/ci/validate.sh
+
   sanitizers:
     name: Swift sanitizer tests
     runs-on: macos-15

@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 "$repo_root/scripts/ci/test-actions-pinning.sh"
 "$repo_root/scripts/ci/verify-actions-pinning.sh"
+podman_cli="$("$repo_root"/scripts/ci/ensure-podman.sh)"
 
 case "$(uname -m)" in
     arm64 | aarch64)
@@ -22,13 +23,13 @@ esac
 actionlint_image="docker.io/rhysd/actionlint@sha256:$actionlint_digest"
 shellcheck_image="docker.io/koalaman/shellcheck-alpine@sha256:$shellcheck_digest"
 
-podman run --rm --pull=missing \
+"$podman_cli" run --rm --pull=missing \
     --volume "$repo_root:/workspace:ro" --workdir /workspace \
     "$actionlint_image" -color
 
-podman run --rm --pull=missing \
+"$podman_cli" run --rm --pull=missing \
     --entrypoint /bin/shellcheck \
     --volume "$repo_root:/workspace:ro" --workdir /workspace \
     "$shellcheck_image" \
     script/*.sh scripts/ci/*.sh scripts/lib/*.sh scripts/qa/*.sh \
-    scripts/release/*.sh
+    scripts/release/*.sh scripts/setup/*.sh

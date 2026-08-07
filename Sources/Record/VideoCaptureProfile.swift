@@ -29,7 +29,14 @@ enum VideoCaptureProfile {
         guard displayID > 0, pixelWidth > 0, pixelHeight > 0 else {
             throw ProfileError.displayUnavailable
         }
-        let size = boundedEvenSize(width: pixelWidth, height: pixelHeight)
+        guard
+            let size = CaptureOutputSize.boundedForCapture(
+                pixelWidth: pixelWidth,
+                pixelHeight: pixelHeight
+            )
+        else {
+            throw ProfileError.displayUnavailable
+        }
         let configuration = CaptureConfiguration(
             source: .display(id: displayID),
             outputSize: size,
@@ -45,15 +52,9 @@ enum VideoCaptureProfile {
     /// Preserve the display aspect ratio while fitting the hardware writer's
     /// 4K bound. Even dimensions avoid chroma-subsampling padding and copies.
     static func boundedEvenSize(width: Int, height: Int) -> CaptureOutputSize {
-        let scale = min(
-            1,
-            min(4_096 / Double(width), 2_160 / Double(height))
-        )
-        let scaledWidth = max(16, Int((Double(width) * scale).rounded(.down)))
-        let scaledHeight = max(16, Int((Double(height) * scale).rounded(.down)))
-        return CaptureOutputSize(
-            width: scaledWidth - scaledWidth % 2,
-            height: scaledHeight - scaledHeight % 2
-        )
+        CaptureOutputSize.boundedForCapture(
+            pixelWidth: width,
+            pixelHeight: height
+        ) ?? .init(width: 16, height: 16)
     }
 }
