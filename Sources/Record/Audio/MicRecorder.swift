@@ -159,7 +159,9 @@ final class MicRecorder: @unchecked Sendable {
                 [weak self, writer, livenessProbe] buffer, _ in
                 writer.enqueueCopy(of: buffer)
                 if livenessProbe?.consume(buffer) == true {
-                    DispatchQueue.main.async { self?.fallBackToRawAfterDigitalSilence() }
+                    Task { @MainActor [weak self] in
+                        self?.fallBackToRawAfterDigitalSilence()
+                    }
                 }
             }
         } else {
