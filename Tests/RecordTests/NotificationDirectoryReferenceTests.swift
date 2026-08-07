@@ -4,8 +4,10 @@ import XCTest
 
 final class NotificationDirectoryReferenceTests: XCTestCase {
     func testRoundTripsRootAndDirectSessionWithoutPersistingAbsolutePaths() throws {
-        let root = URL(fileURLWithPath: "/tmp/Recordings", isDirectory: true)
+        let temporaryRoot = try makeTemporaryDirectory()
+        let root = temporaryRoot.appendingPathComponent("Recordings", isDirectory: true)
         let session = root.appendingPathComponent("2026.08.06-1230", isDirectory: true)
+        try FileManager.default.createDirectory(at: session, withIntermediateDirectories: true)
         let reference = NotificationDirectoryReference(recordingsRoot: root)
 
         XCTAssertEqual(reference.token(for: root), ".")
@@ -35,10 +37,7 @@ final class NotificationDirectoryReferenceTests: XCTestCase {
     }
 
     func testRejectsSessionSymlinkThatEscapesRecordingsRoot() throws {
-        let temporaryRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
-            UUID().uuidString,
-            isDirectory: true
-        )
+        let temporaryRoot = try makeTemporaryDirectory()
         let recordingsRoot = temporaryRoot.appendingPathComponent(
             "Recordings",
             isDirectory: true
@@ -49,7 +48,6 @@ final class NotificationDirectoryReferenceTests: XCTestCase {
             withIntermediateDirectories: true
         )
         try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: temporaryRoot) }
 
         let link = recordingsRoot.appendingPathComponent("session", isDirectory: true)
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
@@ -57,5 +55,20 @@ final class NotificationDirectoryReferenceTests: XCTestCase {
 
         XCTAssertEqual(reference.token(for: link), "session")
         XCTAssertNil(reference.resolve("session"))
+    }
+
+    private func makeTemporaryDirectory() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            UUID().uuidString,
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        addTeardownBlock {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        return directory
     }
 }
