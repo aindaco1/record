@@ -33,7 +33,7 @@ preferences, temporary recovery sessions, and installed transcription model.
   `recording.mov` and writes `mic.caf` and `system.caf` independently.
 - **Start audio-only recording** writes the same two independent audio tracks
   without capturing the display.
-- **Export folder…** changes the approved destination. Desktop is suggested on
+- **Select export folder…** changes the approved destination. Desktop is suggested on
   first use, and the sandbox grant persists across launches.
 - **Open temp session** opens private recovery storage for sessions that have
   not been exported.
@@ -54,7 +54,7 @@ recoverable.
 
 Parakeet v3 is the default transcription engine. Record never downloads a
 model itself. If the verified model is missing, Record offers a setup prompt
-and **Transcription Model → Set Up Parakeet Model…**. Download the pinned model
+and **Transcript model → Set Up Parakeet Model…**. Download the pinned model
 from FluidInference, then let Record verify every file and atomically import it
 into local storage. See the [Parakeet setup guide](docs/models/parakeet.md).
 
@@ -72,15 +72,20 @@ install the same bridge explicitly with:
 ./scripts/setup/install-macwhisper-cli.sh
 ```
 
-Choose **Transcription Model → MacWhisper (Small)**. This option is absent
+Choose **Transcript model → MacWhisper (Small)**. This option is absent
 unless MacWhisper, its bundled `mw`, and Record's sandbox helper are all
 available. Record validates the MacWhisper application signature before each
 invocation and never falls back silently from one engine to another.
 
-If a local transcription fails, **Transcription Model → Retry Failed
+If a local transcription fails, **Transcript model → Retry Failed
 Transcription** appears until the job is retried. Record keeps both source audio
-files unchanged. A startup recovery scan also summarizes interrupted sessions
-and opens only Record's temporary recovery folder from the notification.
+files unchanged. Voice processing reduces speaker-to-microphone echo by default;
+when aligned cross-track speech still duplicates, Record conservatively removes
+only high-confidence mic copies from the readable transcript and keeps the
+unsuppressed result in `transcript.raw.json`. A startup recovery scan validates
+interrupted media, restores playable partials, quarantines invalid partials
+without deleting them, and opens only Record's temporary recovery folder from
+the notification.
 
 ## Built-in plugins
 
@@ -140,7 +145,7 @@ boundaries.
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
 - [Quill migration record](docs/migration/quill-triage.md)
-- [Current GitHub issue triage](docs/project/issue-triage-1.0.2.md)
+- [Current GitHub issue triage](docs/project/issue-triage-1.0.3.md)
 - [Support](SUPPORT.md)
 
 ## Provenance and license

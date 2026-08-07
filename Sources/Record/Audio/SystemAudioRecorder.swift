@@ -1,13 +1,14 @@
 import AVFoundation
 import CoreAudio
 import Foundation
+import RecordCore
 
 /// Records all system audio output to a file via a Core Audio process tap
 /// (macOS 14.2+). No virtual device, no kernel extension — the tap mixes every
 /// process's output to stereo and hands us buffers through a private aggregate
 /// device. First use triggers the one-time "System Audio Recording" TCC prompt
 /// and lights the purple recording indicator while active.
-final class SystemAudioRecorder {
+final class SystemAudioRecorder: @unchecked Sendable {
     enum RecorderError: Error, CustomStringConvertible {
         case tapCreationFailed(OSStatus)
         case tapFormatUnreadable(OSStatus)
@@ -32,12 +33,22 @@ final class SystemAudioRecorder {
     private var tapID = AudioObjectID(kAudioObjectUnknown)
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
-    private var file: AVAudioFile?
+    private var writer: AudioFileWritePump?
     private let queue = DispatchQueue(label: "com.aindaco.record.system-tap")
+    private let startedAt: Date
+    private let onHealth: @Sendable (CaptureHealthEvent) -> Void
     private(set) var isRecording = false
     /// Wall-clock time of the first captured buffer — the track's true start,
     /// used to offset-align the two tracks' transcript timestamps.
-    private(set) var firstBufferAt: Date?
+    var firstBufferAt: Date? { writer?.snapshot().firstBufferAt }
+
+    init(
+        startedAt: Date = Date(),
+        onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
+    ) {
+        self.startedAt = startedAt
+        self.onHealth = onHealth
+    }
 
     /// Start capturing system audio, encoding AAC into `url` (use a .caf
     /// extension — CAF needs no finalization pass, so a crash mid-meeting
@@ -58,7 +69,10 @@ final class SystemAudioRecorder {
         do {
             let format = try tapStreamFormat()
             try createAggregateDevice(tapUUID: description.uuid)
-            file = try makeFile(url: url, format: format)
+            let file = try makeFile(url: url, format: format)
+            writer = AudioFileWritePump(file: file) { [weak self] event in
+                self?.report(event)
+            }
             try installIOProc(format: format)
         } catch {
             cleanup()
@@ -74,6 +88,18 @@ final class SystemAudioRecorder {
         isRecording = false
         if let procID, aggregateID != kAudioObjectUnknown {
             AudioDeviceStop(aggregateID, procID)
+        }
+        let snapshot = writer?.snapshot()
+        writer?.finish()
+        if snapshot?.receivedBuffers == 0 {
+            report(
+                .init(
+                    track: .systemAudio,
+                    code: .missingCallbacks,
+                    severity: .failed,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
         }
         cleanup()
     }
@@ -135,20 +161,19 @@ final class SystemAudioRecorder {
     }
 
     private func installIOProc(format: AVAudioFormat) throws {
+        guard let writer else {
+            throw RecorderError.fileCreationFailed(
+                NSError(domain: "Record.SystemAudioRecorder", code: 1)
+            )
+        }
         var status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue) {
-            [weak self] _, inInputData, _, _, _ in
-            guard let self, let file = self.file else { return }
-            if self.firstBufferAt == nil { self.firstBufferAt = Date() }
+            _, inInputData, _, _, _ in
             guard let buffer = AVAudioPCMBuffer(
                 pcmFormat: format,
                 bufferListNoCopy: inInputData,
                 deallocator: nil
             ) else { return }
-            do {
-                try file.write(from: buffer)
-            } catch {
-                FileHandle.standardError.write(Data("system track write failed: \(error)\n".utf8))
-            }
+            writer.enqueueCopy(of: buffer)
         }
         guard status == noErr, let procID else { throw RecorderError.ioProcCreationFailed(status) }
 
@@ -169,6 +194,41 @@ final class SystemAudioRecorder {
             AudioHardwareDestroyProcessTap(tapID)
             tapID = AudioObjectID(kAudioObjectUnknown)
         }
-        file = nil
+        writer?.finish()
+        writer = nil
+    }
+
+    private func report(_ event: AudioFileWritePump.Event) {
+        switch event {
+        case .queuePressure:
+            report(
+                .init(
+                    track: .systemAudio,
+                    code: .queuePressure,
+                    severity: .degraded,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        case .writeFailed:
+            report(
+                .init(
+                    track: .systemAudio,
+                    code: .writeFailed,
+                    severity: .failed,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        }
+    }
+
+    private func report(_ event: CaptureHealthEvent) {
+        onHealth(event)
+        FileHandle.standardError.write(
+            Data("capture health: system_audio \(event.code.rawValue)\n".utf8)
+        )
+    }
+
+    private func elapsedMilliseconds(at date: Date = Date()) -> Int {
+        max(0, Int(date.timeIntervalSince(startedAt) * 1_000))
     }
 }

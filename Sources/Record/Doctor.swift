@@ -133,7 +133,7 @@ enum DoctorReport {
                 name: "transcription",
                 status: .warn("local \(selection.rawValue) model is missing"),
                 remediation:
-                    "choose Transcription Model → Set Up Parakeet Model in Record; recording remains available"
+                    "choose Transcript model → Set Up Parakeet Model in Record; recording remains available"
             )
         default:
             return Check(

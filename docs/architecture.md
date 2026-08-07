@@ -60,11 +60,20 @@ The current screen-capture segment is deliberately split into
 each audio source remains independently playable and addressable in the
 manifest. All writers share the same capture-clock anchor, and the manifest
 stores each track's start offset for downstream transcription and editing.
+Audio callbacks copy into fixed-capacity queues; conversion, encoding, and
+filesystem writes stay off those callbacks. Content-free `capture_health`
+events in the manifest record missing callbacks, digital silence, route
+recovery, queue pressure, and write failure without device names or samples.
+Default-input changes restart the microphone graph into the same file, with
+silence representing the route gap so elapsed time does not collapse.
 During capture this directory lives in private crash-recovery storage. A clean
 stop promotes the complete directory through an atomic copy/rename into the
 approved export root, then removes only the validated finalized private child.
 Transcription, notification navigation, and downstream handoffs use the
 promoted directory. Failed or unexported sessions remain private.
+On startup, playable hidden partials are promoted when their declared target is
+missing. Invalid partial containers move intact to `Recovery/Corrupt Media`;
+Record never truncates or deletes those bytes during recovery.
 
 State transitions are explicit:
 

@@ -118,4 +118,16 @@ final class TranscriptionCoordinatorTests: XCTestCase {
 
         XCTAssertNil(state.failedDirectory)
     }
+
+    func testCompletionHookClaimIsAtMostOnceAcrossRecoveryAttempts() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "CompletionHookClaimTests-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        XCTAssertTrue(TranscriptionCoordinator.claimCompletionHook(in: directory))
+        XCTAssertFalse(TranscriptionCoordinator.claimCompletionHook(in: directory))
+    }
 }

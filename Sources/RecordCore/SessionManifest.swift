@@ -53,6 +53,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     public var endedAt: Date?
     public var tracks: [Track]
     public var failure: CaptureFailure?
+    public var healthEvents: [CaptureHealthEvent]?
 
     public init(
         schemaVersion: Int = SessionManifest.currentSchemaVersion,
@@ -62,7 +63,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         startedAt: Date,
         endedAt: Date? = nil,
         tracks: [Track],
-        failure: CaptureFailure? = nil
+        failure: CaptureFailure? = nil,
+        healthEvents: [CaptureHealthEvent]? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -72,6 +74,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         self.endedAt = endedAt
         self.tracks = tracks
         self.failure = failure
+        self.healthEvents = healthEvents
     }
 
     enum CodingKeys: String, CodingKey {
@@ -83,6 +86,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case endedAt = "ended_at"
         case tracks
         case failure
+        case healthEvents = "capture_health"
     }
 
     public func finalized(at end: Date, tracks finalizedTracks: [Track]) throws -> Self {

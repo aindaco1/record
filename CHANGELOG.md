@@ -6,17 +6,41 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
-### Changed
+## [1.0.3] - 2026-08-07
+
+### Added
 
 - Extracted Record's offline Parakeet runtime and bounded offline speaker
   diarization adapter into the reusable `RecordSpeech` library product. Record
   continues to use the same local-only implementation through a thin app
   adapter, and sibling Dust Wave tools can reuse it without forking model code.
+- Content-free per-track capture health events for missing callbacks, digital
+  silence, route recovery, bounded-queue pressure, and write failures.
+- Crash recovery that validates media containers, promotes playable partials,
+  and quarantines invalid partials without deleting their bytes.
+- Conservative cross-track transcript echo suppression with the unsuppressed
+  result retained locally as `transcript.raw.json`.
+
+### Changed
+
+- Microphone and system-audio callbacks now hand buffers to fixed-capacity
+  writer queues instead of performing codec and filesystem work inline.
+- Microphone voice processing is enabled by default; input-device changes
+  debounce, restart into the same track, retry on failure, and pad route gaps
+  to keep the recorded timeline monotonic.
+- Completion hooks use a local exclusive claim marker for at-most-once launch
+  across crash recovery.
+- Renamed the menu labels to **Transcript model** and **Select export folder…**.
 
 ### Fixed
 
 - Preserve source audio duration when FluidAudio reports a zero-duration
   Parakeet result.
+
+### Security
+
+- Registered the existing local release-signing public key with GitHub as an
+  SSH signing key; no private key material was copied or uploaded.
 
 ## [1.0.2] - 2026-08-07
 
@@ -84,7 +108,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/aindaco1/record/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/aindaco1/record/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/aindaco1/record/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/aindaco1/record/releases/tag/v1.0.0

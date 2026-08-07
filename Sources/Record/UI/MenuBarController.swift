@@ -8,10 +8,10 @@ import RecordCore
 @MainActor
 final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
-    static let transcriptionModelMenuTitle = "Transcription Model"
+    static let transcriptionModelMenuTitle = "Transcript model"
     static let openTempSessionMenuTitle = "Open temp session"
     static let openLastRecordingMenuTitle = "Open last recording"
-    static let exportFolderMenuTitle = "Export folder…"
+    static let exportFolderMenuTitle = "Select export folder…"
     static let checkForUpdatesMenuTitle = "Check for Updates…"
     static let launchAtLoginMenuTitle = "Open at Login"
 
@@ -36,6 +36,7 @@ final class MenuBarController {
     private let checkForUpdatesItem: NSMenuItem
     private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
+    private var captureHealthNote: String?
 
     var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
     var isRetryTranscriptionMenuItemVisible: Bool { !retryTranscriptionItem.isHidden }
@@ -256,10 +257,13 @@ final class MenuBarController {
     /// shows a pulsing white Record ring while recording; the elapsed counter
     /// lives in the menu's state label. Call once a second while recording.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
-        stateLabel.title =
-            recording
-            ? "● \(mode.displayName) recording · \(elapsed ?? "0:00")"
-            : "idle"
+        if recording {
+            let health = captureHealthNote.map { " · \($0)" } ?? ""
+            stateLabel.title = "● \(mode.displayName) recording · \(elapsed ?? "0:00")\(health)"
+        } else {
+            captureHealthNote = nil
+            stateLabel.title = "idle"
+        }
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
@@ -269,6 +273,7 @@ final class MenuBarController {
     }
 
     func updateRequestingPermissions(for mode: RecordingMode) {
+        captureHealthNote = nil
         stateLabel.title = "waiting for \(mode.displayName) recording permissions…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
@@ -277,6 +282,7 @@ final class MenuBarController {
     }
 
     func updatePreparingScreenRecording() {
+        captureHealthNote = nil
         stateLabel.title = "preparing screen recording…"
         toggleItem.title = "Preparing screen recording…"
         toggleItem.isEnabled = false
@@ -301,6 +307,25 @@ final class MenuBarController {
         exportFolderItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
         setRecordingIndicatorActive(false)
+    }
+
+    func updateCaptureHealth(_ event: CaptureHealthEvent) {
+        switch event.code {
+        case .routeRecovered:
+            captureHealthNote = nil
+        case .routeChanged:
+            captureHealthNote = "reconnecting microphone…"
+        case .routeRecoveryFailed:
+            captureHealthNote = "microphone reconnecting…"
+        case .digitalSilence:
+            captureHealthNote = "using raw microphone"
+        case .queuePressure:
+            captureHealthNote = "capture under load"
+        case .writeFailed:
+            captureHealthNote = "track write failed"
+        case .missingCallbacks:
+            captureHealthNote = "track captured no data"
+        }
     }
 
     func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {

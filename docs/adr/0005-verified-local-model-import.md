@@ -13,7 +13,7 @@ untrusted model replacement.
 ## Decision
 
 Record detects a missing selected Parakeet model at launch and exposes the same
-setup action in the Transcription Model menu. The user downloads the model from
+setup action in the Transcript model menu. The user downloads the model from
 FluidInference's immutable Hugging Face revision in a browser or external CLI,
 then explicitly selects the downloaded directory.
 

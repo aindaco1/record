@@ -9,8 +9,10 @@ regressions run on every pull request.
 - capture configuration limits and lifecycle command/effect transitions
 - ScreenCaptureKit plan translation, source resolution, failure mapping,
   timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
-- fixed-capacity media ingress eviction, metrics, failure cleanup, deterministic
-  draining, and shared-timeline mapping under delay, gaps, and clock regression
+- fixed-capacity media and audio-writer ingress eviction, one-shot health
+  events, off-callback conversion/writes, exact silence padding, failure
+  cleanup, deterministic draining, and shared-timeline mapping under delay,
+  gaps, and clock regression
 - hardware-required HEVC/AAC writer settings, collision-safe independent video
   and audio paths, and empty-segment finalization without publishing invalid media
 - display-profile 4K/even-dimension bounds, video-session orchestration,
@@ -21,8 +23,11 @@ regressions run on every pull request.
 - command-scoped permission ordering, exact TCC service selection, and
   one-shot recording-intent recovery across a privacy restart
 - session state transitions and atomic manifest round trips
-- interrupted-session recovery, content-free recovery summaries, live-process
-  protection, and path traversal rejection
+- interrupted-session recovery, playable-partial promotion, byte-preserving
+  corrupt quarantine, content-free recovery summaries, live-process protection,
+  at-most-once completion-hook claims, and path traversal rejection
+- microphone route-recovery state transitions plus conservative transcript echo
+  suppression that retains backchannels, unrelated overlap, and a raw sidecar
 - manifest-derived recent-recording discovery plus symlink and nesting rejection
 - failed-transcription retry menu state and no-op behavior without a failed job
 - deterministic folder collision handling
@@ -89,6 +94,10 @@ Use synthetic or non-sensitive content for development recordings:
 7. Listen to `mic.caf` and `system.caf`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
+   Repeat once without headphones while the test clip plays through speakers.
+   The raw mic may contain residual bleed, but the readable transcript should
+   not duplicate aligned system dialogue; if suppression occurs,
+   `transcript.raw.json` must retain the unsuppressed segments.
 8. Confirm the complete audio-only session appears in the approved Desktop
    folder, its private working directory is removed, and **Audio recording
    ready** opens the exported folder in Finder. When transcription completes,
@@ -119,10 +128,17 @@ Also exercise these negative paths before a release candidate:
   live half-session;
 - revoke System Audio Recording access in System Settings and verify the error
   identifies the relevant permission;
-- switch the default microphone between recordings;
-- record silence and an unplugged/reconnected external microphone;
+- switch the default microphone during a recording; the menu should briefly
+  report reconnection, the same `mic.caf` should continue, and its duration
+  should include the silent route gap;
+- record silence and an unplugged/reconnected external microphone; route
+  retries must remain bounded and stopping must not leave an input tap alive;
 - interrupt a recording with sleep/wake, then with Quit Record, and inspect the
   resulting session each time;
+- in a disposable temp session, force termination while each independent media
+  writer has a hidden `.partial` file. Relaunch: playable containers should be
+  promoted, invalid containers should appear intact under
+  `Recovery/Corrupt Media`, and a second relaunch should make no further moves;
 - record for 30 minutes while watching memory, file growth, and menu timing.
 
 Never paste a recording, transcript, model, or private path into a public issue.
@@ -142,11 +158,11 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Transcription Model → MacWhisper (Small)** in the Record menu and repeat the
+**Transcript model → MacWhisper (Small)** in the Record menu and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either CAF file, and a job
 where every available track fails must not create a successful transcript.
-After a failure, choose **Transcription Model → Retry Failed Transcription**
+After a failure, choose **Transcript model → Retry Failed Transcription**
 and confirm the action disappears while the job runs and a successful retry
 creates the canonical transcript without changing either source file.
 Screen and audio-only sessions use the same independent CAF inputs for local
@@ -163,7 +179,7 @@ bundled `mw`, or Record's user-script bridge is missing.
 
 ## Export folder access
 
-In the signed sandboxed app, choose **Export folder…** from the menu, approve
+In the signed sandboxed app, choose **Select export folder…** from the menu, approve
 Desktop, record a short screen session and a short audio-only session, quit, and
 relaunch. The item tooltip should still show Desktop, both complete session
 directories should export without another prompt, and each finalized private
@@ -181,7 +197,7 @@ release, install the prior notarized version on a clean test account, choose
 replacement, and relaunch. Confirm a same-version check reports no update.
 
 Before updating, grant all three Record privacy services and capture a short
-screen and audio-only session. After updating 1.0.1 to 1.0.2, confirm the
+screen and audio-only session. After updating 1.0.2 to 1.0.3, confirm the
 toggles still identify Record as enabled and neither recording mode repeats an
 already-approved prompt. Run
 `./scripts/ci/check-tcc-identity.sh /Applications/Record.app` on both builds;

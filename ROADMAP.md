@@ -3,19 +3,21 @@
 Record 1.0 intentionally focuses on dependable main-display and audio capture.
 Priorities may change as real recordings expose better opportunities.
 
-## 1.0.2 maintenance
+## 1.0.3 reliability
 
-- One-click retry for the most recent failed local transcription.
-- A manifest-derived **Open last recording** action without a history database.
-- Human-readable recovery summaries for interrupted or malformed temp sessions.
-- A smaller issue backlog centered on observed reliability needs.
+- Bounded off-callback microphone and system-audio writers with persistent,
+  content-free per-track health events.
+- Default-input route recovery with debounce, bounded retry, and timeline gaps
+  represented by silence rather than compressed time.
+- Media-aware interrupted-session recovery and byte-preserving quarantine.
+- Reversible high-confidence transcript echo suppression while separate raw
+  microphone and system tracks remain unchanged.
 
 ## Next
 
 - Display, window, application, and region source selection.
 - Pause and resume with lossless segment concatenation.
 - First-class microphone and frame-rate selection.
-- Safe microphone route-change recovery and visible per-track health.
 - A settings window for output, transcription, and plugin preferences.
 - Lightweight recording history and configurable shortcuts.
 - Optional Homebrew Cask after clean install/uninstall verification.
@@ -32,7 +34,6 @@ umbrella issues until a real use case justifies the complexity.
 - A capability-limited, out-of-process extension protocol.
 - Optional cursor-click visualization and per-source audio controls.
 - Optional first-party Whisper/translation if MacWhisper stops meeting the need.
-- Reversible cross-track echo detection backed by a representative local corpus.
 - An opt-in local browser speaker-metadata bridge.
 - Localization and VoiceOver-focused accessibility review.
 

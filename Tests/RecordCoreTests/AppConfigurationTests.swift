@@ -14,7 +14,8 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.transcription.model, ParakeetModelID.v3.rawValue)
         XCTAssertNil(configuration.transcription.executable)
         XCTAssertEqual(configuration.transcription.language, "auto")
-        XCTAssertFalse(configuration.micVoiceProcessing)
+        XCTAssertTrue(configuration.transcription.suppressSpeakerEcho)
+        XCTAssertTrue(configuration.micVoiceProcessing)
     }
 
     func testMacWhisperRequiresAnExplicitModel() {

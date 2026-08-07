@@ -12,9 +12,10 @@ to Record's sandbox home:
     "enabled": true,
     "engine": "parakeet",
     "model": "parakeet-tdt-0.6b-v3-coreml",
-    "language": "auto"
+    "language": "auto",
+    "suppress_speaker_echo": true
   },
-  "mic_voice_processing": false,
+  "mic_voice_processing": true,
   "completion_hook": {
     "executable": "/absolute/path/to/local-tool",
     "arguments": ["--session", "{session}"]
@@ -31,11 +32,22 @@ aliases are `v2` and `v3`; v3 is the default. MacWhisper requires an explicit
 local model identifier and may optionally use an absolute `executable` path.
 `language` is `auto` or a two-letter language code.
 
+`mic_voice_processing` enables Apple's local VoiceProcessingIO echo canceller.
+It is on by default and falls back to raw microphone capture when the active
+route cannot produce live processed samples. `suppress_speaker_echo` is a
+second, transcript-only safeguard: aligned high-confidence microphone copies
+of system speech are omitted from `transcript.json` and `transcript.md`, while
+`transcript.raw.json` retains the unsuppressed local result. Neither option
+modifies `mic.caf` or `system.caf`.
+
 Completion hooks run only after successful local transcription. Record invokes
 the absolute executable directly, never through a shell. The literal
 `{session}` argument expands to the completed session directory. Sandbox rules
 still apply, so a hook is an advanced personal integration rather than a
 portable release feature.
+Record atomically claims each hook before launch, so recovery will not run the
+same hook twice. A process failure in the narrow interval after the claim can
+therefore omit a hook rather than duplicate its side effects.
 
 Invalid schemas, relative executables, unsupported engines, missing
 MacWhisper models, and invalid language values fail closed to safe defaults and
