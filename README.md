@@ -84,7 +84,9 @@ does not bundle or download Gifski, run a shell, or add network access.
 
 For a real sandboxed app-bundle launch and the current manual audio checklist,
 see [Testing](docs/testing.md). The project-local `./script/build_and_run.sh`
-entrypoint is also available as the Codex `Run` action.
+entrypoint is also available as the Codex `Run` action. It installs the signed
+development build at `~/Applications/Record.app`, giving macOS permissions,
+notifications, and notification clicks a stable application identity.
 
 Optional configuration lives at `~/.config/record/config.json`:
 

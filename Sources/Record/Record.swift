@@ -79,6 +79,10 @@ final class RecordApplicationDelegate: NSObject, NSApplicationDelegate {
         self.controller = controller
     }
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        controller?.prepareNotifications()
+    }
+
     func applicationShouldTerminate(
         _ sender: NSApplication
     ) -> NSApplication.TerminateReply {
@@ -215,6 +219,14 @@ final class AppController {
             DispatchQueue.main.async { [weak self] in
                 self?.requestRecording(recordingToResume, resumingAfterRestart: true)
             }
+        }
+    }
+
+    /// Request notification access after launch, before the first completed
+    /// recording needs to publish a ready event.
+    func prepareNotifications() {
+        Task { [notifications] in
+            await notifications.prepareAuthorization()
         }
     }
 

@@ -4,6 +4,10 @@
 <dict>
     <key>CFBundleExecutable</key>
     <string>record</string>
+    <key>CFBundleDisplayName</key>
+    <string>Record</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
     <key>CFBundleIdentifier</key>
     <string>com.aindaco.record</string>
     <key>CFBundleIconFile</key>
@@ -20,6 +24,10 @@
     <string>15.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSUserNotificationAlertStyle</key>
+    <string>alert</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Record captures microphone audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
     <key>NSAudioCaptureUsageDescription</key>

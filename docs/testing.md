@@ -44,10 +44,12 @@ Use synthetic or non-sensitive content for development recordings:
    This builds arm64, assembles the real app bundle, signs it with the first
    available Developer ID or Apple Development identity plus the reviewed
    sandbox entitlements, verifies those embedded entitlements, and leaves
-   Record running. Set `RECORD_CODESIGN_IDENTITY` to override the selection.
-   With no Apple identity it falls back to ad hoc signing and warns that TCC
-   grants will not survive a rebuild. The Record ring should appear in the
-   menu bar.
+   `~/Applications/Record.app` running. Set `RECORD_CODESIGN_IDENTITY` to
+   override the selection. With no Apple identity it falls back to ad hoc
+   signing and warns that TCC grants will not survive a rebuild. The Record
+   ring should appear in the menu bar. On first launch, allow notifications;
+   Record requests access before the first completion event so recording and
+   transcript banners cannot be lost to a late authorization prompt.
 2. Choose **Start screen recording**. Record should request microphone access
    first when needed, followed by **Screen & System Audio Recording**. It must
    not request **System Audio Recording Only** or open System Settings itself.

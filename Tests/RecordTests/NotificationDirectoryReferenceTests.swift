@@ -1,8 +1,74 @@
 import Foundation
 @testable import Record
+@preconcurrency import UserNotifications
 import XCTest
 
 final class NotificationDirectoryReferenceTests: XCTestCase {
+    func testAuthorizedDeliverySkipsAuthorizationRequest() async {
+        let client = FakeNotificationCenterClient(
+            authorizationStatus: .authorized,
+            grantsAuthorization: false
+        )
+        let delivery = RecordNotificationDelivery(client: client)
+
+        await delivery.post(
+            RecordNotification(
+                title: "Transcript ready",
+                body: "Saved to Desktop",
+                destinationDirectory: URL(fileURLWithPath: "/tmp/session")
+            ),
+            directoryToken: "exports:session"
+        )
+
+        let snapshot = await client.snapshot()
+        XCTAssertEqual(snapshot.authorizationRequests, 0)
+        XCTAssertEqual(snapshot.titles, ["Transcript ready"])
+        XCTAssertEqual(snapshot.directoryTokens, ["exports:session"])
+    }
+
+    func testDeliveryRequestsAuthorizationBeforePosting() async {
+        let client = FakeNotificationCenterClient(
+            authorizationStatus: .notDetermined,
+            grantsAuthorization: true
+        )
+        let delivery = RecordNotificationDelivery(client: client)
+
+        await delivery.post(
+            RecordNotification(
+                title: "Recording ready",
+                body: "Saved to Desktop",
+                destinationDirectory: URL(fileURLWithPath: "/tmp/session")
+            ),
+            directoryToken: "exports:session"
+        )
+
+        let snapshot = await client.snapshot()
+        XCTAssertEqual(snapshot.authorizationRequests, 1)
+        XCTAssertEqual(snapshot.titles, ["Recording ready"])
+        XCTAssertEqual(snapshot.directoryTokens, ["exports:session"])
+    }
+
+    func testDeniedAuthorizationDoesNotEnqueueNotification() async {
+        let client = FakeNotificationCenterClient(
+            authorizationStatus: .denied,
+            grantsAuthorization: false
+        )
+        let delivery = RecordNotificationDelivery(client: client)
+
+        await delivery.post(
+            RecordNotification(
+                title: "Recording ready",
+                body: "Saved to Desktop",
+                destinationDirectory: URL(fileURLWithPath: "/tmp/session")
+            ),
+            directoryToken: "exports:session"
+        )
+
+        let snapshot = await client.snapshot()
+        XCTAssertEqual(snapshot.authorizationRequests, 0)
+        XCTAssertTrue(snapshot.titles.isEmpty)
+    }
+
     func testRoundTripsRootAndDirectSessionWithoutPersistingAbsolutePaths() throws {
         let temporaryRoot = try makeTemporaryDirectory()
         let root = temporaryRoot.appendingPathComponent("Recordings", isDirectory: true)
@@ -121,5 +187,49 @@ final class NotificationDirectoryReferenceTests: XCTestCase {
             try? FileManager.default.removeItem(at: directory)
         }
         return directory
+    }
+}
+
+private actor FakeNotificationCenterClient: RecordNotificationCenterClient {
+    struct Snapshot: Sendable {
+        let authorizationRequests: Int
+        let titles: [String]
+        let directoryTokens: [String]
+    }
+
+    private let status: UNAuthorizationStatus
+    private let grantsAuthorization: Bool
+    private var authorizationRequests = 0
+    private var titles: [String] = []
+    private var directoryTokens: [String] = []
+
+    init(
+        authorizationStatus: UNAuthorizationStatus,
+        grantsAuthorization: Bool
+    ) {
+        status = authorizationStatus
+        self.grantsAuthorization = grantsAuthorization
+    }
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        status
+    }
+
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
+        authorizationRequests += 1
+        return grantsAuthorization
+    }
+
+    func add(_ request: RecordNotificationRequest) async throws {
+        titles.append(request.title)
+        directoryTokens.append(request.directoryToken)
+    }
+
+    func snapshot() -> Snapshot {
+        Snapshot(
+            authorizationRequests: authorizationRequests,
+            titles: titles,
+            directoryTokens: directoryTokens
+        )
     }
 }

@@ -11,9 +11,21 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/lib/local-signing.sh"
 built_app="$repo_root/.build/release-artifacts/Record.app"
 unregistered_built_app="$repo_root/.build/release-artifacts/Record.build-artifact"
+current_user="$(id -un)"
+login_home="$(
+    /usr/bin/dscacheutil -q user -a name "$current_user" \
+        | /usr/bin/awk '$1 == "dir:" { print $2; exit }'
+)"
+if [[ -z "$login_home" || "$login_home" != /* || "$login_home" == "/" ]]; then
+    echo "could not resolve a safe login home directory" >&2
+    exit 1
+fi
+applications_root="$login_home/Applications"
+app_bundle="$applications_root/Record.app"
+staging_app="$applications_root/.Record.$$.staging.app"
 temporary_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
-run_root="$temporary_root/record-local-run"
-app_bundle="$run_root/Record.app"
+legacy_run_root="$temporary_root/record-local-run"
+legacy_app="$legacy_run_root/Record.app"
 app_binary="$app_bundle/Contents/MacOS/record"
 process_name="record"
 lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
@@ -65,22 +77,32 @@ RECORD_VERSION="${RECORD_VERSION:-0.0.0-local}" \
     RECORD_BUILD_NUMBER="${RECORD_BUILD_NUMBER:-1}" \
     ./scripts/release/build-app.sh
 
-case "$run_root" in
+case "$app_bundle" in
+    "$login_home"/Applications/Record.app) ;;
+    *) echo "refusing unsafe local app path: $app_bundle" >&2; exit 1 ;;
+esac
+case "$staging_app" in
+    "$login_home"/Applications/.Record.*.staging.app) ;;
+    *) echo "refusing unsafe staging path: $staging_app" >&2; exit 1 ;;
+esac
+case "$legacy_run_root" in
     "$temporary_root"/record-local-run) ;;
-    *) echo "refusing unsafe local run path: $run_root" >&2; exit 1 ;;
+    *) echo "refusing unsafe legacy run path: $legacy_run_root" >&2; exit 1 ;;
 esac
 
-rm -rf "$run_root"
-mkdir -p "$run_root"
-ditto --norsrc --noextattr "$built_app" "$app_bundle"
+mkdir -p "$applications_root"
+rm -rf "$staging_app"
+ditto --norsrc --noextattr "$built_app" "$staging_app"
 
-# The iCloud-backed workspace can cause Launch Services to discover this
-# unsigned assembler output. Once copied, remove its .app suffix so a later
-# notification click cannot resolve to it. build-app.sh recreates it each run.
+# Keep the unsigned assembler output and the retired temporary runner out of
+# Launch Services. Notification authorization and clicks must resolve to the
+# persistent, signed app in the user's Applications folder.
 if [[ -x "$lsregister" ]]; then
     "$lsregister" -u "$built_app" >/dev/null 2>&1 || true
+    "$lsregister" -u "$legacy_app" >/dev/null 2>&1 || true
 fi
 mv "$built_app" "$unregistered_built_app"
+rm -rf "$legacy_run_root"
 
 available_identities="$(/usr/bin/security find-identity -v -p codesigning 2>/dev/null || true)"
 signing_identity="$(
@@ -92,17 +114,22 @@ if [[ -n "$signing_identity" ]]; then
     echo "Signing local app with stable identity $signing_identity"
     codesign --force --options runtime --timestamp=none \
         --sign "$signing_identity" \
-        --entitlements Configuration/Record.entitlements "$app_bundle"
+        --entitlements Configuration/Record.entitlements "$staging_app"
 else
     echo "warning: no Apple signing identity found; TCC grants will not survive rebuilds" >&2
     codesign --force --sign - \
-        --entitlements Configuration/Record.entitlements "$app_bundle"
+        --entitlements Configuration/Record.entitlements "$staging_app"
 fi
-./scripts/ci/check-signed-entitlements.sh "$app_bundle"
+./scripts/ci/check-signed-entitlements.sh "$staging_app"
+
+if [[ -x "$lsregister" ]]; then
+    "$lsregister" -u "$app_bundle" >/dev/null 2>&1 || true
+fi
+rm -rf "$app_bundle"
+mv "$staging_app" "$app_bundle"
 
 # Notification clicks ask Launch Services to activate Record before the app's
-# delegate reveals the recording in Finder. Keep the unsigned assembler output
-# out of Launch Services so it cannot be chosen instead of this signed bundle.
+# delegate reveals the recording in Finder. Register only this persistent app.
 if [[ -x "$lsregister" ]]; then
     "$lsregister" -f "$app_bundle" >/dev/null
 fi

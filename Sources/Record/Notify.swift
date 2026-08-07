@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import OSLog
 @preconcurrency import UserNotifications
 
 struct RecordNotification: Equatable, Sendable {
@@ -12,30 +13,80 @@ private enum NotificationUserInfoKey {
     static let directoryToken = "recordDirectoryToken"
 }
 
-private actor RecordNotificationDelivery {
-    private let center: UNUserNotificationCenter
+struct RecordNotificationRequest: Sendable {
+    let title: String
+    let body: String
+    let directoryToken: String
+}
+
+protocol RecordNotificationCenterClient: Sendable {
+    func authorizationStatus() async -> UNAuthorizationStatus
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+    func add(_ request: RecordNotificationRequest) async throws
+}
+
+private struct SystemRecordNotificationCenterClient: RecordNotificationCenterClient,
+    @unchecked Sendable
+{
+    let center: UNUserNotificationCenter
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        await center.notificationSettings().authorizationStatus
+    }
+
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
+        try await center.requestAuthorization(options: options)
+    }
+
+    func add(_ request: RecordNotificationRequest) async throws {
+        let content = UNMutableNotificationContent()
+        content.title = request.title
+        content.body = request.body
+        content.sound = .default
+        content.threadIdentifier = "record.recordings"
+        content.userInfo = [NotificationUserInfoKey.directoryToken: request.directoryToken]
+
+        try await center.add(
+            UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+        )
+    }
+}
+
+actor RecordNotificationDelivery {
+    private static let logger = Logger(
+        subsystem: "com.aindaco.record",
+        category: "notifications"
+    )
+
+    private let client: any RecordNotificationCenterClient
     private var authorizationRequest: Task<Bool, Error>?
 
-    init(center: UNUserNotificationCenter) {
-        self.center = center
+    init(client: any RecordNotificationCenterClient) {
+        self.client = client
+    }
+
+    @discardableResult
+    func prepareAuthorization() async -> Bool {
+        do {
+            return try await canDeliverNotifications()
+        } catch {
+            Self.logNotificationFailure(error)
+            return false
+        }
     }
 
     func post(_ notification: RecordNotification, directoryToken: String) async {
+        guard await prepareAuthorization() else { return }
         do {
-            guard try await canDeliverNotifications() else { return }
-
-            let content = UNMutableNotificationContent()
-            content.title = notification.title
-            content.body = notification.body
-            content.sound = .default
-            content.threadIdentifier = "record.recordings"
-            content.userInfo = [NotificationUserInfoKey.directoryToken: directoryToken]
-
-            try await center.add(
-                UNNotificationRequest(
-                    identifier: UUID().uuidString,
-                    content: content,
-                    trigger: nil
+            try await client.add(
+                RecordNotificationRequest(
+                    title: notification.title,
+                    body: notification.body,
+                    directoryToken: directoryToken
                 )
             )
         } catch {
@@ -44,8 +95,11 @@ private actor RecordNotificationDelivery {
     }
 
     private func canDeliverNotifications() async throws -> Bool {
-        let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
+        let status = await client.authorizationStatus()
+        Self.logger.info(
+            "Notification authorization status: \(status.rawValue, privacy: .public)"
+        )
+        switch status {
         case .authorized, .provisional, .ephemeral:
             return true
         case .notDetermined:
@@ -53,7 +107,7 @@ private actor RecordNotificationDelivery {
                 return try await authorizationRequest.value
             }
             let request = Task {
-                try await center.requestAuthorization(options: [.alert, .sound])
+                try await client.requestAuthorization(options: [.alert, .sound])
             }
             authorizationRequest = request
             defer { authorizationRequest = nil }
@@ -67,6 +121,9 @@ private actor RecordNotificationDelivery {
 
     private static func logNotificationFailure(_ error: Error) {
         let error = error as NSError
+        logger.error(
+            "Notification delivery failed: \(error.domain, privacy: .public) \(error.code)"
+        )
         FileHandle.standardError.write(
             Data(
                 "Record could not post a notification (\(error.domain) \(error.code))\n".utf8
@@ -161,10 +218,17 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
         recordingsRoot: URL,
         center: UNUserNotificationCenter = .current()
     ) {
-        delivery = RecordNotificationDelivery(center: center)
+        delivery = RecordNotificationDelivery(
+            client: SystemRecordNotificationCenterClient(center: center)
+        )
         directories = NotificationDirectoryReference(recordingsRoot: recordingsRoot)
         super.init()
         center.delegate = self
+    }
+
+    @discardableResult
+    func prepareAuthorization() async -> Bool {
+        await delivery.prepareAuthorization()
     }
 
     func updateExportRoot(_ exportRoot: URL?) {
