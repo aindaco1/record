@@ -17,7 +17,7 @@ final class ScreenRecordingPermissionTests: XCTestCase {
             }
         )
 
-        XCTAssertTrue(controller.ensureAccess())
+        XCTAssertEqual(controller.prepareForCapture(), .ready)
         XCTAssertEqual(provider.requestCount, 0)
         XCTAssertEqual(audioRegistrar.requestCount, 0)
         XCTAssertEqual(setupCount, 0)
@@ -47,7 +47,7 @@ final class ScreenRecordingPermissionTests: XCTestCase {
             settingsOpener: { events.append("settings") }
         )
 
-        controller.setupPermissions()
+        XCTAssertTrue(controller.setupPermissions())
 
         XCTAssertEqual(events, ["message", "screen", "system-audio", "settings"])
         XCTAssertEqual(provider.requestCount, 1)
@@ -65,7 +65,7 @@ final class ScreenRecordingPermissionTests: XCTestCase {
             settingsOpener: { settingsOpenCount += 1 }
         )
 
-        controller.setupPermissions()
+        XCTAssertFalse(controller.setupPermissions())
 
         XCTAssertEqual(provider.requestCount, 0)
         XCTAssertEqual(audioRegistrar.requestCount, 0)
@@ -83,7 +83,7 @@ final class ScreenRecordingPermissionTests: XCTestCase {
             settingsOpener: { settingsOpenCount += 1 }
         )
 
-        controller.setupPermissions()
+        XCTAssertTrue(controller.setupPermissions())
 
         XCTAssertEqual(provider.requestCount, 0)
         XCTAssertEqual(audioRegistrar.requestCount, 1)
@@ -99,7 +99,7 @@ final class ScreenRecordingPermissionTests: XCTestCase {
             setupPresenter: { _ in true }
         )
 
-        XCTAssertFalse(controller.ensureAccess())
+        XCTAssertEqual(controller.prepareForCapture(), .setupStarted)
         XCTAssertEqual(provider.requestCount, 1)
         XCTAssertEqual(audioRegistrar.requestCount, 1)
     }

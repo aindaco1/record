@@ -1,5 +1,6 @@
 import AppKit
 import ArgumentParser
+import CoreServices
 import Foundation
 import RecordCapture
 import RecordCore
@@ -49,6 +50,8 @@ struct Run: ParsableCommand {
         app.setActivationPolicy(.accessory)
 
         let controller = AppController(root: root)
+        let applicationDelegate = RecordApplicationDelegate(controller: controller)
+        app.delegate = applicationDelegate
 
         let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
         sigint.setEventHandler {
@@ -62,7 +65,29 @@ struct Run: ParsableCommand {
             Data(
                 "Record up · recordings → \(root.path) · ^C to quit\n".utf8
             ))
-        app.run()
+        withExtendedLifetime(applicationDelegate) {
+            app.run()
+        }
+    }
+}
+
+@MainActor
+final class RecordApplicationDelegate: NSObject, NSApplicationDelegate {
+    private weak var controller: AppController?
+
+    init(controller: AppController) {
+        self.controller = controller
+    }
+
+    func applicationShouldTerminate(
+        _ sender: NSApplication
+    ) -> NSApplication.TerminateReply {
+        if controller?.handleTerminationRequest(
+            appleEvent: NSAppleEventManager.shared().currentAppleEvent
+        ) == true {
+            return .terminateCancel
+        }
+        return .terminateNow
     }
 }
 
@@ -119,6 +144,7 @@ final class AppController {
     private var videoStopTask: Task<Void, Never>?
     private var pendingVideoStop = false
     private var quitAfterStop = false
+    private var relaunchAfterPrivacySettingsQuit = false
     private var videoExportName: String?
     private var lastFinishedVideoURL: URL?
 
@@ -206,7 +232,14 @@ final class AppController {
 
     private func startVideoSession() {
         guard activeRecording == nil else { return }
-        guard screenRecordingPermission.ensureAccess() else {
+        switch screenRecordingPermission.prepareForCapture() {
+        case .ready:
+            break
+        case .setupStarted:
+            relaunchAfterPrivacySettingsQuit = true
+            refreshScreenRecordingPermissionMenu()
+            return
+        case .cancelled:
             refreshScreenRecordingPermissionMenu()
             return
         }
@@ -603,8 +636,54 @@ final class AppController {
     }
 
     private func manageScreenRecordingPermission() {
-        screenRecordingPermission.setupPermissions()
+        if screenRecordingPermission.setupPermissions() {
+            relaunchAfterPrivacySettingsQuit = true
+        }
         refreshScreenRecordingPermissionMenu()
+    }
+
+    func handleTerminationRequest(
+        appleEvent: NSAppleEventDescriptor?
+    ) -> Bool {
+        guard relaunchAfterPrivacySettingsQuit else { return false }
+        guard Self.isPrivacySettingsQuitEvent(appleEvent) else { return false }
+
+        relaunchAfterPrivacySettingsQuit = false
+        restart()
+        return true
+    }
+
+    static func shouldRelaunchAfterPrivacySettingsQuit(
+        eventClass: AEEventClass,
+        eventID: AEEventID,
+        senderBundleIdentifier: String?
+    ) -> Bool {
+        guard eventClass == AEEventClass(kCoreEventClass) else { return false }
+        guard eventID == AEEventID(kAEQuitApplication) else { return false }
+        return [
+            "com.apple.settings.PrivacySecurity.extension",
+            "com.apple.systempreferences",
+        ].contains(senderBundleIdentifier)
+    }
+
+    private static func isPrivacySettingsQuitEvent(
+        _ event: NSAppleEventDescriptor?
+    ) -> Bool {
+        guard let event else { return false }
+        guard
+            let senderPID = event.attributeDescriptor(
+                forKeyword: AEKeyword(keySenderPIDAttr)
+            )?.int32Value
+        else { return false }
+
+        let senderBundleIdentifier = NSRunningApplication(
+            processIdentifier: pid_t(senderPID)
+        )?.bundleIdentifier
+        return shouldRelaunchAfterPrivacySettingsQuit(
+            eventClass: event.eventClass,
+            eventID: event.eventID,
+            senderBundleIdentifier: senderBundleIdentifier
+        )
     }
 
     private func refreshScreenRecordingPermissionMenu() {

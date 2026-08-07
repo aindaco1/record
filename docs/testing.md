@@ -50,7 +50,9 @@ Use synthetic or non-sensitive content for development recordings:
    the setup itself must not create a recording or media file. The settings
    page should open with Record present in both lists without using the `+`
    buttons. macOS still requires you to control each toggle. If it requests a
-   relaunch, choose **Restart Record** from the feather menu.
+   relaunch, Record should reopen itself after the old process exits. If it
+   does not, reopen the same signed app bundle without rebuilding it and report
+   the failure.
 3. Choose **Start screen recording**. On first use, approve Desktop in the
    export-folder picker and grant microphone access if macOS prompts.
 4. Move a test window, speak into the selected microphone, and play a known

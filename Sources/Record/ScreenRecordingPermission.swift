@@ -83,6 +83,12 @@ struct ScreenRecordingPermissionPresentation: Equatable, Sendable {
     }
 }
 
+enum ScreenRecordingAccessPreparation: Equatable, Sendable {
+    case ready
+    case setupStarted
+    case cancelled
+}
+
 @MainActor
 final class ScreenRecordingPermissionController {
     typealias SetupPresenter = @MainActor (_ guidance: String) -> Bool
@@ -124,18 +130,18 @@ final class ScreenRecordingPermissionController {
 
     /// Screen recording starts only on a subsequent click after setup. This
     /// keeps permission registration distinct from capturing user content.
-    func ensureAccess() -> Bool {
-        if provider.isGranted { return true }
-        setupPermissions()
-        return false
+    func prepareForCapture() -> ScreenRecordingAccessPreparation {
+        if provider.isGranted { return .ready }
+        return setupPermissions() ? .setupStarted : .cancelled
     }
 
     /// Presents one Record-owned explanation, then registers both independent
     /// macOS TCC services in sequence. Apple may still present one native
     /// confirmation per service; applications cannot combine or pre-approve
     /// those system-owned decisions.
-    func setupPermissions() {
-        guard setupPresenter(presentation.setupGuidance) else { return }
+    @discardableResult
+    func setupPermissions() -> Bool {
+        guard setupPresenter(presentation.setupGuidance) else { return false }
 
         if !provider.isGranted {
             _ = provider.requestAccess()
@@ -150,6 +156,7 @@ final class ScreenRecordingPermissionController {
             )
         }
         settingsOpener()
+        return true
     }
 
     func presentCaptureDenial() {
