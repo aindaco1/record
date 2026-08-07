@@ -69,6 +69,15 @@ into the same file, with silence representing the route gap so elapsed time
 does not collapse. A post-restart callback watchdog ignores the engine's own
 settling notification and falls back once to raw input when VoiceProcessingIO
 cannot remain live on the new route.
+Each screen-recording interval first closes into immutable
+`segment-NNNN.mov`, `segment-NNNN-system.caf`, and `segment-NNNN-mic.caf`
+working files. Pause finalizes the active interval; resume creates fresh
+writers and a fresh ScreenCaptureKit stream from the same in-memory selection.
+The atomic manifest journals start, pause, resume, and stop events before a
+transition can expose new media. Finalization concatenates compatible HEVC
+segments with AVFoundation passthrough and retimes existing AAC packets into
+the canonical CAF files without decoding or re-encoding. Raw segments remain
+until the complete exported directory validates.
 During capture this directory lives in private crash-recovery storage. A clean
 stop promotes the complete directory through an atomic copy/rename into the
 approved export root, then removes only the validated finalized private child.

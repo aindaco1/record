@@ -111,6 +111,32 @@ public struct SegmentOutputSet: Equatable, Sendable {
     public let outputs: [ScreenCaptureSampleKind: SegmentOutput]
 
     public init(
+        finalURLs: [ScreenCaptureSampleKind: URL],
+        identifier: UUID = UUID(),
+        fileManager: FileManager = .default
+    ) throws {
+        guard finalURLs[.screen] != nil else {
+            throw SegmentWriterError.invalidOutputURL
+        }
+        let standardizedURLs = finalURLs.values.map(\.standardizedFileURL)
+        guard Set(standardizedURLs).count == standardizedURLs.count else {
+            throw SegmentWriterError.invalidOutputURL
+        }
+        outputs = try Dictionary(
+            uniqueKeysWithValues: finalURLs.map { kind, finalURL in
+                (
+                    kind,
+                    try SegmentOutput(
+                        finalURL: finalURL,
+                        identifier: identifier,
+                        fileManager: fileManager
+                    )
+                )
+            }
+        )
+    }
+
+    public init(
         screenURL: URL,
         includesSystemAudio: Bool,
         includesMicrophone: Bool,
@@ -118,28 +144,18 @@ public struct SegmentOutputSet: Equatable, Sendable {
         fileManager: FileManager = .default
     ) throws {
         let directory = screenURL.deletingLastPathComponent()
-        var outputs: [ScreenCaptureSampleKind: SegmentOutput] = [
-            .screen: try SegmentOutput(
-                finalURL: screenURL,
-                identifier: identifier,
-                fileManager: fileManager
-            )
-        ]
+        var finalURLs: [ScreenCaptureSampleKind: URL] = [.screen: screenURL]
         if includesSystemAudio {
-            outputs[.systemAudio] = try SegmentOutput(
-                finalURL: directory.appendingPathComponent("system.caf"),
-                identifier: identifier,
-                fileManager: fileManager
-            )
+            finalURLs[.systemAudio] = directory.appendingPathComponent("system.caf")
         }
         if includesMicrophone {
-            outputs[.microphone] = try SegmentOutput(
-                finalURL: directory.appendingPathComponent("mic.caf"),
-                identifier: identifier,
-                fileManager: fileManager
-            )
+            finalURLs[.microphone] = directory.appendingPathComponent("mic.caf")
         }
-        self.outputs = outputs
+        try self.init(
+            finalURLs: finalURLs,
+            identifier: identifier,
+            fileManager: fileManager
+        )
     }
 
     public subscript(kind: ScreenCaptureSampleKind) -> SegmentOutput? {

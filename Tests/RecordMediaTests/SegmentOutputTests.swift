@@ -53,6 +53,38 @@ final class SegmentOutputTests: XCTestCase {
         XCTAssertEqual(Set(outputs.outputs.values.map(\.partialURL)).count, 3)
     }
 
+    func testOutputSetAcceptsExplicitImmutableSegmentNames() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let outputs = try SegmentOutputSet(
+            finalURLs: [
+                .screen: directory.appendingPathComponent("segment-0002.mov"),
+                .systemAudio: directory.appendingPathComponent("segment-0002-system.caf"),
+                .microphone: directory.appendingPathComponent("segment-0002-mic.caf"),
+            ]
+        )
+
+        XCTAssertEqual(outputs[.screen]?.finalURL.lastPathComponent, "segment-0002.mov")
+        XCTAssertEqual(
+            outputs[.systemAudio]?.finalURL.lastPathComponent,
+            "segment-0002-system.caf"
+        )
+        XCTAssertEqual(outputs[.microphone]?.finalURL.lastPathComponent, "segment-0002-mic.caf")
+    }
+
+    func testOutputSetRejectsDuplicateDestinations() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let duplicate = directory.appendingPathComponent("segment.mov")
+
+        XCTAssertThrowsError(
+            try SegmentOutputSet(finalURLs: [.screen: duplicate, .microphone: duplicate])
+        ) { error in
+            XCTAssertEqual(error as? SegmentWriterError, .invalidOutputURL)
+        }
+    }
+
     func testRejectsNonMovieAndMissingDirectoryTargets() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

@@ -48,6 +48,79 @@ final class SessionRecoveryTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: session.path))
     }
 
+    func testCompletedPauseSegmentMakesAnInterruptedSessionRecoverable() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let session = root.appendingPathComponent("paused", isDirectory: true)
+        try FileManager.default.createDirectory(at: session, withIntermediateDirectories: true)
+        try SessionManifest(
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            tracks: [.init(kind: .screen, filename: "recording.mov")],
+            captureSegments: [
+                .init(
+                    index: 1,
+                    startedAtMilliseconds: 0,
+                    endedAtMilliseconds: 5_000,
+                    tracks: [.init(kind: .screen, filename: "segment-0001.mov")]
+                )
+            ],
+            captureEvents: [
+                .init(kind: .started, occurredAtMilliseconds: 0, segmentIndex: 1),
+                .init(kind: .paused, occurredAtMilliseconds: 5_000, segmentIndex: 1),
+            ]
+        ).write(to: session)
+        try Data([1, 2, 3]).write(to: session.appendingPathComponent("segment-0001.mov"))
+
+        let report = SessionRecovery.recover(in: root, isProcessRunning: { _ in false })
+
+        XCTAssertEqual(report.interrupted.map(\.lastPathComponent), ["paused"])
+        XCTAssertEqual(try SessionManifest.read(from: session).state, .interrupted)
+    }
+
+    func testActiveSegmentPartialIsPromotedAndRecoveredThroughTheSegmentJournal() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let session = root.appendingPathComponent("rotating", isDirectory: true)
+        try FileManager.default.createDirectory(at: session, withIntermediateDirectories: true)
+        try SessionManifest(
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            tracks: [.init(kind: .screen, filename: "recording.mov")],
+            captureSegments: [
+                .init(
+                    index: 1,
+                    startedAtMilliseconds: 0,
+                    tracks: [.init(kind: .screen, filename: "segment-0001.mov")]
+                )
+            ],
+            captureEvents: [
+                .init(kind: .started, occurredAtMilliseconds: 0, segmentIndex: 1)
+            ]
+        ).write(to: session)
+        let partial = session.appendingPathComponent(
+            ".segment-0001.00000000-0000-0000-0000-000000000004.partial.mov"
+        )
+        try Data([4, 5, 6]).write(to: partial)
+
+        let report = SessionRecovery.recover(
+            in: root,
+            isProcessRunning: { _ in false },
+            inspectMedia: { _ in .playable },
+            recoverPartialMedia: true
+        )
+
+        let promoted = session.appendingPathComponent("segment-0001.mov")
+        XCTAssertEqual(
+            report.promotedMedia.map { $0.resolvingSymlinksInPath() },
+            [promoted.resolvingSymlinksInPath()]
+        )
+        XCTAssertEqual(
+            report.interrupted.map { $0.resolvingSymlinksInPath() },
+            [session.resolvingSymlinksInPath()]
+        )
+        XCTAssertEqual(try Data(contentsOf: promoted), Data([4, 5, 6]))
+        XCTAssertEqual(try SessionManifest.read(from: session).state, .interrupted)
+    }
+
     func testLiveOwnerIsNeverRecovered() throws {
         let root = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

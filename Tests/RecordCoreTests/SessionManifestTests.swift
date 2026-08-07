@@ -100,6 +100,80 @@ final class SessionManifestTests: XCTestCase {
         }
     }
 
+    func testManifestRoundTripsCrashSafeSegmentsAndEvents() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let manifest = SessionManifest(
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            tracks: [.init(kind: .screen, filename: "recording.mov")],
+            captureSegments: [
+                .init(
+                    index: 1,
+                    startedAtMilliseconds: 0,
+                    endedAtMilliseconds: 4_000,
+                    tracks: [
+                        .init(kind: .screen, filename: "segment-0001.mov"),
+                        .init(
+                            kind: .microphone,
+                            filename: "segment-0001-mic.caf",
+                            speaker: "me",
+                            startOffsetMilliseconds: 12
+                        ),
+                    ]
+                )
+            ],
+            captureEvents: [
+                .init(kind: .started, occurredAtMilliseconds: 0, segmentIndex: 1),
+                .init(kind: .paused, occurredAtMilliseconds: 4_000, segmentIndex: 1),
+            ]
+        )
+
+        try manifest.write(to: directory)
+
+        XCTAssertEqual(try SessionManifest.read(from: directory), manifest)
+    }
+
+    func testManifestRejectsUnsafeOrDuplicateSegmentMetadata() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let invalidRange = SessionManifest(
+            startedAt: Date(),
+            tracks: [],
+            captureSegments: [
+                .init(
+                    index: 1,
+                    startedAtMilliseconds: 100,
+                    endedAtMilliseconds: 99,
+                    tracks: [.init(kind: .screen, filename: "segment-0001.mov")]
+                )
+            ]
+        )
+        let duplicateFile = SessionManifest(
+            startedAt: Date(),
+            tracks: [.init(kind: .screen, filename: "recording.mov")],
+            captureSegments: [
+                .init(
+                    index: 1,
+                    startedAtMilliseconds: 0,
+                    tracks: [.init(kind: .screen, filename: "recording.mov")]
+                )
+            ]
+        )
+
+        XCTAssertThrowsError(try invalidRange.write(to: directory)) { error in
+            XCTAssertEqual(
+                error as? SessionManifest.ManifestError,
+                .invalidCaptureSegment(1)
+            )
+        }
+        XCTAssertThrowsError(try duplicateFile.write(to: directory)) { error in
+            XCTAssertEqual(
+                error as? SessionManifest.ManifestError,
+                .duplicateTrackFilename("recording.mov")
+            )
+        }
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("RecordCoreTests-\(UUID().uuidString)", isDirectory: true)

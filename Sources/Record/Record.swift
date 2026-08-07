@@ -158,12 +158,15 @@ final class AppController {
     private var activeRecording: ActiveRecording?
     private var ticker: Timer?
     private var videoStartTask: Task<Void, Never>?
+    private var videoRotationTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
     private var sessionPublishTask: Task<Void, Never>?
     private var recentRecordingRefreshTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
     private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
+    private var videoPaused = false
+    private var videoElapsedClock = RecordingElapsedClock()
     private var quitAfterStop = false
     private var recordingExportName: String?
     private var lastFinishedVideoURL: URL?
@@ -191,6 +194,7 @@ final class AppController {
         menuBar.onStartAudioOnly = { [weak self] in
             self?.requestRecording(.audioOnly)
         }
+        menuBar.onPauseResume = { [weak self] in self?.toggleVideoPause() }
         menuBar.onSelectScreenSource = { [weak self] in
             self?.selectScreenCaptureSource($0)
         }
@@ -264,7 +268,7 @@ final class AppController {
             self.videoStartTask = nil
             menuBar.update(recording: false, elapsed: nil)
         }
-        guard activeRecording != nil || sessionPublishTask != nil else {
+        guard activeRecording != nil || sessionPublishTask != nil || videoRotationTask != nil else {
             NSApp.terminate(nil)
             return
         }
@@ -277,7 +281,10 @@ final class AppController {
     /// the Quit menu. This also protects an active capture if an updater asks
     /// Record to relaunch after installing a signed release.
     func prepareForTermination() -> Bool {
-        guard activeRecording != nil || sessionPublishTask != nil || videoStartTask != nil else {
+        guard
+            activeRecording != nil || sessionPublishTask != nil || videoStartTask != nil
+                || videoRotationTask != nil
+        else {
             return true
         }
         shutdown()
@@ -412,6 +419,8 @@ final class AppController {
                     FileHandle.standardError.write(
                         Data("● screen recording → \(session.dir.path)\n".utf8)
                     )
+                    self.videoPaused = false
+                    self.videoElapsedClock.start(at: Date())
                     self.menuBar.update(recording: true, elapsed: "0:00", mode: .screen)
                     self.startTicker()
                 }
@@ -478,7 +487,7 @@ final class AppController {
         case .audio(let session):
             stopAudioSession(session)
         case .video(let session):
-            if videoStartTask != nil {
+            if videoStartTask != nil || videoRotationTask != nil {
                 pendingVideoStop = true
                 menuBar.updateStoppingRecording()
             } else {
@@ -533,6 +542,8 @@ final class AppController {
 
     private func stopVideoSession(_ session: VideoRecordingSession) {
         guard videoStopTask == nil else { return }
+        _ = videoElapsedClock.stop(at: Date())
+        videoPaused = false
         menuBar.updateStoppingRecording()
         ticker?.invalidate()
         ticker = nil
@@ -553,6 +564,7 @@ final class AppController {
         session: VideoRecordingSession
     ) {
         videoStopTask = nil
+        videoRotationTask = nil
         pendingVideoStop = false
         let preferredExportName =
             recordingExportName
@@ -716,6 +728,80 @@ final class AppController {
         }
     }
 
+    private func toggleVideoPause() {
+        guard case .video(let session) = activeRecording,
+            videoStartTask == nil,
+            videoRotationTask == nil,
+            videoStopTask == nil
+        else { return }
+
+        let resuming = videoPaused
+        let commandDate = Date()
+        if !resuming {
+            ticker?.invalidate()
+            ticker = nil
+        }
+        menuBar.updateRotatingScreenRecording(resuming: resuming)
+        videoRotationTask = Task { [weak self, session] in
+            let result: Result<Void, Error>
+            do {
+                if resuming {
+                    try await session.resume(at: commandDate)
+                } else {
+                    try await session.pause(at: commandDate)
+                }
+                result = .success(())
+            } catch {
+                result = .failure(error)
+            }
+            self?.finishVideoRotation(
+                result,
+                session: session,
+                resuming: resuming,
+                commandDate: commandDate
+            )
+        }
+    }
+
+    private func finishVideoRotation(
+        _ result: Result<Void, Error>,
+        session: VideoRecordingSession,
+        resuming: Bool,
+        commandDate: Date
+    ) {
+        videoRotationTask = nil
+        switch result {
+        case .success:
+            if resuming {
+                videoPaused = false
+                videoElapsedClock.resume(at: Date())
+            } else {
+                videoPaused = true
+                videoElapsedClock.pause(at: commandDate)
+            }
+            if pendingVideoStop {
+                stopVideoSession(session)
+            } else if videoPaused {
+                menuBar.updatePausedScreenRecording(
+                    elapsed: Self.format(videoElapsedClock.elapsed(at: Date()))
+                )
+            } else {
+                menuBar.update(
+                    recording: true,
+                    elapsed: Self.format(videoElapsedClock.elapsed(at: Date())),
+                    mode: .screen
+                )
+                startTicker()
+            }
+        case .failure(let error):
+            FileHandle.standardError.write(
+                Data("screen capture rotation failed: \(error)\n".utf8)
+            )
+            pendingVideoStop = true
+            stopVideoSession(session)
+        }
+    }
+
     private func handleCaptureHealth(_ event: CaptureHealthEvent) {
         menuBar.updateCaptureHealth(event)
         let line =
@@ -731,6 +817,7 @@ final class AppController {
             activeRecording = nil
         }
         pendingVideoStop = false
+        videoPaused = false
         recordingExportName = nil
         menuBar.update(recording: false, elapsed: nil)
         if Self.captureFailure(from: error)?.code == .permissionDenied {
@@ -1036,9 +1123,16 @@ final class AppController {
 
     private func tick() {
         guard let activeRecording else { return }
+        let elapsed: TimeInterval
+        switch activeRecording {
+        case .audio(let session):
+            elapsed = Date().timeIntervalSince(session.startedAt)
+        case .video:
+            elapsed = videoElapsedClock.elapsed(at: Date())
+        }
         menuBar.update(
             recording: true,
-            elapsed: Self.format(Date().timeIntervalSince(activeRecording.startedAt)),
+            elapsed: Self.format(elapsed),
             mode: activeRecording.mode
         )
     }

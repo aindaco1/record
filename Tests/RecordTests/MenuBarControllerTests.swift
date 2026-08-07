@@ -106,4 +106,27 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertTrue(animation.autoreverses)
         XCTAssertEqual(animation.repeatCount, .infinity)
     }
+
+    func testPauseControlIsScopedToScreenRecordingAndRepresentsTransitions() {
+        let menu = MenuBarController()
+
+        menu.update(recording: true, elapsed: "0:03", mode: .audioOnly)
+        XCTAssertFalse(menu.isPauseResumeVisible)
+
+        menu.update(recording: true, elapsed: "0:03", mode: .screen)
+        XCTAssertTrue(menu.isPauseResumeVisible)
+        XCTAssertTrue(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Pause screen recording")
+
+        menu.updateRotatingScreenRecording(resuming: false)
+        XCTAssertFalse(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Pausing screen recording…")
+
+        menu.updatePausedScreenRecording(elapsed: "0:03")
+        XCTAssertTrue(menu.isPauseResumeEnabled)
+        XCTAssertEqual(menu.pauseResumeTitle, "Resume screen recording")
+
+        menu.update(recording: false, elapsed: nil)
+        XCTAssertFalse(menu.isPauseResumeVisible)
+    }
 }

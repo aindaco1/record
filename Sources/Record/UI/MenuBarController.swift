@@ -20,6 +20,7 @@ final class MenuBarController {
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
+    private let pauseResumeItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
     private let screenSourceItem: NSMenuItem
     private let mainDisplaySourceItem: NSMenuItem
@@ -46,6 +47,9 @@ final class MenuBarController {
     var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
     var isRetryTranscriptionMenuItemVisible: Bool { !retryTranscriptionItem.isHidden }
     var isOpenLastRecordingEnabled: Bool { openLastRecordingItem.isEnabled }
+    var isPauseResumeVisible: Bool { !pauseResumeItem.isHidden }
+    var pauseResumeTitle: String { pauseResumeItem.title }
+    var isPauseResumeEnabled: Bool { pauseResumeItem.isEnabled }
     var selectedScreenSource: ScreenCaptureSourcePreference? {
         let items: [(ScreenCaptureSourcePreference, NSMenuItem)] = [
             (.mainDisplay, mainDisplaySourceItem),
@@ -57,6 +61,7 @@ final class MenuBarController {
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
+    var onPauseResume: (() -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
     var onToggleCapturePrivacy: ((CapturePrivacyFeature) -> Void)?
     var onToggleRecordingName: (() -> Void)?
@@ -95,6 +100,15 @@ final class MenuBarController {
             keyEquivalent: "r"
         )
         menu.addItem(toggleItem)
+
+        pauseResumeItem = NSMenuItem(
+            title: "Pause screen recording",
+            action: #selector(pauseResumeClicked),
+            keyEquivalent: ""
+        )
+        pauseResumeItem.isHidden = true
+        pauseResumeItem.isEnabled = false
+        menu.addItem(pauseResumeItem)
 
         audioOnlyItem = NSMenuItem(
             title: "Start audio-only recording",
@@ -254,6 +268,7 @@ final class MenuBarController {
 
         for item in [
             toggleItem,
+            pauseResumeItem,
             audioOnlyItem,
             mainDisplaySourceItem,
             systemPickerSourceItem,
@@ -300,6 +315,9 @@ final class MenuBarController {
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
+        pauseResumeItem.isHidden = !recording || mode != .screen
+        pauseResumeItem.isEnabled = recording && mode == .screen
+        pauseResumeItem.title = "Pause screen recording"
         screenSourceItem.isEnabled = !recording
         exportFolderItem.isEnabled = !recording
         setCapturePrivacyItemsEnabled(!recording)
@@ -310,6 +328,8 @@ final class MenuBarController {
         captureHealthNote = nil
         stateLabel.title = "waiting for \(mode.displayName) recording permissions…"
         toggleItem.isEnabled = false
+        pauseResumeItem.isHidden = true
+        pauseResumeItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         screenSourceItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
@@ -321,6 +341,8 @@ final class MenuBarController {
         stateLabel.title = "preparing screen recording…"
         toggleItem.title = "Preparing screen recording…"
         toggleItem.isEnabled = false
+        pauseResumeItem.isHidden = true
+        pauseResumeItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         screenSourceItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
@@ -331,6 +353,7 @@ final class MenuBarController {
         stateLabel.title = "stopping recording…"
         toggleItem.title = "Stopping recording…"
         toggleItem.isEnabled = false
+        pauseResumeItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         screenSourceItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
@@ -340,11 +363,40 @@ final class MenuBarController {
         stateLabel.title = "saving recording…"
         toggleItem.title = "Saving recording…"
         toggleItem.isEnabled = false
+        pauseResumeItem.isHidden = true
+        pauseResumeItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         screenSourceItem.isEnabled = false
         exportFolderItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
         setRecordingIndicatorActive(false)
+    }
+
+    func updatePausedScreenRecording(elapsed: String) {
+        stateLabel.title = "paused screen recording · \(elapsed)"
+        toggleItem.title = "Stop recording"
+        toggleItem.isEnabled = true
+        pauseResumeItem.title = "Resume screen recording"
+        pauseResumeItem.isHidden = false
+        pauseResumeItem.isEnabled = true
+        audioOnlyItem.isEnabled = false
+        screenSourceItem.isEnabled = false
+        exportFolderItem.isEnabled = false
+        setCapturePrivacyItemsEnabled(false)
+        setRecordingIndicatorActive(false)
+    }
+
+    func updateRotatingScreenRecording(resuming: Bool) {
+        stateLabel.title = resuming ? "resuming screen recording…" : "pausing screen recording…"
+        toggleItem.isEnabled = false
+        pauseResumeItem.title =
+            resuming ? "Resuming screen recording…" : "Pausing screen recording…"
+        pauseResumeItem.isHidden = false
+        pauseResumeItem.isEnabled = false
+        audioOnlyItem.isEnabled = false
+        screenSourceItem.isEnabled = false
+        exportFolderItem.isEnabled = false
+        setCapturePrivacyItemsEnabled(false)
     }
 
     func updateCaptureHealth(_ event: CaptureHealthEvent) {
@@ -568,6 +620,7 @@ final class MenuBarController {
     }
 
     @objc private func toggleClicked() { onToggle?() }
+    @objc private func pauseResumeClicked() { onPauseResume?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func screenSourceClicked(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,
