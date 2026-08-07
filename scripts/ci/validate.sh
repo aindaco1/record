@@ -4,9 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
-swift_build_system="${RECORD_SWIFT_BUILD_SYSTEM:-}"
+swift_build_system="${RECORD_SWIFT_BUILD_SYSTEM:-native}"
 case "$swift_build_system" in
-    "") swift_build_arguments=() ;;
     native | swiftbuild)
         swift_build_arguments=(--build-system "$swift_build_system")
         ;;
