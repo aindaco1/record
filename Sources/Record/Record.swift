@@ -603,7 +603,7 @@ final class AppController {
     }
 
     private func manageScreenRecordingPermission() {
-        _ = screenRecordingPermission.ensureAccess()
+        screenRecordingPermission.setupPermissions()
         refreshScreenRecordingPermissionMenu()
     }
 

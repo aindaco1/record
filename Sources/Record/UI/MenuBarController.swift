@@ -23,7 +23,7 @@ final class MenuBarController {
     private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
     private let restartItem: NSMenuItem
-    private var screenRecordingPermissionGranted = false
+    private var isRecording = false
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
@@ -70,7 +70,7 @@ final class MenuBarController {
         menu.addItem(audioOnlyItem)
 
         screenRecordingPermissionItem = NSMenuItem(
-            title: "Grant Screen Recording Permission…",
+            title: "Set Up Recording Permissions…",
             action: #selector(manageScreenRecordingPermissionClicked),
             keyEquivalent: ""
         )
@@ -211,6 +211,7 @@ final class MenuBarController {
     /// counter lives in the menu's state label. Call once a second while
     /// recording.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
+        isRecording = recording
         stateLabel.title =
             recording
             ? "● \(mode.displayName) recording · \(elapsed ?? "0:00")"
@@ -218,8 +219,7 @@ final class MenuBarController {
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
-        screenRecordingPermissionItem.isEnabled =
-            !recording && !screenRecordingPermissionGranted
+        screenRecordingPermissionItem.isEnabled = !recording
         restartItem.isEnabled = !recording
         setCapturePrivacyItemsEnabled(!recording)
         statusItem.button?.contentTintColor = recording ? .systemRed : nil
@@ -249,11 +249,10 @@ final class MenuBarController {
     func updateScreenRecordingPermission(
         _ presentation: ScreenRecordingPermissionPresentation
     ) {
-        screenRecordingPermissionGranted = presentation.isGranted
         screenRecordingPermissionItem.title = presentation.menuTitle
         screenRecordingPermissionItem.toolTip = presentation.menuToolTip
         screenRecordingPermissionItem.state = presentation.isGranted ? .on : .off
-        screenRecordingPermissionItem.isEnabled = !presentation.isGranted
+        screenRecordingPermissionItem.isEnabled = !isRecording
     }
 
     func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {

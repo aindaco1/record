@@ -1,124 +1,173 @@
 import AppKit
+import CoreAudio
 import CoreGraphics
 import Foundation
 
 protocol ScreenRecordingPermissionProviding {
     var isGranted: Bool { get }
-    var hasRequestedAccess: Bool { get }
     func requestAccess() -> Bool
 }
 
 final class SystemScreenRecordingPermissionProvider: ScreenRecordingPermissionProviding {
-    private static let requestRecordedKey =
-        "screenRecordingPermissionRequestRecorded"
-
-    private let defaults: UserDefaults
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-    }
-
     var isGranted: Bool { CGPreflightScreenCaptureAccess() }
-    var hasRequestedAccess: Bool { defaults.bool(forKey: Self.requestRecordedKey) }
 
     func requestAccess() -> Bool {
-        // Record this before entering TCC because the native prompt can block
-        // and the process may be restarted immediately after the response.
-        defaults.set(true, forKey: Self.requestRecordedKey)
-        return CGRequestScreenCaptureAccess()
+        CGRequestScreenCaptureAccess()
+    }
+}
+
+protocol SystemAudioPermissionRegistering {
+    @discardableResult
+    func registerAccessRequest() -> OSStatus
+}
+
+/// Registers Record with the system-audio-only TCC service without recording.
+/// The temporary private tap is never attached to an aggregate device, given an
+/// IO callback, or started, and is destroyed immediately if creation succeeds.
+final class SystemAudioPermissionRegistrar: SystemAudioPermissionRegistering {
+    @discardableResult
+    func registerAccessRequest() -> OSStatus {
+        let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
+        description.name = "Record permission setup"
+        description.isPrivate = true
+        description.muteBehavior = .unmuted
+
+        var tapID = AudioObjectID(kAudioObjectUnknown)
+        let status = AudioHardwareCreateProcessTap(description, &tapID)
+        if status == noErr, tapID != kAudioObjectUnknown {
+            _ = AudioHardwareDestroyProcessTap(tapID)
+        }
+        return status
     }
 }
 
 struct ScreenRecordingPermissionPresentation: Equatable, Sendable {
     let isGranted: Bool
-    let hasRequestedAccess: Bool
 
     var menuTitle: String {
-        if isGranted { return "Screen Recording Permission: Granted" }
-        return hasRequestedAccess
-            ? "Open Screen Recording Settings…"
-            : "Grant Screen Recording Permission…"
+        isGranted ? "Recording Permissions…" : "Set Up Recording Permissions…"
     }
 
     var menuToolTip: String {
-        if isGranted { return "Record can capture your screen." }
-        if hasRequestedAccess {
+        if isGranted {
             return
-                "Permission was already requested. Enable Record in System Settings, then restart it."
+                "Screen access is granted. Open setup to register or review system-audio-only access."
         }
         return
-            "Requests screen access. macOS groups it under Screen & System Audio Recording."
+            "Register Record for screen and system-audio-only access in one guided setup."
     }
 
-    func guidance(restartRecommended: Bool) -> String {
+    var setupGuidance: String {
+        """
+        Record uses two separate macOS permissions:
+
+        • Screen & System Audio Recording — for video recordings
+        • System Audio Recording Only — for audio-only recordings
+
+        Continue asks macOS to add Record to both permission lists. macOS may show one Apple confirmation for each list; choose Allow in each. Record will not capture or save anything during setup.
+
+        System Settings will then open so you can review both entries. If macOS asks, restart Record after changing a permission.
+        """
+    }
+
+    func captureDenialGuidance(restartRecommended: Bool) -> String {
         let nextStep =
             restartRecommended
             ? "If Record is already enabled, return to the feather menu and choose Restart Record."
             : "After enabling Record, return to the feather menu and choose Restart Record."
         return """
-            Record needs Screen Recording access to capture video. Audio-only recording still works.
+            Record needs Screen & System Audio Recording access to capture video. Audio-only recording still works.
 
-            macOS groups screen access under Privacy & Security › Screen & System Audio Recording. The separate System Audio Recording Only permission is requested only when an audio recording starts.
-
-            Open System Settings, enable Record, then return to Record. \(nextStep)
+            Open System Settings, enable Record under Privacy & Security › Screen & System Audio Recording, then return to Record. \(nextStep)
             """
     }
 }
 
 @MainActor
 final class ScreenRecordingPermissionController {
+    typealias SetupPresenter = @MainActor (_ guidance: String) -> Bool
     typealias DeniedPresenter = @MainActor (_ guidance: String) -> Void
+    typealias SettingsOpener = @MainActor () -> Void
 
     private static let settingsURL = URL(
         string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
     )!
 
     private let provider: any ScreenRecordingPermissionProviding
+    private let systemAudioRegistrar: any SystemAudioPermissionRegistering
+    private let setupPresenter: SetupPresenter
     private let deniedPresenter: DeniedPresenter
+    private let settingsOpener: SettingsOpener
 
     init(
         provider: any ScreenRecordingPermissionProviding =
             SystemScreenRecordingPermissionProvider(),
-        deniedPresenter: DeniedPresenter? = nil
+        systemAudioRegistrar: any SystemAudioPermissionRegistering =
+            SystemAudioPermissionRegistrar(),
+        setupPresenter: SetupPresenter? = nil,
+        deniedPresenter: DeniedPresenter? = nil,
+        settingsOpener: SettingsOpener? = nil
     ) {
         self.provider = provider
+        self.systemAudioRegistrar = systemAudioRegistrar
+        self.setupPresenter = setupPresenter ?? Self.presentSetup
         self.deniedPresenter = deniedPresenter ?? Self.presentDeniedAccess
+        self.settingsOpener =
+            settingsOpener ?? {
+                NSWorkspace.shared.open(Self.settingsURL)
+            }
     }
 
     var presentation: ScreenRecordingPermissionPresentation {
-        ScreenRecordingPermissionPresentation(
-            isGranted: provider.isGranted,
-            hasRequestedAccess: provider.hasRequestedAccess
-        )
+        ScreenRecordingPermissionPresentation(isGranted: provider.isGranted)
     }
 
+    /// Screen recording starts only on a subsequent click after setup. This
+    /// keeps permission registration distinct from capturing user content.
     func ensureAccess() -> Bool {
         if provider.isGranted { return true }
-        if !provider.hasRequestedAccess {
-            // CGRequestScreenCaptureAccess presents Apple's native prompt.
-            // Do not stack a second Record alert while that prompt is active.
-            return provider.requestAccess()
-        }
-        deniedPresenter(
-            ScreenRecordingPermissionPresentation(
-                isGranted: false,
-                hasRequestedAccess: true
-            ).guidance(
-                restartRecommended: false
-            )
-        )
+        setupPermissions()
         return false
+    }
+
+    /// Presents one Record-owned explanation, then registers both independent
+    /// macOS TCC services in sequence. Apple may still present one native
+    /// confirmation per service; applications cannot combine or pre-approve
+    /// those system-owned decisions.
+    func setupPermissions() {
+        guard setupPresenter(presentation.setupGuidance) else { return }
+
+        if !provider.isGranted {
+            _ = provider.requestAccess()
+        }
+        let audioStatus = systemAudioRegistrar.registerAccessRequest()
+        if audioStatus != noErr {
+            FileHandle.standardError.write(
+                Data(
+                    "system audio permission registration returned OSStatus \(audioStatus)\n"
+                        .utf8
+                )
+            )
+        }
+        settingsOpener()
     }
 
     func presentCaptureDenial() {
         deniedPresenter(
-            ScreenRecordingPermissionPresentation(
-                isGranted: false,
-                hasRequestedAccess: true
-            ).guidance(
-                restartRecommended: true
-            )
+            ScreenRecordingPermissionPresentation(isGranted: false)
+                .captureDenialGuidance(restartRecommended: true)
         )
+    }
+
+    private static func presentSetup(_ guidance: String) -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        alert.messageText = "Set Up Recording Permissions"
+        alert.informativeText = guidance
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Not Now")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private static func presentDeniedAccess(_ guidance: String) {

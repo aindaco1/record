@@ -16,6 +16,8 @@ regressions run on every pull request.
 - display-profile 4K/even-dimension bounds, video-session orchestration,
   failure manifests, idempotent stops, and atomic non-overwriting exports
 - model identifier validation and local-only failure behavior
+- unified recording-permission setup ordering, cancellation, and no-capture
+  behavior with injected TCC adapters
 - session state transitions and atomic manifest round trips
 - interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
@@ -41,27 +43,33 @@ Use synthetic or non-sensitive content for development recordings:
    This builds arm64, assembles the real app bundle, signs it ad hoc with the
    reviewed sandbox entitlements, verifies those embedded entitlements, and
    leaves Record running. A feather should appear in the menu bar.
-2. Choose **Start screen recording**. On first use, approve Desktop in the
-   export-folder picker. Grant microphone and Screen & System Audio Recording
-   access to Record if macOS prompts. If macOS requests a relaunch, quit Record
-   from its menu and rerun the command.
-3. Move a test window, speak into the selected microphone, and play a known
+2. Choose **Set Up Recording Permissions…**. Record should show one explanation,
+   then ask macOS to register both **Screen & System Audio Recording** and
+   **System Audio Recording Only**, in that order. Apple may show one native
+   confirmation for each independent permission. Choose Allow when prompted;
+   the setup itself must not create a recording or media file. The settings
+   page should open with Record present in both lists without using the `+`
+   buttons. macOS still requires you to control each toggle. If it requests a
+   relaunch, choose **Restart Record** from the feather menu.
+3. Choose **Start screen recording**. On first use, approve Desktop in the
+   export-folder picker and grant microphone access if macOS prompts.
+4. Move a test window, speak into the selected microphone, and play a known
    local audio clip for at least 15 seconds. Confirm the feather turns red, the
    menu shows an increasing elapsed time, and the command becomes **Stop
    recording**.
-4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
+5. Stop recording and wait for the menu to return to idle. Confirm a nonempty
    template-named `.mov` appears on Desktop, opens in QuickTime,
    shows the main display at the expected aspect ratio, and contains both the
    microphone and played system audio. Record keeps the raw `recording.mov` in
    **Open session storage** for recovery.
-5. Repeat with **Start audio-only recording**, then inspect that session with
+6. Repeat with **Start audio-only recording**, then inspect that session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
    finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
    readable durations, and nonnegative synchronization offsets.
-6. Listen to `mic.caf` and `system.caf`. The microphone track should contain
+7. Listen to `mic.caf` and `system.caf`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
-7. Quit Record from its menu. Rerun with `--logs` for unified process logs or
+8. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
 Open **Plugins → Recording Name Template…**, test date/time and bundled-word

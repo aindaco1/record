@@ -4,81 +4,113 @@ import XCTest
 
 @MainActor
 final class ScreenRecordingPermissionTests: XCTestCase {
-    func testGrantedPermissionDoesNotRequestOrPresentGuidance() {
+    func testGrantedPermissionStartsWithoutShowingSetup() {
         let provider = FakePermissionProvider(isGranted: true, requestResult: false)
-        var presented: [String] = []
-        let controller = ScreenRecordingPermissionController(provider: provider) {
-            presented.append($0)
-        }
+        let audioRegistrar = FakeSystemAudioPermissionRegistrar()
+        var setupCount = 0
+        let controller = makeController(
+            provider: provider,
+            audioRegistrar: audioRegistrar,
+            setupPresenter: { _ in
+                setupCount += 1
+                return true
+            }
+        )
 
         XCTAssertTrue(controller.ensureAccess())
         XCTAssertEqual(provider.requestCount, 0)
-        XCTAssertTrue(presented.isEmpty)
-        XCTAssertEqual(
-            controller.presentation.menuTitle,
-            "Screen Recording Permission: Granted"
-        )
+        XCTAssertEqual(audioRegistrar.requestCount, 0)
+        XCTAssertEqual(setupCount, 0)
+        XCTAssertEqual(controller.presentation.menuTitle, "Recording Permissions…")
     }
 
-    func testInitialDeniedRequestReliesOnNativePromptWithoutStackingGuidance() {
+    func testSetupPresentsOneMessageThenRegistersBothPermissionsInOrder() {
+        var events: [String] = []
         let provider = FakePermissionProvider(
             isGranted: false,
-            hasRequestedAccess: false,
-            requestResult: false
+            requestResult: false,
+            onRequest: { events.append("screen") }
         )
-        var presented: [String] = []
-        let controller = ScreenRecordingPermissionController(provider: provider) {
-            presented.append($0)
+        let audioRegistrar = FakeSystemAudioPermissionRegistrar {
+            events.append("system-audio")
         }
+        let controller = makeController(
+            provider: provider,
+            audioRegistrar: audioRegistrar,
+            setupPresenter: { guidance in
+                events.append("message")
+                XCTAssertTrue(guidance.contains("Screen & System Audio Recording"))
+                XCTAssertTrue(guidance.contains("System Audio Recording Only"))
+                XCTAssertTrue(guidance.contains("will not capture or save anything"))
+                return true
+            },
+            settingsOpener: { events.append("settings") }
+        )
 
-        XCTAssertFalse(controller.ensureAccess())
+        controller.setupPermissions()
+
+        XCTAssertEqual(events, ["message", "screen", "system-audio", "settings"])
         XCTAssertEqual(provider.requestCount, 1)
-        XCTAssertTrue(provider.hasRequestedAccess)
-        XCTAssertTrue(presented.isEmpty)
-        XCTAssertEqual(
-            controller.presentation.menuTitle,
-            "Open Screen Recording Settings…"
-        )
+        XCTAssertEqual(audioRegistrar.requestCount, 1)
     }
 
-    func testRetryAfterNativeRequestShowsOneHumanGuidanceWithoutRequestingAgain() {
-        let provider = FakePermissionProvider(
-            isGranted: false,
-            hasRequestedAccess: true,
-            requestResult: false
+    func testCancelledSetupRequestsNothingAndDoesNotOpenSettings() {
+        let provider = FakePermissionProvider(isGranted: false, requestResult: false)
+        let audioRegistrar = FakeSystemAudioPermissionRegistrar()
+        var settingsOpenCount = 0
+        let controller = makeController(
+            provider: provider,
+            audioRegistrar: audioRegistrar,
+            setupPresenter: { _ in false },
+            settingsOpener: { settingsOpenCount += 1 }
         )
-        var presented: [String] = []
-        let controller = ScreenRecordingPermissionController(provider: provider) {
-            presented.append($0)
-        }
 
-        XCTAssertFalse(controller.ensureAccess())
+        controller.setupPermissions()
+
         XCTAssertEqual(provider.requestCount, 0)
-        XCTAssertEqual(presented.count, 1)
-        XCTAssertTrue(presented[0].contains("Audio-only recording still works"))
-        XCTAssertTrue(presented[0].contains("Restart Record"))
-        XCTAssertTrue(presented[0].contains("System Audio Recording Only"))
-        XCTAssertFalse(presented[0].contains("permissionDenied"))
+        XCTAssertEqual(audioRegistrar.requestCount, 0)
+        XCTAssertEqual(settingsOpenCount, 0)
     }
 
-    func testSuccessfulRequestContinuesWithoutFailureAlert() {
+    func testSetupStillRegistersSystemAudioWhenScreenIsAlreadyGranted() {
+        let provider = FakePermissionProvider(isGranted: true, requestResult: true)
+        let audioRegistrar = FakeSystemAudioPermissionRegistrar()
+        var settingsOpenCount = 0
+        let controller = makeController(
+            provider: provider,
+            audioRegistrar: audioRegistrar,
+            setupPresenter: { _ in true },
+            settingsOpener: { settingsOpenCount += 1 }
+        )
+
+        controller.setupPermissions()
+
+        XCTAssertEqual(provider.requestCount, 0)
+        XCTAssertEqual(audioRegistrar.requestCount, 1)
+        XCTAssertEqual(settingsOpenCount, 1)
+    }
+
+    func testInitialScreenStartRunsSetupButDoesNotCaptureOnSameClick() {
         let provider = FakePermissionProvider(isGranted: false, requestResult: true)
-        var presented = false
-        let controller = ScreenRecordingPermissionController(provider: provider) { _ in
-            presented = true
-        }
+        let audioRegistrar = FakeSystemAudioPermissionRegistrar()
+        let controller = makeController(
+            provider: provider,
+            audioRegistrar: audioRegistrar,
+            setupPresenter: { _ in true }
+        )
 
-        XCTAssertTrue(controller.ensureAccess())
+        XCTAssertFalse(controller.ensureAccess())
         XCTAssertEqual(provider.requestCount, 1)
-        XCTAssertFalse(presented)
+        XCTAssertEqual(audioRegistrar.requestCount, 1)
     }
 
     func testCaptureDenialExplainsAlreadyEnabledRestartCase() {
         let provider = FakePermissionProvider(isGranted: false, requestResult: false)
         var guidance: String?
-        let controller = ScreenRecordingPermissionController(provider: provider) {
-            guidance = $0
-        }
+        let controller = makeController(
+            provider: provider,
+            deniedPresenter: { guidance = $0 }
+        )
 
         controller.presentCaptureDenial()
 
@@ -108,27 +140,66 @@ final class ScreenRecordingPermissionTests: XCTestCase {
         XCTAssertFalse(permissionMessage.contains("permissionDenied"))
         XCTAssertFalse(encoderMessage.contains("opaque encoder error"))
     }
+
+    private func makeController(
+        provider: FakePermissionProvider,
+        audioRegistrar: FakeSystemAudioPermissionRegistrar =
+            FakeSystemAudioPermissionRegistrar(),
+        setupPresenter: @escaping ScreenRecordingPermissionController.SetupPresenter = {
+            _ in false
+        },
+        deniedPresenter: @escaping ScreenRecordingPermissionController.DeniedPresenter = {
+            _ in
+        },
+        settingsOpener: @escaping ScreenRecordingPermissionController.SettingsOpener = {}
+    ) -> ScreenRecordingPermissionController {
+        ScreenRecordingPermissionController(
+            provider: provider,
+            systemAudioRegistrar: audioRegistrar,
+            setupPresenter: setupPresenter,
+            deniedPresenter: deniedPresenter,
+            settingsOpener: settingsOpener
+        )
+    }
 }
 
 private final class FakePermissionProvider: ScreenRecordingPermissionProviding {
     let isGranted: Bool
-    private(set) var hasRequestedAccess: Bool
     let requestResult: Bool
+    private let onRequest: () -> Void
     private(set) var requestCount = 0
 
     init(
         isGranted: Bool,
-        hasRequestedAccess: Bool = false,
-        requestResult: Bool
+        requestResult: Bool,
+        onRequest: @escaping () -> Void = {}
     ) {
         self.isGranted = isGranted
-        self.hasRequestedAccess = hasRequestedAccess
         self.requestResult = requestResult
+        self.onRequest = onRequest
     }
 
     func requestAccess() -> Bool {
         requestCount += 1
-        hasRequestedAccess = true
+        onRequest()
         return requestResult
+    }
+}
+
+private final class FakeSystemAudioPermissionRegistrar:
+    SystemAudioPermissionRegistering
+{
+    private let onRequest: () -> Void
+    private(set) var requestCount = 0
+
+    init(onRequest: @escaping () -> Void = {}) {
+        self.onRequest = onRequest
+    }
+
+    @discardableResult
+    func registerAccessRequest() -> OSStatus {
+        requestCount += 1
+        onRequest()
+        return noErr
     }
 }
