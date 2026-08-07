@@ -21,6 +21,13 @@ actor TranscriptionCoordinator {
     private var engineSelection: TranscriptionSelection?
     private var lastFailure: String?
     private var statusHandler: (@Sendable (Status) -> Void)?
+    private let notificationHandler: @Sendable (RecordNotification) -> Void
+
+    init(
+        notificationHandler: @escaping @Sendable (RecordNotification) -> Void = { _ in }
+    ) {
+        self.notificationHandler = notificationHandler
+    }
 
     func setStatusHandler(_ handler: @escaping @Sendable (Status) -> Void) {
         statusHandler = handler
@@ -108,14 +115,24 @@ actor TranscriptionCoordinator {
             publish(.transcribing(session: dir.lastPathComponent, queued: queue.count))
             do {
                 try await transcribe(dir)
-                notifyUser(title: "Record — transcript ready", body: dir.lastPathComponent)
+                notificationHandler(
+                    RecordNotification(
+                        title: "Transcript ready",
+                        body: "Transcription finished. Click to open the recording folder.",
+                        destinationDirectory: dir
+                    )
+                )
                 runHook(for: dir)
             } catch {
                 log(dir, "transcription failed: \(error)")
                 lastFailure = dir.lastPathComponent
-                notifyUser(
-                    title: "Record — transcription failed",
-                    body: "\(dir.lastPathComponent) — see transcribe.log"
+                notificationHandler(
+                    RecordNotification(
+                        title: "Transcription couldn’t finish",
+                        body:
+                            "The recording is safe. Click to open its folder and review transcribe.log.",
+                        destinationDirectory: dir
+                    )
                 )
             }
         }

@@ -11,6 +11,7 @@ final class MenuBarController {
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
+    private let screenRecordingPermissionItem: NSMenuItem
     private let hideNotificationsItem: NSMenuItem
     private let hideMenuBarItem: NSMenuItem
     private let hideDesktopItemsItem: NSMenuItem
@@ -21,9 +22,12 @@ final class MenuBarController {
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
+    private let restartItem: NSMenuItem
+    private var screenRecordingPermissionGranted = false
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
+    var onManageScreenRecordingPermission: (() -> Void)?
     var onToggleCapturePrivacy: ((CapturePrivacyFeature) -> Void)?
     var onToggleRecordingName: (() -> Void)?
     var onEditRecordingNameTemplate: (() -> Void)?
@@ -31,6 +35,7 @@ final class MenuBarController {
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onOpenFolder: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
+    var onRestart: (() -> Void)?
     var onQuit: (() -> Void)?
 
     init() {
@@ -63,6 +68,13 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         menu.addItem(audioOnlyItem)
+
+        screenRecordingPermissionItem = NSMenuItem(
+            title: "Grant Screen Recording Permission…",
+            action: #selector(manageScreenRecordingPermissionClicked),
+            keyEquivalent: ""
+        )
+        menu.addItem(screenRecordingPermissionItem)
 
         let pluginsItem = NSMenuItem(title: "Plugins", action: nil, keyEquivalent: "")
         let pluginsMenu = NSMenu(title: "Plugins")
@@ -150,6 +162,13 @@ final class MenuBarController {
 
         menu.addItem(.separator())
 
+        restartItem = NSMenuItem(
+            title: "Restart Record",
+            action: #selector(restartClicked),
+            keyEquivalent: ""
+        )
+        menu.addItem(restartItem)
+
         let quit = NSMenuItem(
             title: "Quit Record",
             action: #selector(quitClicked),
@@ -160,6 +179,7 @@ final class MenuBarController {
         for item in [
             toggleItem,
             audioOnlyItem,
+            screenRecordingPermissionItem,
             hideNotificationsItem,
             hideMenuBarItem,
             hideDesktopItemsItem,
@@ -170,6 +190,7 @@ final class MenuBarController {
             macWhisperEngineItem,
             openFolder,
             exportFolderItem,
+            restartItem,
             quit,
         ] {
             item.target = self
@@ -197,6 +218,9 @@ final class MenuBarController {
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
+        screenRecordingPermissionItem.isEnabled =
+            !recording && !screenRecordingPermissionGranted
+        restartItem.isEnabled = !recording
         setCapturePrivacyItemsEnabled(!recording)
         statusItem.button?.contentTintColor = recording ? .systemRed : nil
     }
@@ -206,6 +230,8 @@ final class MenuBarController {
         toggleItem.title = "Preparing screen recording…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
+        screenRecordingPermissionItem.isEnabled = false
+        restartItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
         statusItem.button?.contentTintColor = .systemOrange
     }
@@ -215,7 +241,19 @@ final class MenuBarController {
         toggleItem.title = "Stopping recording…"
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
+        screenRecordingPermissionItem.isEnabled = false
+        restartItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
+    }
+
+    func updateScreenRecordingPermission(
+        _ presentation: ScreenRecordingPermissionPresentation
+    ) {
+        screenRecordingPermissionGranted = presentation.isGranted
+        screenRecordingPermissionItem.title = presentation.menuTitle
+        screenRecordingPermissionItem.toolTip = presentation.menuToolTip
+        screenRecordingPermissionItem.state = presentation.isGranted ? .on : .off
+        screenRecordingPermissionItem.isEnabled = !presentation.isGranted
     }
 
     func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {
@@ -316,6 +354,9 @@ final class MenuBarController {
 
     @objc private func toggleClicked() { onToggle?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
+    @objc private func manageScreenRecordingPermissionClicked() {
+        onManageScreenRecordingPermission?()
+    }
     @objc private func toggleCapturePrivacyClicked(_ sender: NSMenuItem) {
         guard
             let rawValue = sender.representedObject as? String,
@@ -335,5 +376,6 @@ final class MenuBarController {
     }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
+    @objc private func restartClicked() { onRestart?() }
     @objc private func quitClicked() { onQuit?() }
 }

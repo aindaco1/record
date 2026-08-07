@@ -106,7 +106,9 @@ final class AppController {
 
     private let root: URL
     private let menuBar = MenuBarController()
-    private let transcription = TranscriptionCoordinator()
+    private let notifications: RecordNotificationCenter
+    private let transcription: TranscriptionCoordinator
+    private let screenRecordingPermission = ScreenRecordingPermissionController()
     private let exportDirectoryAccess = ExportDirectoryAccess()
     private let capturePrivacyPreferences = CapturePrivacyPreferences()
     private let recordingNamePreferences = RecordingNamePreferences()
@@ -122,8 +124,16 @@ final class AppController {
 
     init(root: URL) {
         self.root = root
+        let notifications = RecordNotificationCenter(recordingsRoot: root)
+        self.notifications = notifications
+        transcription = TranscriptionCoordinator { notification in
+            notifications.post(notification)
+        }
         menuBar.onToggle = { [weak self] in self?.toggle() }
         menuBar.onStartAudioOnly = { [weak self] in self?.startAudioSession() }
+        menuBar.onManageScreenRecordingPermission = { [weak self] in
+            self?.manageScreenRecordingPermission()
+        }
         menuBar.onToggleCapturePrivacy = { [weak self] in self?.toggleCapturePrivacy($0) }
         menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
         menuBar.onEditRecordingNameTemplate = { [weak self] in
@@ -135,8 +145,10 @@ final class AppController {
         }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
+        menuBar.onRestart = { [weak self] in self?.restart() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        refreshScreenRecordingPermissionMenu()
         refreshCapturePrivacyMenu()
         refreshRecordingNameMenu()
         refreshGifskiMenu()
@@ -180,7 +192,11 @@ final class AppController {
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
-            notifyUser(title: "Record — recording failed", body: "\(error)")
+            postNotification(
+                title: "Audio recording couldn’t start",
+                body: "Check the microphone permission and try again.",
+                directory: root
+            )
             return
         }
 
@@ -190,6 +206,11 @@ final class AppController {
 
     private func startVideoSession() {
         guard activeRecording == nil else { return }
+        guard screenRecordingPermission.ensureAccess() else {
+            refreshScreenRecordingPermissionMenu()
+            return
+        }
+        refreshScreenRecordingPermissionMenu()
         if exportDirectoryLease == nil {
             chooseExportFolder()
         }
@@ -268,9 +289,10 @@ final class AppController {
                 Data(
                     "recording finalization failed: \(error)\n".utf8
                 ))
-            notifyUser(
-                title: "Record — finalization failed",
-                body: "The media was preserved, but session recovery is required."
+            postNotification(
+                title: "Audio recording needs recovery",
+                body: "The audio is safe. Click to open the recording folder.",
+                directory: session.dir
             )
         }
         let elapsed = Self.format(Date().timeIntervalSince(session.startedAt))
@@ -332,27 +354,30 @@ final class AppController {
                 )
                 refreshGifskiMenu()
             } else {
-                notifyUser(
-                    title: "Record — video preserved",
-                    body:
-                        "Capture ended with an error; inspect \(outcome.sessionDirectory.lastPathComponent)."
+                postNotification(
+                    title: "Screen recording preserved",
+                    body: "Capture stopped early, but the available video is safe.",
+                    directory: outcome.sessionDirectory
                 )
             }
         case .failure(let error):
             FileHandle.standardError.write(Data("video finalization failed: \(error)\n".utf8))
-            notifyUser(
-                title: "Record — video finalization failed",
-                body: "Recoverable media remains in session storage."
+            postNotification(
+                title: "Screen recording needs recovery",
+                body: "The available media is safe. Click to open the recording folder.",
+                directory: session.dir
             )
         }
         terminateIfRequested()
     }
 
     private func publishVideo(_ mediaURL: URL, preferredBaseName: String) -> URL {
+        let sessionDirectory = mediaURL.deletingLastPathComponent()
         guard let exportDirectoryLease else {
-            notifyUser(
-                title: "Record — video ready",
-                body: "Saved in session storage. Choose an export folder for automatic copies."
+            postNotification(
+                title: "Screen recording ready",
+                body: "Saved locally. Click to open the recording folder.",
+                directory: sessionDirectory
             )
             return mediaURL
         }
@@ -363,16 +388,19 @@ final class AppController {
                 preferredBaseName: preferredBaseName
             )
             FileHandle.standardError.write(Data("○ video exported → \(exportedURL.path)\n".utf8))
-            notifyUser(
-                title: "Record — video ready",
-                body: "Saved to \(exportedURL.deletingLastPathComponent().lastPathComponent)."
+            postNotification(
+                title: "Screen recording ready",
+                body:
+                    "Saved a copy to \(exportedURL.deletingLastPathComponent().lastPathComponent). Click to open the recording folder.",
+                directory: sessionDirectory
             )
             return exportedURL
         } catch {
             FileHandle.standardError.write(Data("video export failed: \(error)\n".utf8))
-            notifyUser(
-                title: "Record — export failed",
-                body: "The original video remains in session storage."
+            postNotification(
+                title: "Screen recording saved locally",
+                body: "The Desktop copy failed, but the original video is safe.",
+                directory: sessionDirectory
             )
             return mediaURL
         }
@@ -397,13 +425,47 @@ final class AppController {
         pendingVideoStop = false
         videoExportName = nil
         menuBar.update(recording: false, elapsed: nil)
-        reportRecordingStartFailure(error)
+        if Self.captureFailure(from: error)?.code == .permissionDenied {
+            screenRecordingPermission.presentCaptureDenial()
+            refreshScreenRecordingPermissionMenu()
+        } else {
+            reportRecordingStartFailure(error, directory: session.dir)
+        }
         terminateIfRequested()
     }
 
-    private func reportRecordingStartFailure(_ error: Error) {
+    private func reportRecordingStartFailure(_ error: Error, directory: URL? = nil) {
         FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
-        notifyUser(title: "Record — recording failed", body: "\(error)")
+        postNotification(
+            title: "Screen recording couldn’t start",
+            body: Self.startFailureMessage(for: error),
+            directory: directory ?? root
+        )
+    }
+
+    private static func captureFailure(from error: Error) -> CaptureFailure? {
+        if case .captureFailed(let failure) = error as? VideoRecordingSession.SessionError {
+            return failure
+        }
+        if case .captureFailed(let failure) = error as? ScreenCaptureAdapterError {
+            return failure
+        }
+        return nil
+    }
+
+    static func startFailureMessage(for error: Error) -> String {
+        switch captureFailure(from: error)?.code {
+        case .sourceUnavailable:
+            "The selected screen or window is no longer available. Choose it again and retry."
+        case .deviceDisconnected:
+            "An audio device became unavailable. Reconnect it and try again."
+        case .encoderFailed, .writerFailed:
+            "Record couldn’t prepare the local video file. The failed session was preserved."
+        case .permissionDenied:
+            "Screen Recording permission is required. Audio-only recording still works."
+        case .internalFailure, nil:
+            "Record couldn’t prepare screen capture. The failed session was preserved."
+        }
     }
 
     private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
@@ -466,18 +528,20 @@ final class AppController {
     private func openLastVideoInGifski() {
         guard let lastFinishedVideoURL else { return }
         do {
-            try GifskiHandoff.open(videoURL: lastFinishedVideoURL) { result in
-                if case .failure = result {
-                    notifyUser(
-                        title: "Record — Gifski unavailable",
-                        body: "The video was preserved and can be opened manually."
+            try GifskiHandoff.open(videoURL: lastFinishedVideoURL) { [weak self] result in
+                if case .failure = result, let self {
+                    self.postNotification(
+                        title: "Gifski couldn’t open the video",
+                        body: "The recording is safe and can be opened manually.",
+                        directory: self.recordingDirectory(for: lastFinishedVideoURL)
                     )
                 }
             }
         } catch {
-            notifyUser(
-                title: "Record — Gifski unavailable",
-                body: "Install Gifski or record another local video."
+            postNotification(
+                title: "Gifski is unavailable",
+                body: "Install Gifski, then try opening the recording again.",
+                directory: recordingDirectory(for: lastFinishedVideoURL)
             )
         }
     }
@@ -538,6 +602,60 @@ final class AppController {
         NSWorkspace.shared.open(root)
     }
 
+    private func manageScreenRecordingPermission() {
+        _ = screenRecordingPermission.ensureAccess()
+        refreshScreenRecordingPermissionMenu()
+    }
+
+    private func refreshScreenRecordingPermissionMenu() {
+        menuBar.updateScreenRecordingPermission(screenRecordingPermission.presentation)
+    }
+
+    private func restart() {
+        guard activeRecording == nil else { return }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.createsNewApplicationInstance = true
+        let applicationURL = Bundle.main.bundleURL
+
+        Task { @MainActor [weak self] in
+            do {
+                _ = try await NSWorkspace.shared.openApplication(
+                    at: applicationURL,
+                    configuration: configuration
+                )
+                NSApp.terminate(nil)
+            } catch {
+                self?.postNotification(
+                    title: "Record couldn’t restart",
+                    body: "Quit Record from the feather menu, then open it again.",
+                    directory: self?.root
+                )
+            }
+        }
+    }
+
+    private func postNotification(
+        title: String,
+        body: String,
+        directory: URL?
+    ) {
+        notifications.post(
+            RecordNotification(
+                title: title,
+                body: body,
+                destinationDirectory: directory ?? root
+            )
+        )
+    }
+
+    private func recordingDirectory(for url: URL) -> URL {
+        let candidate = url.standardizedFileURL.deletingLastPathComponent()
+        return candidate.deletingLastPathComponent() == root.standardizedFileURL
+            ? candidate
+            : root
+    }
+
     private func restoreExportFolderAccess() {
         do {
             exportDirectoryLease = try exportDirectoryAccess.restore()
@@ -559,9 +677,10 @@ final class AppController {
             menuBar.updateExportDirectory(selection.url)
         } catch {
             FileHandle.standardError.write(Data("export folder selection failed: \(error)\n".utf8))
-            notifyUser(
-                title: "Record — export folder unavailable",
-                body: "Choose the folder again to restore access."
+            postNotification(
+                title: "Export folder unavailable",
+                body: "Choose the export folder again. Existing recordings are unaffected.",
+                directory: root
             )
         }
     }
