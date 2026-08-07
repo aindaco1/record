@@ -49,6 +49,8 @@ public struct ScreenCaptureStreamPlan: Equatable, Sendable {
         capturesMicrophone = configuration.audio.includeMicrophone
         if case .region(_, let rect) = configuration.source {
             sourceRect = rect
+        } else if case .systemRegion(let rect) = configuration.source {
+            sourceRect = rect
         } else {
             sourceRect = nil
         }

@@ -15,7 +15,8 @@ regressions run on every pull request.
   gaps, and clock regression
 - hardware-required HEVC/AAC writer settings, collision-safe independent video
   and audio paths, and empty-segment finalization without publishing invalid media
-- display-profile 4K/even-dimension bounds, video-session orchestration,
+- display-profile and picker-derived 4K/even-dimension bounds, memory-only
+  source-mode persistence, region coordinate conversion, video-session orchestration,
   bounded fresh-stream startup retries, classified failure manifests,
   idempotent stops, atomic whole-session exports, and contained source cleanup
 - model identifier validation, local-only failure behavior, pinned SHA-256
@@ -48,11 +49,11 @@ click-event mapping, and out-of-process plugin capability denial.
 
 ## Manual smoke test available now
 
-The current integrated build supports main-display video, audio-only recording,
-and the capture-privacy, recording-name, and Gifski handoff plugins. Camera
-overlays, source selection, pause/resume, editing, and an external plugin host
-are not yet integrated, so those rows in the hardware matrix remain future
-acceptance criteria.
+The current integrated build supports main-display, application, window, and
+region video; audio-only recording; and the capture-privacy, recording-name,
+and Gifski handoff plugins. Camera overlays, pause/resume, editing, and an
+external plugin host are not yet integrated, so those rows in the hardware
+matrix remain future acceptance criteria.
 
 Use synthetic or non-sensitive content for development recordings:
 
@@ -106,6 +107,15 @@ Use synthetic or non-sensitive content for development recordings:
    then choose **Open last recording** and confirm Finder reveals that session.
 9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
+
+Repeat the screen flow with each **Screen source** mode. For the system picker,
+select one display, one application, and one independent window; close the
+source during one disposable recording and confirm Record stops and preserves
+the session. For **Custom Region…**, select a display, drag a region that does
+not include private content, and confirm the MOV dimensions and framing match
+the selection. Relaunch and confirm only the selected mode persists: Record
+must ask for the source again and must not retain a window title, app name,
+display identifier, or region.
 
 Choose **Open at Login**, confirm Record appears in System Settings → General →
 Login Items, then disable it again. If macOS reports that approval is required,

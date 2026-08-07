@@ -228,6 +228,7 @@ private final class FakeVideoCapturePipelineBuilder: VideoCapturePipelineBuildin
 
     func makePipeline(
         configuration: CaptureConfiguration,
+        selection: SystemScreenCaptureSelection?,
         outputURL: URL,
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) async throws -> any VideoCapturePipeline {

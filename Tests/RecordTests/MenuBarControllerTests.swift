@@ -10,6 +10,18 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
         XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
+        XCTAssertEqual(MenuBarController.screenSourceMenuTitle, "Screen source")
+    }
+
+    func testScreenSourceMenuHasExactlyOnePersistentModeSelected() {
+        let menu = MenuBarController()
+
+        menu.updateScreenCaptureSource(.mainDisplay)
+        XCTAssertEqual(menu.selectedScreenSource, .mainDisplay)
+        menu.updateScreenCaptureSource(.systemPicker)
+        XCTAssertEqual(menu.selectedScreenSource, .systemPicker)
+        menu.updateScreenCaptureSource(.region)
+        XCTAssertEqual(menu.selectedScreenSource, .region)
     }
 
     func testRetryTranscriptionAppearsOnlyForAnActionableFailure() {

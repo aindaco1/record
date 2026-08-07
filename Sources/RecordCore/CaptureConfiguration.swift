@@ -26,6 +26,17 @@ public enum CaptureSource: Codable, Equatable, Sendable {
     case application(bundleIdentifier: String, displayID: UInt32)
     case window(id: UInt32)
     case region(displayID: UInt32, rect: CaptureRect)
+    /// A privacy-preserving source selected through the system content picker.
+    /// Record keeps the selection style but never persists a window title.
+    case systemSelection(style: CaptureSelectionStyle)
+    /// A display selected through the system picker with a display-local crop.
+    case systemRegion(rect: CaptureRect)
+}
+
+public enum CaptureSelectionStyle: String, Codable, Equatable, Sendable {
+    case display
+    case application
+    case window
 }
 
 public struct CaptureOutputSize: Codable, Equatable, Sendable {
@@ -41,6 +52,22 @@ public struct CaptureOutputSize: Codable, Equatable, Sendable {
         width >= 16 && height >= 16
             && width <= 4_096 && height <= 4_096
             && width * height <= 4_096 * 2_160
+    }
+
+    /// Preserve aspect ratio while fitting Record's hardware-writer bound.
+    /// Even dimensions avoid chroma-subsampling padding and copies.
+    public static func boundedForCapture(pixelWidth: Int, pixelHeight: Int) -> Self? {
+        guard pixelWidth > 0, pixelHeight > 0 else { return nil }
+        let scale = min(
+            1,
+            min(4_096 / Double(pixelWidth), 2_160 / Double(pixelHeight))
+        )
+        let scaledWidth = max(16, Int((Double(pixelWidth) * scale).rounded(.down)))
+        let scaledHeight = max(16, Int((Double(pixelHeight) * scale).rounded(.down)))
+        return .init(
+            width: scaledWidth - scaledWidth % 2,
+            height: scaledHeight - scaledHeight % 2
+        )
     }
 }
 
@@ -184,6 +211,12 @@ public struct CaptureConfiguration: Codable, Equatable, Sendable {
             }
         case .region(let displayID, let rect):
             guard displayID > 0, rect.isValid else {
+                throw ValidationError.invalidRegion
+            }
+        case .systemSelection:
+            break
+        case .systemRegion(let rect):
+            guard rect.isValid else {
                 throw ValidationError.invalidRegion
             }
         }

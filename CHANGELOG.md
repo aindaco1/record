@@ -6,6 +6,17 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Added
+
+- A persistent **Screen source** mode with the main-display fast path, Apple's
+  display/application/window picker, and a display-local custom-region overlay.
+
+### Security
+
+- System-picker filters remain memory-only: Record persists only the selection
+  mode and never stores application names, window titles, source identifiers,
+  or region geometry.
+
 ## [1.0.3] - 2026-08-07
 
 ### Added

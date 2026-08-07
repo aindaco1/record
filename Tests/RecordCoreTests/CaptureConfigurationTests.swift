@@ -78,6 +78,35 @@ final class CaptureConfigurationTests: XCTestCase {
         }
     }
 
+    func testSystemPickerSourcesValidateWithoutPersistedIdentifiers() throws {
+        let selection = CaptureConfiguration(
+            source: .systemSelection(style: .application),
+            outputSize: .init(width: 1_920, height: 1_080)
+        )
+        let region = CaptureConfiguration(
+            source: .systemRegion(rect: .init(x: 10, y: 20, width: 800, height: 600)),
+            outputSize: .init(width: 1_600, height: 1_200)
+        )
+
+        XCTAssertNoThrow(try selection.validate())
+        XCTAssertNoThrow(try region.validate())
+        let encoded = String(decoding: try JSONEncoder().encode(selection), as: UTF8.self)
+        XCTAssertFalse(encoded.localizedCaseInsensitiveContains("window title"))
+        XCTAssertFalse(encoded.contains("bundleIdentifier"))
+    }
+
+    func testBoundedCaptureSizeIsDRYAcrossDisplayAndPickerSources() {
+        XCTAssertEqual(
+            CaptureOutputSize.boundedForCapture(pixelWidth: 5_120, pixelHeight: 2_880),
+            .init(width: 3_840, height: 2_160)
+        )
+        XCTAssertEqual(
+            CaptureOutputSize.boundedForCapture(pixelWidth: 1_919, pixelHeight: 1_079),
+            .init(width: 1_918, height: 1_078)
+        )
+        XCTAssertNil(CaptureOutputSize.boundedForCapture(pixelWidth: 0, pixelHeight: 1_080))
+    }
+
     func testRejectsInvalidCameraConfiguration() {
         let configuration = CaptureConfiguration(
             source: .window(id: 1),

@@ -19,6 +19,7 @@ protocol VideoCapturePipeline: AnyObject, Sendable {
 protocol VideoCapturePipelineBuilding: Sendable {
     func makePipeline(
         configuration: CaptureConfiguration,
+        selection: SystemScreenCaptureSelection?,
         outputURL: URL,
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) async throws -> any VideoCapturePipeline
@@ -55,6 +56,7 @@ struct VideoCaptureStartupRetryPolicy: Sendable {
 struct ScreenCaptureVideoPipelineBuilder: VideoCapturePipelineBuilding {
     func makePipeline(
         configuration: CaptureConfiguration,
+        selection: SystemScreenCaptureSelection?,
         outputURL: URL,
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) async throws -> any VideoCapturePipeline {
@@ -86,11 +88,22 @@ struct ScreenCaptureVideoPipelineBuilder: VideoCapturePipelineBuilding {
                 )
             }
         )
-        let capture = try await ScreenCaptureKitStreamBuilder().prepare(
-            configuration: configuration,
-            sink: sink,
-            onEvent: onEvent
-        )
+        let streamBuilder = ScreenCaptureKitStreamBuilder()
+        let capture: ScreenCaptureSession
+        if let selection {
+            capture = try await streamBuilder.prepare(
+                selection: selection,
+                configuration: configuration,
+                sink: sink,
+                onEvent: onEvent
+            )
+        } else {
+            capture = try await streamBuilder.prepare(
+                configuration: configuration,
+                sink: sink,
+                onEvent: onEvent
+            )
+        }
         return ScreenCaptureVideoPipeline(capture: capture, sink: sink, writer: writer)
     }
 }
@@ -219,7 +232,10 @@ actor VideoRecordingSession {
         try manifest.write(to: dir)
     }
 
-    func start(configuration: CaptureConfiguration) async throws {
+    func start(
+        configuration: CaptureConfiguration,
+        selection: SystemScreenCaptureSelection? = nil
+    ) async throws {
         expectedCaptureKinds = [.screen]
         if configuration.audio.includeSystemAudio { expectedCaptureKinds.insert(.systemAudio) }
         if configuration.audio.includeMicrophone { expectedCaptureKinds.insert(.microphone) }
@@ -232,6 +248,7 @@ actor VideoRecordingSession {
             do {
                 let pipeline = try await pipelineBuilder.makePipeline(
                     configuration: configuration,
+                    selection: selection,
                     outputURL: dir.appendingPathComponent("recording.mov"),
                     onEvent: { [weak self] event in
                         Task { await self?.receive(event, from: pipelineID) }
