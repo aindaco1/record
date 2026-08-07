@@ -58,6 +58,8 @@ final class RecordingPermissionTests: XCTestCase {
         XCTAssertEqual(result, .ready)
         XCTAssertEqual(events, ["microphone", "system-audio-only"])
         XCTAssertEqual(screen.requestCount, 0)
+        XCTAssertNotNil(controller.takePreparedSystemAudioTap())
+        XCTAssertNil(controller.takePreparedSystemAudioTap())
     }
 
     func testGrantedScreenAndMicrophoneStartWithoutAnyPrompt() async {
@@ -240,6 +242,7 @@ private final class FakeSystemAudioPermissionRegistrar:
 {
     private let status: OSStatus
     private let onRequest: () -> Void
+    private var preparedTap: PreparedSystemAudioTap?
     private(set) var requestCount = 0
 
     init(status: OSStatus = noErr, onRequest: @escaping () -> Void = {}) {
@@ -251,6 +254,17 @@ private final class FakeSystemAudioPermissionRegistrar:
     func registerAccessRequest() -> OSStatus {
         requestCount += 1
         onRequest()
+        if status == noErr, preparedTap == nil {
+            preparedTap = PreparedSystemAudioTap(
+                handle: .init(id: 42, uuid: UUID()),
+                destroy: { _ in }
+            )
+        }
         return status
+    }
+
+    func takePreparedTap() -> PreparedSystemAudioTap? {
+        defer { preparedTap = nil }
+        return preparedTap
     }
 }

@@ -20,9 +20,12 @@ final class SystemAudioRecorder: @unchecked Sendable {
         var description: String {
             switch self {
             case .tapCreationFailed(let s):
-                return "process tap creation failed (OSStatus \(s)) — check System Settings → Privacy & Security → Screen & System Audio Recording"
-            case .tapFormatUnreadable(let s): return "couldn't read tap stream format (OSStatus \(s))"
-            case .aggregateCreationFailed(let s): return "aggregate device creation failed (OSStatus \(s))"
+                return
+                    "process tap creation failed (OSStatus \(s)) — check System Settings → Privacy & Security → Screen & System Audio Recording"
+            case .tapFormatUnreadable(let s):
+                return "couldn't read tap stream format (OSStatus \(s))"
+            case .aggregateCreationFailed(let s):
+                return "aggregate device creation failed (OSStatus \(s))"
             case .ioProcCreationFailed(let s): return "IO proc creation failed (OSStatus \(s))"
             case .deviceStartFailed(let s): return "device start failed (OSStatus \(s))"
             case .fileCreationFailed(let e): return "output file creation failed: \(e)"
@@ -34,6 +37,7 @@ final class SystemAudioRecorder: @unchecked Sendable {
     private var aggregateID = AudioObjectID(kAudioObjectUnknown)
     private var procID: AudioDeviceIOProcID?
     private var writer: AudioFileWritePump?
+    private var preparedTap: PreparedSystemAudioTap?
     private let queue = DispatchQueue(label: "com.aindaco.record.system-tap")
     private let startedAt: Date
     private let onHealth: @Sendable (CaptureHealthEvent) -> Void
@@ -44,9 +48,11 @@ final class SystemAudioRecorder: @unchecked Sendable {
 
     init(
         startedAt: Date = Date(),
+        preparedTap: PreparedSystemAudioTap? = nil,
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) {
         self.startedAt = startedAt
+        self.preparedTap = preparedTap
         self.onHealth = onHealth
     }
 
@@ -56,19 +62,21 @@ final class SystemAudioRecorder: @unchecked Sendable {
     func start(writingTo url: URL) throws {
         guard !isRecording else { return }
 
-        let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
-        description.name = "Record system tap"
-        description.isPrivate = true
-        description.muteBehavior = .unmuted
-
-        var newTapID = AudioObjectID(kAudioObjectUnknown)
-        let status = AudioHardwareCreateProcessTap(description, &newTapID)
-        guard status == noErr else { throw RecorderError.tapCreationFailed(status) }
-        tapID = newTapID
+        let tap: PreparedSystemAudioTap
+        do {
+            tap = try preparedTap ?? PreparedSystemAudioTap.create(name: "Record system tap")
+        } catch let error as PreparedSystemAudioTap.CreationError {
+            throw RecorderError.tapCreationFailed(error.status)
+        }
+        preparedTap = nil
+        guard let tapHandle = tap.consume() else {
+            throw RecorderError.tapCreationFailed(kAudioHardwareUnspecifiedError)
+        }
+        tapID = tapHandle.id
 
         do {
             let format = try tapStreamFormat()
-            try createAggregateDevice(tapUUID: description.uuid)
+            try createAggregateDevice(tapUUID: tapHandle.uuid)
             let file = try makeFile(url: url, format: format)
             writer = AudioFileWritePump(file: file) { [weak self] event in
                 self?.report(event)
@@ -168,11 +176,13 @@ final class SystemAudioRecorder: @unchecked Sendable {
         }
         var status = AudioDeviceCreateIOProcIDWithBlock(&procID, aggregateID, queue) {
             _, inInputData, _, _, _ in
-            guard let buffer = AVAudioPCMBuffer(
-                pcmFormat: format,
-                bufferListNoCopy: inInputData,
-                deallocator: nil
-            ) else { return }
+            guard
+                let buffer = AVAudioPCMBuffer(
+                    pcmFormat: format,
+                    bufferListNoCopy: inInputData,
+                    deallocator: nil
+                )
+            else { return }
             writer.enqueueCopy(of: buffer)
         }
         guard status == noErr, let procID else { throw RecorderError.ioProcCreationFailed(status) }

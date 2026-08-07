@@ -41,6 +41,9 @@ All notable changes to Record are documented here. Record follows
   retain the full timeline.
 - Remove exact one- or two-word echo fragments when longer aligned echo
   segments prove they belong to one continuous speaker-bleed run.
+- Start audio-only capture with the process tap that successfully requested
+  permission, and ignore the microphone graph's own startup configuration
+  notification instead of rebuilding both Core Audio paths before recording.
 
 ### Security
 

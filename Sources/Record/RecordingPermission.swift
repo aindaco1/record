@@ -51,26 +51,34 @@ final class SystemScreenRecordingPermissionProvider: ScreenRecordingPermissionPr
 protocol SystemAudioPermissionRegistering {
     @discardableResult
     func registerAccessRequest() -> OSStatus
+    func takePreparedTap() -> PreparedSystemAudioTap?
 }
 
-/// Checks the system-audio-only TCC service without recording. The temporary
-/// private tap is never attached to an aggregate device, given an IO callback,
-/// or started, and is destroyed immediately if creation succeeds.
+/// Requests the system-audio-only TCC service without beginning capture. A
+/// successful private tap is transferred into the imminent recording so the
+/// permission check and capture do not initialize Core Audio twice.
 @MainActor
 final class SystemAudioPermissionRegistrar: SystemAudioPermissionRegistering {
+    private var preparedTap: PreparedSystemAudioTap?
+
     @discardableResult
     func registerAccessRequest() -> OSStatus {
-        let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
-        description.name = "Record audio-only permission check"
-        description.isPrivate = true
-        description.muteBehavior = .unmuted
-
-        var tapID = AudioObjectID(kAudioObjectUnknown)
-        let status = AudioHardwareCreateProcessTap(description, &tapID)
-        if status == noErr, tapID != kAudioObjectUnknown {
-            _ = AudioHardwareDestroyProcessTap(tapID)
+        preparedTap = nil
+        do {
+            preparedTap = try PreparedSystemAudioTap.create(
+                name: "Record system audio"
+            )
+            return noErr
+        } catch let error as PreparedSystemAudioTap.CreationError {
+            return error.status
+        } catch {
+            return kAudioHardwareUnspecifiedError
         }
-        return status
+    }
+
+    func takePreparedTap() -> PreparedSystemAudioTap? {
+        defer { preparedTap = nil }
+        return preparedTap
     }
 }
 
@@ -205,6 +213,10 @@ final class RecordingPermissionController {
     /// caller uses that signal to keep or discard its pending recording intent.
     func presentSettingsRequired(for blocker: RecordingPermissionBlocker) -> Bool {
         settingsPresenter(blocker)
+    }
+
+    func takePreparedSystemAudioTap() -> PreparedSystemAudioTap? {
+        systemAudio.takePreparedTap()
     }
 
     private static func presentSettingsRequired(

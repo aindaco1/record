@@ -99,6 +99,7 @@ final class MicRecorder: @unchecked Sendable {
         isRecording = true
         _ = routeRecovery.handle(.start)
         installDefaultInputObserver()
+        beginEngineLivenessCheck(atMilliseconds: elapsedMilliseconds())
     }
 
     func stop() {
@@ -316,7 +317,7 @@ final class MicRecorder: @unchecked Sendable {
             )
             let recoveredAt = elapsedMilliseconds()
             execute(routeRecovery.handle(.restartSucceeded(atMilliseconds: recoveredAt)))
-            beginRestartLivenessCheck(atMilliseconds: recoveredAt)
+            beginEngineLivenessCheck(atMilliseconds: recoveredAt)
         } catch {
             let failedAt = elapsedMilliseconds()
             FileHandle.standardError.write(Data("mic route restart failed: \(error)\n".utf8))
@@ -324,7 +325,7 @@ final class MicRecorder: @unchecked Sendable {
         }
     }
 
-    private func beginRestartLivenessCheck(atMilliseconds: Int) {
+    private func beginEngineLivenessCheck(atMilliseconds: Int) {
         restartLiveness.begin(
             atMilliseconds: atMilliseconds,
             voiceProcessingEnabled: usingVoiceProcessing
@@ -390,7 +391,7 @@ final class MicRecorder: @unchecked Sendable {
         padMicrophoneGapThroughNow()
         do {
             try attachEngine(voiceProcessing: false)
-            beginRestartLivenessCheck(atMilliseconds: elapsedMilliseconds())
+            beginEngineLivenessCheck(atMilliseconds: elapsedMilliseconds())
         } catch {
             FileHandle.standardError.write(Data("mic raw route fallback failed: \(error)\n".utf8))
             routeDidChange(.livenessFailure)
@@ -424,7 +425,7 @@ final class MicRecorder: @unchecked Sendable {
         padMicrophoneGapThroughNow()
         do {
             try attachEngine(voiceProcessing: false)
-            beginRestartLivenessCheck(atMilliseconds: elapsedMilliseconds())
+            beginEngineLivenessCheck(atMilliseconds: elapsedMilliseconds())
         } catch {
             FileHandle.standardError.write(Data("mic raw fallback failed: \(error)\n".utf8))
             report(
