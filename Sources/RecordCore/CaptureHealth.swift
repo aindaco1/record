@@ -13,6 +13,7 @@ public struct CaptureHealthEvent: Codable, Equatable, Sendable {
         case routeChanged = "route_changed"
         case routeRecovered = "route_recovered"
         case routeRecoveryFailed = "route_recovery_failed"
+        case voiceProcessingFallback = "voice_processing_fallback"
         case missingCallbacks = "missing_callbacks"
         case digitalSilence = "digital_silence"
         case queuePressure = "queue_pressure"
@@ -51,6 +52,70 @@ public struct CaptureHealthEvent: Codable, Equatable, Sendable {
         case severity
         case occurredAtMilliseconds = "occurred_at_ms"
         case durationMilliseconds = "duration_ms"
+    }
+}
+
+/// Distinguishes a healthy post-route restart from an AVAudioEngine
+/// configuration-notification loop. The engine may emit a delayed
+/// configuration event for the graph Record just created. Defer that event
+/// briefly, then require a recent callback; a silent VoiceProcessingIO graph
+/// falls back once to the raw input path instead of restarting forever.
+public struct MicrophoneRestartLivenessGuard: Sendable {
+    public enum Decision: Equatable, Sendable {
+        case healthy
+        case fallBackToRaw
+        case retryCapture
+    }
+
+    public static let stabilizationMilliseconds = 2_000
+    public static let recentCallbackToleranceMilliseconds = 250
+
+    private struct Watch: Sendable {
+        let startedAtMilliseconds: Int
+        let voiceProcessingEnabled: Bool
+    }
+
+    private var watch: Watch?
+
+    public init() {}
+
+    public mutating func begin(
+        atMilliseconds: Int,
+        voiceProcessingEnabled: Bool
+    ) {
+        watch = Watch(
+            startedAtMilliseconds: max(0, atMilliseconds),
+            voiceProcessingEnabled: voiceProcessingEnabled
+        )
+    }
+
+    public func shouldDeferEngineConfigurationChange(atMilliseconds: Int) -> Bool {
+        guard let watch else { return false }
+        let elapsed = max(0, atMilliseconds) - watch.startedAtMilliseconds
+        return elapsed >= 0 && elapsed <= Self.stabilizationMilliseconds
+    }
+
+    public mutating func evaluate(
+        atMilliseconds: Int,
+        lastCallbackAtMilliseconds: Int?,
+        captureIsRunning: Bool
+    ) -> Decision? {
+        guard let watch else { return nil }
+        self.watch = nil
+
+        let evaluatedAt = max(watch.startedAtMilliseconds, atMilliseconds)
+        let callbackIsRecent =
+            lastCallbackAtMilliseconds.map { callbackAt in
+                callbackAt >= watch.startedAtMilliseconds
+                    && callbackAt <= evaluatedAt
+                    && evaluatedAt - callbackAt <= Self.recentCallbackToleranceMilliseconds
+            } ?? false
+        if callbackIsRecent && captureIsRunning { return .healthy }
+        return watch.voiceProcessingEnabled ? .fallBackToRaw : .retryCapture
+    }
+
+    public mutating func cancel() {
+        watch = nil
     }
 }
 

@@ -63,9 +63,12 @@ stores each track's start offset for downstream transcription and editing.
 Audio callbacks copy into fixed-capacity queues; conversion, encoding, and
 filesystem writes stay off those callbacks. Content-free `capture_health`
 events in the manifest record missing callbacks, digital silence, route
-recovery, queue pressure, and write failure without device names or samples.
-Default-input changes restart the microphone graph into the same file, with
-silence representing the route gap so elapsed time does not collapse.
+recovery, voice-processing fallback, queue pressure, and write failure without
+device names or samples. Default-input changes restart the microphone graph
+into the same file, with silence representing the route gap so elapsed time
+does not collapse. A post-restart callback watchdog ignores the engine's own
+settling notification and falls back once to raw input when VoiceProcessingIO
+cannot remain live on the new route.
 During capture this directory lives in private crash-recovery storage. A clean
 stop promotes the complete directory through an atomic copy/rename into the
 approved export root, then removes only the validated finalized private child.

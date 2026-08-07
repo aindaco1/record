@@ -11,6 +11,12 @@ import RecordCore
 /// engine-configuration changes are debounced and restart the graph without
 /// replacing the output file; silence padding preserves the track timeline.
 final class MicRecorder: @unchecked Sendable {
+    private enum RouteChangeSource: Equatable {
+        case defaultInput
+        case engineConfiguration
+        case livenessFailure
+    }
+
     enum RecorderError: Error, CustomStringConvertible {
         case engineStartFailed(Error)
         case fileCreationFailed(Error)
@@ -35,8 +41,10 @@ final class MicRecorder: @unchecked Sendable {
     private var engineObserver: NSObjectProtocol?
     private var defaultInputObserver: DefaultInputDeviceObserver?
     private var scheduledRecovery: DispatchWorkItem?
+    private var scheduledLivenessCheck: DispatchWorkItem?
     private var routeRecovery = MicrophoneRouteRecoveryStateMachine()
-    private var routeGapPaddedThroughMilliseconds: Int?
+    private var restartLiveness = MicrophoneRestartLivenessGuard()
+    private var preferRawInputUntilStop = false
     private var usingVoiceProcessing = false
     private let startedAt: Date
     private let onHealth: @Sendable (CaptureHealthEvent) -> Void
@@ -100,6 +108,9 @@ final class MicRecorder: @unchecked Sendable {
         execute(routeRecovery.handle(.stop))
         scheduledRecovery?.cancel()
         scheduledRecovery = nil
+        scheduledLivenessCheck?.cancel()
+        scheduledLivenessCheck = nil
+        restartLiveness.cancel()
         defaultInputObserver = nil
         tearDownEngine()
 
@@ -148,7 +159,8 @@ final class MicRecorder: @unchecked Sendable {
             throw RecorderError.unsupportedFormat(inputFormat)
         }
 
-        let livenessProbe = voiceProcessing
+        let livenessProbe =
+            voiceProcessing
             ? VoiceProcessingLivenessProbe(requiredFrames: Int(monoFormat.sampleRate))
             : nil
         if voiceProcessing {
@@ -183,7 +195,8 @@ final class MicRecorder: @unchecked Sendable {
         tapInstalled = true
         usingVoiceProcessing = voiceProcessing
         installEngineObserver(for: newEngine)
-        let report = "mic: voiceProcessing=\(input.isVoiceProcessingEnabled) "
+        let report =
+            "mic: voiceProcessing=\(input.isVoiceProcessingEnabled) "
             + "input=\(inputFormat) tap=\(voiceProcessing ? monoFormat : inputFormat)\n"
         FileHandle.standardError.write(Data(report.utf8))
     }
@@ -215,7 +228,7 @@ final class MicRecorder: @unchecked Sendable {
 
     private func installDefaultInputObserver() {
         defaultInputObserver = try? DefaultInputDeviceObserver { [weak self] in
-            self?.routeDidChange()
+            self?.routeDidChange(.defaultInput)
         }
     }
 
@@ -225,16 +238,27 @@ final class MicRecorder: @unchecked Sendable {
             object: engine,
             queue: .main
         ) { [weak self] _ in
-            self?.routeDidChange()
+            self?.routeDidChange(.engineConfiguration)
         }
     }
 
-    private func routeDidChange() {
+    private func routeDidChange(_ source: RouteChangeSource) {
         dispatchPrecondition(condition: .onQueue(.main))
         guard isRecording else { return }
+        let changedAt = elapsedMilliseconds()
+        if source == .engineConfiguration,
+            restartLiveness.shouldDeferEngineConfigurationChange(
+                atMilliseconds: changedAt
+            )
+        {
+            return
+        }
+        scheduledLivenessCheck?.cancel()
+        scheduledLivenessCheck = nil
+        restartLiveness.cancel()
         execute(
             routeRecovery.handle(
-                .routeChanged(atMilliseconds: elapsedMilliseconds())
+                .routeChanged(atMilliseconds: changedAt)
             )
         )
     }
@@ -280,38 +304,112 @@ final class MicRecorder: @unchecked Sendable {
 
     private func restartForRouteChange() {
         guard isRecording else { return }
-        let changedAt: Int
-        if case .restarting(let timestamp) = routeRecovery.state {
-            changedAt = timestamp
-        } else {
-            return
-        }
-        if routeGapPaddedThroughMilliseconds == nil {
-            routeGapPaddedThroughMilliseconds = changedAt
-        }
-
+        guard case .restarting = routeRecovery.state else { return }
+        scheduledLivenessCheck?.cancel()
+        scheduledLivenessCheck = nil
+        restartLiveness.cancel()
         tearDownEngine()
-        let attemptAt = elapsedMilliseconds()
-        padRouteGap(upTo: attemptAt)
+        padMicrophoneGapThroughNow()
         do {
-            try attachEngine(voiceProcessing: Config.micVoiceProcessing())
-            routeGapPaddedThroughMilliseconds = nil
-            execute(routeRecovery.handle(.restartSucceeded(atMilliseconds: attemptAt)))
+            try attachEngine(
+                voiceProcessing: Config.micVoiceProcessing() && !preferRawInputUntilStop
+            )
+            let recoveredAt = elapsedMilliseconds()
+            execute(routeRecovery.handle(.restartSucceeded(atMilliseconds: recoveredAt)))
+            beginRestartLivenessCheck(atMilliseconds: recoveredAt)
         } catch {
+            let failedAt = elapsedMilliseconds()
             FileHandle.standardError.write(Data("mic route restart failed: \(error)\n".utf8))
-            execute(routeRecovery.handle(.restartFailed(atMilliseconds: attemptAt)))
+            execute(routeRecovery.handle(.restartFailed(atMilliseconds: failedAt)))
         }
     }
 
-    private func padRouteGap(upTo milliseconds: Int) {
-        guard let paddedThrough = routeGapPaddedThroughMilliseconds else { return }
-        let duration = max(0, milliseconds - paddedThrough)
-        writer?.enqueueSilence(durationMilliseconds: duration)
-        routeGapPaddedThroughMilliseconds = milliseconds
+    private func beginRestartLivenessCheck(atMilliseconds: Int) {
+        restartLiveness.begin(
+            atMilliseconds: atMilliseconds,
+            voiceProcessingEnabled: usingVoiceProcessing
+        )
+        scheduledLivenessCheck?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            self?.evaluateRestartLiveness()
+        }
+        scheduledLivenessCheck = item
+        DispatchQueue.main.asyncAfter(
+            deadline: .now()
+                + .milliseconds(MicrophoneRestartLivenessGuard.stabilizationMilliseconds),
+            execute: item
+        )
+    }
+
+    private func evaluateRestartLiveness() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        scheduledLivenessCheck = nil
+        guard isRecording else { return }
+        let evaluatedAt = elapsedMilliseconds()
+        let lastCallbackAt = writer?.snapshot().lastBufferAt.map {
+            elapsedMilliseconds(at: $0)
+        }
+        guard
+            let decision = restartLiveness.evaluate(
+                atMilliseconds: evaluatedAt,
+                lastCallbackAtMilliseconds: lastCallbackAt,
+                captureIsRunning: engine.isRunning
+            )
+        else { return }
+
+        switch decision {
+        case .healthy:
+            return
+        case .fallBackToRaw:
+            fallBackToRawAfterRouteInstability()
+        case .retryCapture:
+            report(
+                .init(
+                    track: .microphone,
+                    code: .routeRecoveryFailed,
+                    severity: .degraded,
+                    occurredAtMilliseconds: evaluatedAt
+                )
+            )
+            routeDidChange(.livenessFailure)
+        }
+    }
+
+    private func fallBackToRawAfterRouteInstability() {
+        guard isRecording else { return }
+        preferRawInputUntilStop = true
+        report(
+            .init(
+                track: .microphone,
+                code: .voiceProcessingFallback,
+                severity: .degraded,
+                occurredAtMilliseconds: elapsedMilliseconds()
+            )
+        )
+        tearDownEngine()
+        padMicrophoneGapThroughNow()
+        do {
+            try attachEngine(voiceProcessing: false)
+            beginRestartLivenessCheck(atMilliseconds: elapsedMilliseconds())
+        } catch {
+            FileHandle.standardError.write(Data("mic raw route fallback failed: \(error)\n".utf8))
+            routeDidChange(.livenessFailure)
+        }
+    }
+
+    private func padMicrophoneGapThroughNow() {
+        guard let writer, let lastBufferAt = writer.snapshot().lastBufferAt else { return }
+        let now = Date()
+        let duration = max(0, Int(now.timeIntervalSince(lastBufferAt) * 1_000))
+        writer.enqueueSilence(durationMilliseconds: duration, capturedAt: now)
     }
 
     private func fallBackToRawAfterDigitalSilence() {
         guard isRecording, usingVoiceProcessing else { return }
+        preferRawInputUntilStop = true
+        scheduledLivenessCheck?.cancel()
+        scheduledLivenessCheck = nil
+        restartLiveness.cancel()
         let fallbackStartedAt = elapsedMilliseconds()
         report(
             .init(
@@ -323,11 +421,10 @@ final class MicRecorder: @unchecked Sendable {
             )
         )
         tearDownEngine()
-        writer?.enqueueSilence(
-            durationMilliseconds: max(0, elapsedMilliseconds() - fallbackStartedAt)
-        )
+        padMicrophoneGapThroughNow()
         do {
             try attachEngine(voiceProcessing: false)
+            beginRestartLivenessCheck(atMilliseconds: elapsedMilliseconds())
         } catch {
             FileHandle.standardError.write(Data("mic raw fallback failed: \(error)\n".utf8))
             report(

@@ -27,12 +27,29 @@ public enum TranscriptEchoSuppressor {
         systemSpeaker: String = "them"
     ) -> TranscriptEchoSuppressionResult {
         let systemSegments = segments.filter { $0.speaker == systemSpeaker }
+        let microphoneSegments = segments.filter { $0.speaker == microphoneSpeaker }
+        let longEchoes = microphoneSegments.filter { microphone in
+            normalizedWords(microphone.text).count >= 3
+                && isHighConfidenceEcho(microphone, of: systemSegments)
+        }
         var kept: [TranscriptDocument.Segment] = []
         var suppressed: [TranscriptDocument.Segment] = []
 
         for segment in segments {
-            guard segment.speaker == microphoneSpeaker,
+            guard segment.speaker == microphoneSpeaker else {
+                kept.append(segment)
+                continue
+            }
+            let words = normalizedWords(segment.text)
+            let isEcho =
                 isHighConfidenceEcho(segment, of: systemSegments)
+                || isShortEchoInsideContinuousRun(
+                    segment,
+                    words: words,
+                    systemSegments: systemSegments,
+                    longEchoes: longEchoes
+                )
+            guard isEcho
             else {
                 kept.append(segment)
                 continue
@@ -80,6 +97,43 @@ public enum TranscriptEchoSuppressor {
             }
         }
         return false
+    }
+
+    private static func isShortEchoInsideContinuousRun(
+        _ microphone: TranscriptDocument.Segment,
+        words: [String],
+        systemSegments: [TranscriptDocument.Segment],
+        longEchoes: [TranscriptDocument.Segment]
+    ) -> Bool {
+        guard (1...2).contains(words.count) else { return false }
+        let hasExactAlignedSystemCopy = systemSegments.contains { system in
+            intervalsOverlap(
+                startA: microphone.startMilliseconds,
+                endA: microphone.endMilliseconds,
+                startB: system.startMilliseconds - timingPaddingMilliseconds,
+                endB: system.endMilliseconds + timingPaddingMilliseconds
+            )
+                && abs(system.startMilliseconds - microphone.startMilliseconds)
+                    <= maximumStartDeltaMilliseconds
+                && normalizedWords(system.text) == words
+        }
+        guard hasExactAlignedSystemCopy else { return false }
+
+        // A standalone one- or two-word overlap may be a real backchannel.
+        // Suppress it only when longer high-confidence echoes directly bracket
+        // it, proving that Parakeet split one continuous acoustic echo run.
+        let continuityMilliseconds = 1_000
+        let hasPrecedingEcho = longEchoes.contains { echo in
+            echo.endMilliseconds <= microphone.startMilliseconds
+                && microphone.startMilliseconds - echo.endMilliseconds
+                    <= continuityMilliseconds
+        }
+        let hasFollowingEcho = longEchoes.contains { echo in
+            echo.startMilliseconds >= microphone.endMilliseconds
+                && echo.startMilliseconds - microphone.endMilliseconds
+                    <= continuityMilliseconds
+        }
+        return hasPrecedingEcho && hasFollowingEcho
     }
 
     private static func intervalsOverlap(

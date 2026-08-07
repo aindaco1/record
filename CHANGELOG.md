@@ -36,6 +36,11 @@ All notable changes to Record are documented here. Record follows
 
 - Preserve source audio duration when FluidAudio reports a zero-duration
   Parakeet result.
+- Stop repeated microphone graph restarts after a headphone route change;
+  unhealthy VoiceProcessingIO routes now fall back once to raw capture and
+  retain the full timeline.
+- Remove exact one- or two-word echo fragments when longer aligned echo
+  segments prove they belong to one continuous speaker-bleed run.
 
 ### Security
 

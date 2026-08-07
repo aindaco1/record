@@ -40,6 +40,36 @@ final class TranscriptEchoSuppressorTests: XCTestCase {
         XCTAssertEqual(result.segments, segments)
     }
 
+    func testSuppressesShortExactFragmentInsideContinuousEchoRun() {
+        let segments: [TranscriptDocument.Segment] = [
+            segment("them", 8_000, 13_000, "The system dialogue continues for several words"),
+            segment("me", 8_018, 13_018, "The system dialogue continues for several words"),
+            segment("them", 13_000, 14_000, "Exactly"),
+            segment("me", 13_018, 14_018, "Exactly"),
+            segment("them", 14_000, 18_000, "Then the same dialogue continues after the split"),
+            segment("me", 14_018, 18_018, "Then the same dialogue continues after the split"),
+        ]
+
+        let result = TranscriptEchoSuppressor.suppress(segments)
+
+        XCTAssertEqual(result.suppressedMicrophoneSegments.count, 3)
+        XCTAssertEqual(result.segments.map(\.speaker), ["them", "them", "them"])
+    }
+
+    func testKeepsShortExactFragmentWhenOnlyOneNeighborIsEcho() {
+        let segments: [TranscriptDocument.Segment] = [
+            segment("them", 1_000, 4_000, "A longer system sentence appears first"),
+            segment("me", 1_020, 4_020, "A longer system sentence appears first"),
+            segment("them", 4_000, 4_500, "Okay"),
+            segment("me", 4_020, 4_520, "Okay"),
+        ]
+
+        let result = TranscriptEchoSuppressor.suppress(segments)
+
+        XCTAssertEqual(result.suppressedMicrophoneSegments.count, 1)
+        XCTAssertTrue(result.segments.contains { $0.speaker == "me" && $0.text == "Okay" })
+    }
+
     func testDifferentOverlappingSpeechIsNeverSuppressed() {
         let segments: [TranscriptDocument.Segment] = [
             segment("them", 1_000, 4_000, "I think we should ship it tomorrow"),

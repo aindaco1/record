@@ -317,6 +317,8 @@ final class MenuBarController {
             captureHealthNote = "reconnecting microphone…"
         case .routeRecoveryFailed:
             captureHealthNote = "microphone reconnecting…"
+        case .voiceProcessingFallback:
+            captureHealthNote = "using compatible microphone mode"
         case .digitalSilence:
             captureHealthNote = "using raw microphone"
         case .queuePressure:
