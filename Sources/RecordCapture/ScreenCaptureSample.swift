@@ -80,6 +80,7 @@ public protocol ScreenCaptureSampleSink: AnyObject, Sendable {
 public enum ScreenCaptureEvent: Equatable, Sendable {
     /// The person used macOS's native stop-sharing control.
     case stopRequested
+    case health(CaptureHealthEvent)
     case failed(CaptureFailure)
 }
 

@@ -334,7 +334,9 @@ final class AppController {
         guard activeRecording == nil else { return }
         ensureExportFolderAccess()
         do {
-            let newSession = try RecordingSession(root: root)
+            let newSession = try RecordingSession(root: root) { [weak self] event in
+                Task { @MainActor [weak self] in self?.handleCaptureHealth(event) }
+            }
             recordingExportName = recordingNamePreferences.renderName(
                 at: newSession.startedAt,
                 clipboard: NSPasteboard.general.string(forType: .string)
@@ -643,12 +645,24 @@ final class AppController {
         switch event {
         case .stopRequested:
             stopSession()
+        case .health(let health):
+            handleCaptureHealth(health)
         case .failed(let failure):
             FileHandle.standardError.write(
                 Data("screen capture failed: \(failure.summary)\n".utf8)
             )
             stopSession()
         }
+    }
+
+    private func handleCaptureHealth(_ event: CaptureHealthEvent) {
+        menuBar.updateCaptureHealth(event)
+        let line =
+            "capture health: \(event.track.rawValue) \(event.code.rawValue) "
+            + "\(event.severity.rawValue)\n"
+        FileHandle.standardError.write(
+            Data(line.utf8)
+        )
     }
 
     private func finishVideoStartFailure(_ error: Error, session: VideoRecordingSession) {

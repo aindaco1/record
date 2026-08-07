@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import RecordCore
 
@@ -76,16 +77,24 @@ actor TranscriptionCoordinator {
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
     func resumePending(root: URL, recoverInterrupted: Bool = true) {
         if recoverInterrupted {
-            let recovery = SessionRecovery.recover(in: root)
+            let recovery = SessionRecovery.recover(
+                in: root,
+                inspectMedia: SessionMediaInspector.inspect,
+                recoverPartialMedia: true
+            )
             if let notification = Self.recoveryNotification(for: recovery, root: root) {
                 notificationHandler(notification)
             }
-            if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty {
+            if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty
+                || !recovery.promotedMedia.isEmpty || !recovery.quarantinedMedia.isEmpty
+            {
                 let interruptedCount = recovery.interrupted.count
                 let failedCount = recovery.failed.count
                 let message =
                     "recovered \(interruptedCount) interrupted and marked "
-                    + "\(failedCount) empty session(s) failed\n"
+                    + "\(failedCount) empty session(s) failed; promoted "
+                    + "\(recovery.promotedMedia.count), quarantined "
+                    + "\(recovery.quarantinedMedia.count) media artifact(s)\n"
                 FileHandle.standardError.write(Data(message.utf8))
             }
             for failure in recovery.errors {
@@ -140,7 +149,9 @@ actor TranscriptionCoordinator {
         let interrupted = report.interrupted.count
         let failed = report.failed.count
         let errors = report.errors.count
-        guard interrupted + failed + errors > 0 else { return nil }
+        let promoted = report.promotedMedia.count
+        let quarantined = report.quarantinedMedia.count
+        guard interrupted + failed + promoted + quarantined + errors > 0 else { return nil }
 
         var details: [String] = []
         if interrupted > 0 {
@@ -151,6 +162,16 @@ actor TranscriptionCoordinator {
         if failed > 0 {
             details.append(
                 "marked \(failed) empty session\(failed == 1 ? "" : "s") as failed"
+            )
+        }
+        if promoted > 0 {
+            details.append(
+                "restored \(promoted) playable media file\(promoted == 1 ? "" : "s")"
+            )
+        }
+        if quarantined > 0 {
+            details.append(
+                "quarantined \(quarantined) partial file\(quarantined == 1 ? "" : "s")"
             )
         }
         if errors > 0 {
@@ -259,14 +280,38 @@ actor TranscriptionCoordinator {
         try Self.validateTrackResults(attempted: attemptedTracks, succeeded: successfulTracks)
         merged.sort { $0.startMilliseconds < $1.startMilliseconds }
 
-        let transcript = TranscriptDocument(
+        let rawTranscript = TranscriptDocument(
             engine: engine.name,
             model: engine.model,
             createdAt: ISO8601DateFormatter().string(from: Date()),
             segments: merged
         )
+        let suppression =
+            Config.suppressSpeakerEcho()
+            ? TranscriptEchoSuppressor.suppress(merged)
+            : TranscriptEchoSuppressionResult(
+                segments: merged,
+                suppressedMicrophoneSegments: []
+            )
+        let rawTranscriptURL = dir.appendingPathComponent("transcript.raw.json")
+        try? FileManager.default.removeItem(at: rawTranscriptURL)
+        if !suppression.suppressedMicrophoneSegments.isEmpty {
+            try rawTranscript.writeJSON(to: rawTranscriptURL)
+            log(
+                dir,
+                "speaker echo suppression removed "
+                    + "\(suppression.suppressedMicrophoneSegments.count) mic segment(s); "
+                    + "unsuppressed segments are in transcript.raw.json"
+            )
+        }
+        let transcript = TranscriptDocument(
+            engine: rawTranscript.engine,
+            model: rawTranscript.model,
+            createdAt: rawTranscript.createdAt,
+            segments: suppression.segments
+        )
         try transcript.write(to: dir, title: dir.lastPathComponent)
-        log(dir, "done — \(merged.count) segments")
+        log(dir, "done — \(suppression.segments.count) segments")
     }
 
     static func validateTrackResults(attempted: Int, succeeded: Int) throws {
@@ -317,6 +362,10 @@ actor TranscriptionCoordinator {
             log(dir, "completion hook is not executable: \(hook.executable)")
             return
         }
+        guard Self.claimCompletionHook(in: dir) else {
+            log(dir, "completion hook already claimed; skipping duplicate launch")
+            return
+        }
         let task = Process()
         task.executableURL = URL(fileURLWithPath: hook.executable)
         task.arguments = hook.arguments.map {
@@ -326,6 +375,23 @@ actor TranscriptionCoordinator {
             try task.run()
         } catch {
             log(dir, "completion hook failed to launch: \(error)")
+        }
+    }
+
+    /// Claims the hook before process launch. A crash after this atomic file
+    /// creation may omit a hook, but can never execute it twice after restart.
+    static func claimCompletionHook(in directory: URL) -> Bool {
+        let marker = directory.appendingPathComponent(".record-completion-hook.started")
+        return marker.withUnsafeFileSystemRepresentation { path in
+            guard let path else { return false }
+            let descriptor = Darwin.open(
+                path,
+                O_WRONLY | O_CREAT | O_EXCL,
+                mode_t(S_IRUSR | S_IWUSR)
+            )
+            guard descriptor >= 0 else { return false }
+            Darwin.close(descriptor)
+            return true
         }
     }
 

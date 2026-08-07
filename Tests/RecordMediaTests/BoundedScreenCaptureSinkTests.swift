@@ -12,9 +12,11 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
             systemAudioCapacity: 2,
             microphoneCapacity: 2
         )
+        let health = HealthRecorder()
         let sink = BoundedScreenCaptureSink(
             configuration: configuration,
-            processor: processor
+            processor: processor,
+            onHealth: { health.record(kind: $0, code: $1, severity: $2) }
         )
 
         sink.consume(try makeTestSample(value: 1))
@@ -27,6 +29,10 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
         XCTAssertEqual(congested.pending, 2)
         XCTAssertEqual(congested.highWatermark, 2)
         XCTAssertEqual(congested.droppedForBackpressure, 1)
+        XCTAssertEqual(
+            health.values,
+            [.init(kind: .screen, code: .queuePressure, severity: .degraded)]
+        )
 
         processor.release.signal()
         try await sink.finish()
@@ -42,10 +48,12 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
         let expected = CaptureFailure(code: .encoderFailed, summary: "hardware encoder failed")
         let processor = FailingProcessor(failure: expected)
         let reported = FailureRecorder()
+        let health = HealthRecorder()
         let sink = BoundedScreenCaptureSink(
             configuration: try MediaIngressConfiguration(),
             processor: processor,
-            onFailure: { reported.record($0) }
+            onFailure: { reported.record($0) },
+            onHealth: { health.record(kind: $0, code: $1, severity: $2) }
         )
 
         sink.consume(try makeTestSample(value: 1))
@@ -58,6 +66,10 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
         let snapshot = sink.snapshot()[.screen]
         XCTAssertEqual(snapshot.discardedAfterFailure, 1)
         XCTAssertEqual(snapshot.rejectedAfterFinish, 1)
+        XCTAssertEqual(
+            health.values,
+            [.init(kind: .screen, code: .writeFailed, severity: .failed)]
+        )
     }
 
     func testRejectsCapacitiesThatCouldHideUnboundedConfiguration() {
@@ -113,6 +125,27 @@ final class BoundedScreenCaptureSinkTests: XCTestCase {
         XCTAssertEqual(snapshot.droppedForBackpressure, 0)
     }
 
+}
+
+private final class HealthRecorder: @unchecked Sendable {
+    struct Entry: Equatable {
+        let kind: ScreenCaptureSampleKind
+        let code: CaptureHealthEvent.Code
+        let severity: CaptureHealthEvent.Severity
+    }
+
+    private let lock = NSLock()
+    private var entries: [Entry] = []
+
+    var values: [Entry] { lock.withLock { entries } }
+
+    func record(
+        kind: ScreenCaptureSampleKind,
+        code: CaptureHealthEvent.Code,
+        severity: CaptureHealthEvent.Severity
+    ) {
+        lock.withLock { entries.append(.init(kind: kind, code: code, severity: severity)) }
+    }
 }
 
 private final class BlockingProcessor: MediaSampleProcessing, @unchecked Sendable {

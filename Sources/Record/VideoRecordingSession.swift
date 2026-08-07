@@ -65,10 +65,26 @@ struct ScreenCaptureVideoPipelineBuilder: VideoCapturePipelineBuilding {
             includesMicrophone: plan.includesMicrophone
         )
         let writer = try AVAssetSegmentWriter(plan: plan, output: output)
+        let healthStartedAt = Date()
         let sink = BoundedScreenCaptureSink(
             configuration: try MediaIngressConfiguration(),
             processor: writer,
-            onFailure: { onEvent(.failed($0)) }
+            onFailure: { onEvent(.failed($0)) },
+            onHealth: { kind, code, severity in
+                onEvent(
+                    .health(
+                        .init(
+                            track: kind.captureHealthTrack,
+                            code: code,
+                            severity: severity,
+                            occurredAtMilliseconds: max(
+                                0,
+                                Int(Date().timeIntervalSince(healthStartedAt) * 1_000)
+                            )
+                        )
+                    )
+                )
+            }
         )
         let capture = try await ScreenCaptureKitStreamBuilder().prepare(
             configuration: configuration,
@@ -175,6 +191,10 @@ actor VideoRecordingSession {
     private var terminalFailure: CaptureFailure?
     private var outcome: VideoRecordingOutcome?
     private var activePipelineID: UUID?
+    private var healthEvents: [CaptureHealthEvent] = []
+    private var expectedCaptureKinds: Set<ScreenCaptureSampleKind> = Set(
+        ScreenCaptureSampleKind.allCases
+    )
 
     init(
         root: URL,
@@ -200,6 +220,9 @@ actor VideoRecordingSession {
     }
 
     func start(configuration: CaptureConfiguration) async throws {
+        expectedCaptureKinds = [.screen]
+        if configuration.audio.includeSystemAudio { expectedCaptureKinds.insert(.systemAudio) }
+        if configuration.audio.includeMicrophone { expectedCaptureKinds.insert(.microphone) }
         _ = try stateMachine.handle(.start(sessionID: id, configuration: configuration))
         var failedAttempt = 0
         while true {
@@ -273,6 +296,7 @@ actor VideoRecordingSession {
         }
 
         let stopped = await pipeline.stop()
+        recordMissingCallbacks(from: stopped.ingress, at: endedAt)
         let failure = terminalFailure ?? stopped.failure
         guard let mediaURL = stopped.mediaURL else {
             let resolvedFailure =
@@ -290,6 +314,7 @@ actor VideoRecordingSession {
             try markFailed(artifacts: stopped.artifacts, failure: failure, at: endedAt)
         } else {
             let tracks = Self.manifestTracks(from: stopped.artifacts)
+            manifest.healthEvents = healthEvents.isEmpty ? nil : healthEvents
             manifest = try manifest.finalized(at: endedAt, tracks: tracks)
             try manifest.write(to: dir)
             _ = try stateMachine.handle(.stopped)
@@ -307,7 +332,23 @@ actor VideoRecordingSession {
 
     private func receive(_ event: ScreenCaptureEvent, from pipelineID: UUID) {
         guard pipelineID == activePipelineID else { return }
-        if case .failed(let failure) = event {
+        var forwardedEvent = event
+        if case .health(let health) = event {
+            let normalizedHealth = CaptureHealthEvent(
+                track: health.track,
+                code: health.code,
+                severity: health.severity,
+                occurredAtMilliseconds: max(
+                    0,
+                    Int(Date().timeIntervalSince(startedAt) * 1_000)
+                ),
+                durationMilliseconds: health.durationMilliseconds
+            )
+            healthEvents.append(normalizedHealth)
+            manifest.healthEvents = healthEvents
+            try? manifest.write(to: dir)
+            forwardedEvent = .health(normalizedHealth)
+        } else if case .failed(let failure) = event {
             terminalFailure = terminalFailure ?? failure
             if case .preparing = stateMachine.state {
                 // `start(configuration:)` owns bounded retry and final error
@@ -321,7 +362,21 @@ actor VideoRecordingSession {
                 try? markFailed(artifacts: nil, failure: failure, at: Date())
             }
         }
-        eventHandler(event)
+        eventHandler(forwardedEvent)
+    }
+
+    private func recordMissingCallbacks(from ingress: MediaIngressSnapshot, at date: Date) {
+        for kind in ScreenCaptureSampleKind.allCases
+        where expectedCaptureKinds.contains(kind) && ingress[kind].received == 0 {
+            let event = CaptureHealthEvent(
+                track: kind.captureHealthTrack,
+                code: .missingCallbacks,
+                severity: .failed,
+                occurredAtMilliseconds: max(0, Int(date.timeIntervalSince(startedAt) * 1_000))
+            )
+            healthEvents.append(event)
+            eventHandler(.health(event))
+        }
     }
 
     private func markFailed(
@@ -333,6 +388,7 @@ actor VideoRecordingSession {
         manifest.endedAt = max(endedAt, startedAt)
         manifest.tracks = Self.manifestTracks(from: artifacts)
         manifest.failure = failure
+        manifest.healthEvents = healthEvents.isEmpty ? nil : healthEvents
         try manifest.write(to: dir)
     }
 
@@ -381,5 +437,15 @@ actor VideoRecordingSession {
             code: .internalFailure,
             summary: "video capture could not start"
         )
+    }
+}
+
+private extension ScreenCaptureSampleKind {
+    var captureHealthTrack: CaptureHealthEvent.Track {
+        switch self {
+        case .screen: .screen
+        case .systemAudio: .systemAudio
+        case .microphone: .microphone
+        }
     }
 }

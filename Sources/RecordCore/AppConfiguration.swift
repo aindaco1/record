@@ -13,19 +13,22 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         public var model: String?
         public var executable: String?
         public var language: String
+        public var suppressSpeakerEcho: Bool
 
         public init(
             enabled: Bool = true,
             engine: String = "parakeet",
             model: String? = "parakeet-tdt-0.6b-v3-coreml",
             executable: String? = nil,
-            language: String = "auto"
+            language: String = "auto",
+            suppressSpeakerEcho: Bool = true
         ) {
             self.enabled = enabled
             self.engine = engine
             self.model = model
             self.executable = executable
             self.language = language
+            self.suppressSpeakerEcho = suppressSpeakerEcho
         }
 
         public init(from decoder: Decoder) throws {
@@ -40,6 +43,8 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             executable = try container.decodeIfPresent(String.self, forKey: .executable)
             language = (try container.decodeIfPresent(String.self, forKey: .language) ?? "auto")
                 .lowercased()
+            suppressSpeakerEcho =
+                try container.decodeIfPresent(Bool.self, forKey: .suppressSpeakerEcho) ?? true
         }
 
         private enum CodingKeys: String, CodingKey {
@@ -48,6 +53,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             case model
             case executable
             case language
+            case suppressSpeakerEcho = "suppress_speaker_echo"
         }
     }
 
@@ -73,7 +79,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         schemaVersion: Int = AppConfiguration.currentSchemaVersion,
         recordingsDirectory: String? = nil,
         transcription: Transcription = .init(),
-        micVoiceProcessing: Bool = false,
+        micVoiceProcessing: Bool = true,
         completionHook: CompletionHook? = nil
     ) {
         self.schemaVersion = schemaVersion
@@ -109,7 +115,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             try container.decodeIfPresent(
                 Bool.self,
                 forKey: .micVoiceProcessing
-            ) ?? false
+            ) ?? true
         completionHook = try container.decodeIfPresent(
             CompletionHook.self,
             forKey: .completionHook

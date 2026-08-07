@@ -42,6 +42,10 @@ enum Config {
         transcriptionSelection().language
     }
 
+    static func suppressSpeakerEcho() -> Bool {
+        current.transcription.suppressSpeakerEcho
+    }
+
     static func transcriptionSelection() -> TranscriptionSelection {
         TranscriptionPreferences.effectiveSelection(configuration: current.transcription)
     }

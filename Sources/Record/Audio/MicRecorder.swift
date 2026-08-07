@@ -1,240 +1,441 @@
 import AVFoundation
+import CoreAudio
 import Foundation
+import RecordCore
 
-/// Records the default input device to a file via AVAudioEngine, encoding AAC
-/// mono. Buffers stream straight to disk — nothing is held in memory, so
-/// session length is unbounded.
+/// Records the default input device to one crash-resilient AAC/CAF track.
+/// Capture callbacks only copy into a bounded handoff; conversion, encoding,
+/// and filesystem work happen on the writer queue.
 ///
-/// With voice processing on (the default), Apple's echo canceller subtracts
-/// speaker playback from the mic so the system track doesn't bleed into the
-/// mic track. VoiceProcessingIO is a duplex unit, not an input effect: it
-/// needs a rendered output path and one explicit mono client format on both
-/// sides, or it silently delivers zeroed buffers (rca-001). A first-second
-/// liveness check catches routes where even the correct graph stays silent
-/// and restarts capture raw.
+/// Apple's VoiceProcessingIO echo canceller is enabled by default. Route and
+/// engine-configuration changes are debounced and restart the graph without
+/// replacing the output file; silence padding preserves the track timeline.
 final class MicRecorder: @unchecked Sendable {
     enum RecorderError: Error, CustomStringConvertible {
         case engineStartFailed(Error)
         case fileCreationFailed(Error)
         case formatUnsupported(String)
 
-        /// AVAudioFormat is not Sendable in the macOS 15 SDK. Capture its
-        /// immutable diagnostic while still on the recorder's execution path
-        /// instead of allowing the framework object to escape in an Error.
         static func unsupportedFormat(_ format: AVAudioFormat) -> Self {
             .formatUnsupported(String(describing: format))
         }
 
         var description: String {
             switch self {
-            case .engineStartFailed(let e): return "mic engine start failed: \(e)"
-            case .fileCreationFailed(let e): return "mic file creation failed: \(e)"
-            case .formatUnsupported(let f): return "can't downmix mic format \(f)"
+            case .engineStartFailed(let error): return "mic engine start failed: \(error)"
+            case .fileCreationFailed(let error): return "mic file creation failed: \(error)"
+            case .formatUnsupported(let format): return "can't downmix mic format \(format)"
             }
         }
     }
 
     private var engine = AVAudioEngine()
-    private var file: AVAudioFile?
-    private var url: URL?
+    private var tapInstalled = false
+    private var writer: AudioFileWritePump?
+    private var engineObserver: NSObjectProtocol?
+    private var defaultInputObserver: DefaultInputDeviceObserver?
+    private var scheduledRecovery: DispatchWorkItem?
+    private var routeRecovery = MicrophoneRouteRecoveryStateMachine()
+    private var routeGapPaddedThroughMilliseconds: Int?
+    private var usingVoiceProcessing = false
+    private let startedAt: Date
+    private let onHealth: @Sendable (CaptureHealthEvent) -> Void
+
     private(set) var isRecording = false
-    /// Wall-clock time of the first captured buffer — the track's true start,
-    /// used to offset-align the two tracks' transcript timestamps.
-    private(set) var firstBufferAt: Date?
+    var firstBufferAt: Date? { writer?.snapshot().firstBufferAt }
 
-    // Liveness check state (voice-processing path only). Written from the tap
-    // callback, read on main when deciding to fall back.
-    private var livenessFrames = 0
-    private var livenessPeak: Float = 0
-    private var livenessSettled = false
+    init(
+        startedAt: Date = Date(),
+        onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
+    ) {
+        self.startedAt = startedAt
+        self.onHealth = onHealth
+    }
 
-    /// Start capturing the mic, encoding AAC into `url` (use a .caf extension
-    /// — CAF needs no finalization pass, so a crash loses nothing written).
     func start(writingTo url: URL) throws {
+        dispatchPrecondition(condition: .onQueue(.main))
         guard !isRecording else { return }
-        self.url = url
-        try attach(voiceProcessing: Config.micVoiceProcessing())
-        isRecording = true
-    }
 
-    /// Stop capturing and finalize the file. Idempotent.
-    func stop() {
-        guard isRecording else { return }
-        isRecording = false
-        engine.stop()
-        engine.inputNode.removeTap(onBus: 0)
-        file = nil
-    }
-
-    // MARK: -
-
-    /// Build the engine graph, create the AAC file, and start capture. Called
-    /// once at start, and a second time (voiceProcessing: false) if the
-    /// liveness check trips.
-    private func attach(voiceProcessing: Bool) throws {
-        engine = AVAudioEngine()
-        let input = engine.inputNode
-
-        var voice = voiceProcessing
-        if voice {
-            do {
-                try input.setVoiceProcessingEnabled(true)
-                // The live voice unit makes macOS treat the session like a
-                // call and duck all other audio — meetings played through the
-                // speakers would get quieter the moment recording starts.
-                input.voiceProcessingOtherAudioDuckingConfiguration =
-                    .init(enableAdvancedDucking: false, duckingLevel: .min)
-            } catch {
-                FileHandle.standardError.write(Data(
-                    "warning: mic voice processing unavailable (\(error)) — recording raw mic\n".utf8
-                ))
-                voice = false
-            }
+        let initialInput = engine.inputNode.outputFormat(forBus: 0)
+        guard let fileFormat = Self.monoFormat(sampleRate: initialInput.sampleRate) else {
+            throw RecorderError.unsupportedFormat(initialInput)
         }
-        let inputFormat = input.outputFormat(forBus: 0)
-
-        // One explicit mono client format. With voice processing this is the
-        // Voice I/O boundary format on both sides of the duplex unit — never
-        // accept the inherited multichannel route format (a 9-channel device
-        // yielded digital silence). Raw capture downmixes to the same shape;
-        // speech models want one channel anyway.
-        guard let monoFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: inputFormat.sampleRate,
-            channels: 1,
-            interleaved: false
-        ) else {
-            throw RecorderError.unsupportedFormat(inputFormat)
-        }
-
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVSampleRateKey: monoFormat.sampleRate,
+            AVSampleRateKey: fileFormat.sampleRate,
             AVNumberOfChannelsKey: 1,
         ]
+        let file: AVAudioFile
         do {
             file = try AVAudioFile(
-                forWriting: url!,
+                forWriting: url,
                 settings: settings,
-                commonFormat: monoFormat.commonFormat,
-                interleaved: monoFormat.isInterleaved
+                commonFormat: fileFormat.commonFormat,
+                interleaved: fileFormat.isInterleaved
             )
         } catch {
             throw RecorderError.fileCreationFailed(error)
         }
-
-        if voice {
-            // Complete the duplex graph: VoiceProcessingIO must render to an
-            // output device or the input side never produces audio. The mixer
-            // has no sources — nothing is monitored or played — its connection
-            // exists solely to give the unit a formatted output path.
-            engine.connect(engine.mainMixerNode, to: engine.outputNode, format: monoFormat)
-            livenessFrames = 0
-            livenessPeak = 0
-            livenessSettled = false
-            installVoiceTap(on: input, format: monoFormat)
-        } else {
-            try installRawTap(on: input, inputFormat: inputFormat, monoFormat: monoFormat)
+        writer = AudioFileWritePump(file: file) { [weak self] event in
+            DispatchQueue.main.async { self?.report(event) }
         }
 
-        engine.prepare()
         do {
-            try engine.start()
+            try attachEngine(voiceProcessing: Config.micVoiceProcessing())
+        } catch {
+            writer?.finish()
+            writer = nil
+            throw error
+        }
+
+        isRecording = true
+        _ = routeRecovery.handle(.start)
+        installDefaultInputObserver()
+    }
+
+    func stop() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard isRecording else { return }
+        isRecording = false
+        execute(routeRecovery.handle(.stop))
+        scheduledRecovery?.cancel()
+        scheduledRecovery = nil
+        defaultInputObserver = nil
+        tearDownEngine()
+
+        let snapshot = writer?.snapshot()
+        writer?.finish()
+        if snapshot?.receivedBuffers == 0 {
+            report(
+                .init(
+                    track: .microphone,
+                    code: .missingCallbacks,
+                    severity: .failed,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        }
+        writer = nil
+    }
+
+    // MARK: Capture graph
+
+    private func attachEngine(voiceProcessing requestedVoiceProcessing: Bool) throws {
+        guard let writer else {
+            throw RecorderError.fileCreationFailed(
+                NSError(domain: "Record.MicRecorder", code: 1)
+            )
+        }
+
+        let newEngine = AVAudioEngine()
+        let input = newEngine.inputNode
+        var voiceProcessing = requestedVoiceProcessing
+        if voiceProcessing {
+            do {
+                try input.setVoiceProcessingEnabled(true)
+                input.voiceProcessingOtherAudioDuckingConfiguration =
+                    .init(enableAdvancedDucking: false, duckingLevel: .min)
+            } catch {
+                FileHandle.standardError.write(
+                    Data("warning: mic voice processing unavailable; recording raw mic\n".utf8)
+                )
+                voiceProcessing = false
+            }
+        }
+
+        let inputFormat = input.outputFormat(forBus: 0)
+        guard let monoFormat = Self.monoFormat(sampleRate: inputFormat.sampleRate) else {
+            throw RecorderError.unsupportedFormat(inputFormat)
+        }
+
+        let livenessProbe = voiceProcessing
+            ? VoiceProcessingLivenessProbe(requiredFrames: Int(monoFormat.sampleRate))
+            : nil
+        if voiceProcessing {
+            // VoiceProcessingIO is duplex. An empty render path activates its
+            // echo reference without monitoring microphone audio to speakers.
+            newEngine.connect(newEngine.mainMixerNode, to: newEngine.outputNode, format: monoFormat)
+            input.installTap(onBus: 0, bufferSize: 4_096, format: monoFormat) {
+                [weak self, writer, livenessProbe] buffer, _ in
+                writer.enqueueCopy(of: buffer)
+                if livenessProbe?.consume(buffer) == true {
+                    DispatchQueue.main.async { self?.fallBackToRawAfterDigitalSilence() }
+                }
+            }
+        } else {
+            input.installTap(onBus: 0, bufferSize: 4_096, format: inputFormat) {
+                [writer] buffer, _ in
+                writer.enqueueCopy(of: buffer)
+            }
+        }
+
+        newEngine.prepare()
+        do {
+            try newEngine.start()
         } catch {
             input.removeTap(onBus: 0)
-            file = nil
             throw RecorderError.engineStartFailed(error)
         }
 
+        engine = newEngine
+        tapInstalled = true
+        usingVoiceProcessing = voiceProcessing
+        installEngineObserver(for: newEngine)
         let report = "mic: voiceProcessing=\(input.isVoiceProcessingEnabled) "
-            + "input=\(input.outputFormat(forBus: 0)) tap=\(monoFormat)\n"
+            + "input=\(inputFormat) tap=\(voiceProcessing ? monoFormat : inputFormat)\n"
         FileHandle.standardError.write(Data(report.utf8))
     }
 
-    /// Voice-processing path: the unit converts to the mono client format
-    /// itself, so tapped buffers write straight to the file. Tracks signal
-    /// peak over the first second — an unsupported route (device pair, macOS
-    /// AUVPAggregate defects) delivers callbacks full of digital zeros, and
-    /// the only recovery is restarting raw.
-    private func installVoiceTap(on input: AVAudioInputNode, format: AVAudioFormat) {
-        let checkFrames = Int(format.sampleRate)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format) { [weak self] buffer, _ in
-            guard let self, let file = self.file else { return }
-            if self.firstBufferAt == nil { self.firstBufferAt = Date() }
-
-            if !self.livenessSettled {
-                let frames = Int(buffer.frameLength)
-                if let data = buffer.floatChannelData?[0] {
-                    for i in 0..<frames {
-                        self.livenessPeak = max(self.livenessPeak, abs(data[i]))
-                    }
-                }
-                self.livenessFrames += frames
-                if self.livenessFrames >= checkFrames {
-                    self.livenessSettled = true
-                    if self.livenessPeak == 0 {
-                        DispatchQueue.main.async { self.fallBackToRaw() }
-                        return
-                    }
-                }
-            }
-
-            do {
-                try file.write(from: buffer)
-            } catch {
-                FileHandle.standardError.write(Data("mic track write failed: \(error)\n".utf8))
-            }
+    private func tearDownEngine() {
+        if let engineObserver {
+            NotificationCenter.default.removeObserver(engineObserver)
+            self.engineObserver = nil
         }
-    }
-
-    /// Raw path: tap at the device's native format and downmix to mono. Same
-    /// sample rate on both sides, so the one-shot convert applies.
-    private func installRawTap(
-        on input: AVAudioInputNode,
-        inputFormat: AVAudioFormat,
-        monoFormat: AVAudioFormat
-    ) throws {
-        guard let converter = AVAudioConverter(from: inputFormat, to: monoFormat) else {
-            throw RecorderError.unsupportedFormat(inputFormat)
-        }
-        input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
-            guard let self, let file = self.file else { return }
-            if self.firstBufferAt == nil { self.firstBufferAt = Date() }
-            guard let mono = AVAudioPCMBuffer(
-                pcmFormat: monoFormat,
-                frameCapacity: buffer.frameCapacity
-            ) else { return }
-            do {
-                try converter.convert(to: mono, from: buffer)
-                try file.write(from: mono)
-            } catch {
-                FileHandle.standardError.write(Data("mic track write failed: \(error)\n".utf8))
-            }
-        }
-    }
-
-    /// The voice-processing route delivered a full second of digital silence:
-    /// tear the engine down and restart raw, discarding the silent prefix so
-    /// the track's timestamps start at real audio.
-    private func fallBackToRaw() {
-        guard isRecording else { return }
-        FileHandle.standardError.write(Data(
-            "warning: voice processing delivered silence — restarting mic raw\n".utf8
-        ))
         engine.stop()
-        engine.inputNode.removeTap(onBus: 0)
-        file = nil
-        firstBufferAt = nil
-        if let url {
-            try? FileManager.default.removeItem(at: url)
+        if tapInstalled {
+            engine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
         }
+        usingVoiceProcessing = false
+    }
+
+    private static func monoFormat(sampleRate: Double) -> AVAudioFormat? {
+        guard sampleRate > 0 else { return nil }
+        return AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate,
+            channels: 1,
+            interleaved: false
+        )
+    }
+
+    // MARK: Route recovery
+
+    private func installDefaultInputObserver() {
+        defaultInputObserver = try? DefaultInputDeviceObserver { [weak self] in
+            self?.routeDidChange()
+        }
+    }
+
+    private func installEngineObserver(for engine: AVAudioEngine) {
+        engineObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: engine,
+            queue: .main
+        ) { [weak self] _ in
+            self?.routeDidChange()
+        }
+    }
+
+    private func routeDidChange() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard isRecording else { return }
+        execute(
+            routeRecovery.handle(
+                .routeChanged(atMilliseconds: elapsedMilliseconds())
+            )
+        )
+    }
+
+    private func execute(_ effects: [MicrophoneRouteRecoveryStateMachine.Effect]) {
+        for effect in effects {
+            switch effect {
+            case .scheduleRestart(let milliseconds):
+                schedule(afterMilliseconds: milliseconds) { [weak self] in
+                    guard let self else { return }
+                    self.execute(
+                        self.routeRecovery.handle(
+                            .restartDelayElapsed(atMilliseconds: self.elapsedMilliseconds())
+                        )
+                    )
+                }
+            case .restartCapture:
+                restartForRouteChange()
+            case .scheduleRetry(let milliseconds):
+                schedule(afterMilliseconds: milliseconds) { [weak self] in
+                    guard let self else { return }
+                    self.execute(
+                        self.routeRecovery.handle(
+                            .retryDelayElapsed(atMilliseconds: self.elapsedMilliseconds())
+                        )
+                    )
+                }
+            case .record(let event):
+                report(event)
+            }
+        }
+    }
+
+    private func schedule(afterMilliseconds milliseconds: Int, action: @escaping () -> Void) {
+        scheduledRecovery?.cancel()
+        let item = DispatchWorkItem(block: action)
+        scheduledRecovery = item
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + .milliseconds(milliseconds),
+            execute: item
+        )
+    }
+
+    private func restartForRouteChange() {
+        guard isRecording else { return }
+        let changedAt: Int
+        if case .restarting(let timestamp) = routeRecovery.state {
+            changedAt = timestamp
+        } else {
+            return
+        }
+        if routeGapPaddedThroughMilliseconds == nil {
+            routeGapPaddedThroughMilliseconds = changedAt
+        }
+
+        tearDownEngine()
+        let attemptAt = elapsedMilliseconds()
+        padRouteGap(upTo: attemptAt)
         do {
-            try attach(voiceProcessing: false)
+            try attachEngine(voiceProcessing: Config.micVoiceProcessing())
+            routeGapPaddedThroughMilliseconds = nil
+            execute(routeRecovery.handle(.restartSucceeded(atMilliseconds: attemptAt)))
         } catch {
-            FileHandle.standardError.write(Data(
-                "mic raw fallback failed: \(error) — session continues without mic track\n".utf8
-            ))
-            file = nil
+            FileHandle.standardError.write(Data("mic route restart failed: \(error)\n".utf8))
+            execute(routeRecovery.handle(.restartFailed(atMilliseconds: attemptAt)))
+        }
+    }
+
+    private func padRouteGap(upTo milliseconds: Int) {
+        guard let paddedThrough = routeGapPaddedThroughMilliseconds else { return }
+        let duration = max(0, milliseconds - paddedThrough)
+        writer?.enqueueSilence(durationMilliseconds: duration)
+        routeGapPaddedThroughMilliseconds = milliseconds
+    }
+
+    private func fallBackToRawAfterDigitalSilence() {
+        guard isRecording, usingVoiceProcessing else { return }
+        let fallbackStartedAt = elapsedMilliseconds()
+        report(
+            .init(
+                track: .microphone,
+                code: .digitalSilence,
+                severity: .degraded,
+                occurredAtMilliseconds: fallbackStartedAt,
+                durationMilliseconds: 1_000
+            )
+        )
+        tearDownEngine()
+        writer?.enqueueSilence(
+            durationMilliseconds: max(0, elapsedMilliseconds() - fallbackStartedAt)
+        )
+        do {
+            try attachEngine(voiceProcessing: false)
+        } catch {
+            FileHandle.standardError.write(Data("mic raw fallback failed: \(error)\n".utf8))
+            report(
+                .init(
+                    track: .microphone,
+                    code: .routeRecoveryFailed,
+                    severity: .failed,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        }
+    }
+
+    // MARK: Health
+
+    private func report(_ event: AudioFileWritePump.Event) {
+        switch event {
+        case .queuePressure:
+            report(
+                .init(
+                    track: .microphone,
+                    code: .queuePressure,
+                    severity: .degraded,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        case .writeFailed:
+            report(
+                .init(
+                    track: .microphone,
+                    code: .writeFailed,
+                    severity: .failed,
+                    occurredAtMilliseconds: elapsedMilliseconds()
+                )
+            )
+        }
+    }
+
+    private func report(_ event: CaptureHealthEvent) {
+        onHealth(event)
+        FileHandle.standardError.write(
+            Data("capture health: microphone \(event.code.rawValue)\n".utf8)
+        )
+    }
+
+    private func elapsedMilliseconds(at date: Date = Date()) -> Int {
+        max(0, Int(date.timeIntervalSince(startedAt) * 1_000))
+    }
+}
+
+/// Core Audio reports a default-device swap independently of AVAudioEngine's
+/// graph notification. Listening to both covers unplug, Bluetooth handoff,
+/// and Control Center input changes; the state machine coalesces duplicates.
+private final class DefaultInputDeviceObserver {
+    private var address = AudioObjectPropertyAddress(
+        mSelector: kAudioHardwarePropertyDefaultInputDevice,
+        mScope: kAudioObjectPropertyScopeGlobal,
+        mElement: kAudioObjectPropertyElementMain
+    )
+    private let listener: AudioObjectPropertyListenerBlock
+
+    init(handler: @escaping @Sendable () -> Void) throws {
+        listener = { _, _ in handler() }
+        let status = AudioObjectAddPropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            .main,
+            listener
+        )
+        guard status == noErr else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
+    }
+
+    deinit {
+        AudioObjectRemovePropertyListenerBlock(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            .main,
+            listener
+        )
+    }
+}
+
+private final class VoiceProcessingLivenessProbe: @unchecked Sendable {
+    private let requiredFrames: Int
+    private let lock = NSLock()
+    private var frames = 0
+    private var peak: Float = 0
+    private var settled = false
+
+    init(requiredFrames: Int) {
+        self.requiredFrames = max(1, requiredFrames)
+    }
+
+    /// Returns true exactly once after one second of callback data contains
+    /// only digital zeros.
+    func consume(_ buffer: AVAudioPCMBuffer) -> Bool {
+        lock.withLock {
+            guard !settled else { return false }
+            let frameCount = Int(buffer.frameLength)
+            if let channel = buffer.floatChannelData?[0] {
+                for index in 0..<frameCount {
+                    peak = max(peak, abs(channel[index]))
+                }
+            }
+            frames += frameCount
+            guard frames >= requiredFrames else { return false }
+            settled = true
+            return peak == 0
         }
     }
 }

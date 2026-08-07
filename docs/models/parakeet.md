@@ -32,7 +32,7 @@ network entitlement.
 
 ## Import into Record
 
-1. Open **Transcription Model → Set Up Parakeet Model…**.
+1. Open **Transcript model → Set Up Parakeet Model…**.
 2. Choose **Import Downloaded Model…**.
 3. Select `$HOME/Downloads/parakeet-tdt-0.6b-v3`.
 

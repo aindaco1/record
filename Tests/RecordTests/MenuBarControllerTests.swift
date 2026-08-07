@@ -4,8 +4,8 @@ import XCTest
 @MainActor
 final class MenuBarControllerTests: XCTestCase {
     func testMenuUsesStableActionLabels() {
-        XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcription Model")
-        XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Export folder…")
+        XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcript model")
+        XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Select export folder…")
         XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
         XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")

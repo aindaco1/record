@@ -63,6 +63,15 @@ public struct TranscriptDocument: Codable, Equatable, Sendable {
         )
     }
 
+    /// Writes an engine-neutral JSON sidecar without creating the canonical
+    /// completion marker. Used to preserve unsuppressed ASR segments whenever
+    /// the readable transcript removes high-confidence speaker echo.
+    public func writeJSON(to url: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        try encoder.encode(self).write(to: url, options: .atomic)
+    }
+
     public func rendered(title: String) -> String {
         var lines = ["# \(title)", "", "engine: \(engine) (\(model))", ""]
         for segment in segments {

@@ -97,6 +97,7 @@ public protocol MediaSampleProcessing: AnyObject, Sendable {
 private final class MediaTrackIngressState {
     var buffer: BoundedRingBuffer<ScreenCaptureSample>
     var snapshot = MediaTrackIngressSnapshot()
+    var reportedQueuePressure = false
 
     init(capacity: Int) {
         buffer = BoundedRingBuffer(capacity: capacity)
@@ -109,6 +110,12 @@ private final class MediaTrackIngressState {
 public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked Sendable {
     private let processor: any MediaSampleProcessing
     private let onFailure: @Sendable (CaptureFailure) -> Void
+    private let onHealth:
+        @Sendable (
+            ScreenCaptureSampleKind,
+            CaptureHealthEvent.Code,
+            CaptureHealthEvent.Severity
+        ) -> Void
     private let worker: DispatchQueue
     private let lock = NSLock()
 
@@ -126,11 +133,18 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
             qos: .userInitiated,
             autoreleaseFrequency: .workItem
         ),
-        onFailure: @escaping @Sendable (CaptureFailure) -> Void = { _ in }
+        onFailure: @escaping @Sendable (CaptureFailure) -> Void = { _ in },
+        onHealth:
+            @escaping @Sendable (
+                ScreenCaptureSampleKind,
+                CaptureHealthEvent.Code,
+                CaptureHealthEvent.Severity
+            ) -> Void = { _, _, _ in }
     ) {
         self.processor = processor
         self.worker = worker
         self.onFailure = onFailure
+        self.onHealth = onHealth
         tracks = Dictionary(
             uniqueKeysWithValues: ScreenCaptureSampleKind.allCases.map {
                 ($0, MediaTrackIngressState(capacity: configuration.capacity(for: $0)))
@@ -140,6 +154,7 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
 
     public func consume(_ sample: ScreenCaptureSample) {
         var shouldScheduleDrain = false
+        var shouldReportPressure = false
 
         lock.lock()
         guard let track = tracks[sample.kind] else {
@@ -156,6 +171,10 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
 
         if track.buffer.appendDroppingOldest(sample) != nil {
             track.snapshot.droppedForBackpressure += 1
+            if !track.reportedQueuePressure {
+                track.reportedQueuePressure = true
+                shouldReportPressure = true
+            }
         }
         track.snapshot.pending = track.buffer.count
         track.snapshot.highWatermark = max(
@@ -169,6 +188,9 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
         }
         lock.unlock()
 
+        if shouldReportPressure {
+            onHealth(sample.kind, .queuePressure, .degraded)
+        }
         if shouldScheduleDrain {
             worker.async { [self] in drain() }
         }
@@ -284,6 +306,7 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
         let waiters = takeFinishWaiters()
         lock.unlock()
 
+        onHealth(failedKind, .writeFailed, .failed)
         onFailure(failure)
         resume(waiters, with: .failure(MediaIngressError.processingFailed(failure)))
     }

@@ -11,7 +11,16 @@ final class SessionManifestTests: XCTestCase {
         let original = SessionManifest(
             id: UUID(uuidString: "A7909C37-16C7-4F2B-A84E-E18C802593F4")!,
             startedAt: started,
-            tracks: [.init(kind: .microphone, filename: "mic.caf", speaker: "me")]
+            tracks: [.init(kind: .microphone, filename: "mic.caf", speaker: "me")],
+            healthEvents: [
+                .init(
+                    track: .microphone,
+                    code: .routeRecovered,
+                    severity: .information,
+                    occurredAtMilliseconds: 2_000,
+                    durationMilliseconds: 500
+                )
+            ]
         )
 
         try original.write(to: directory)
