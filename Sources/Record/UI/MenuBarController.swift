@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import RecordCore
 
 /// Status bar item in the top-right of the menu bar. Shows recording state at
@@ -6,6 +7,8 @@ import RecordCore
 /// (since we run as `.accessory` — no dock icon, no main window).
 @MainActor
 final class MenuBarController {
+    static let recordingPulseAnimationKey = "record.recording-pulse"
+
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
@@ -21,6 +24,7 @@ final class MenuBarController {
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
+    private var recordingIndicatorIsActive = false
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
@@ -183,10 +187,9 @@ final class MenuBarController {
         }
     }
 
-    /// Reflect recording state in the icon tint and menu item titles. The
-    /// menu bar shows only the Record ring (red while recording); the elapsed
-    /// counter lives in the menu's state label. Call once a second while
-    /// recording.
+    /// Reflect recording state in the icon and menu item titles. The menu bar
+    /// shows a pulsing white Record ring while recording; the elapsed counter
+    /// lives in the menu's state label. Call once a second while recording.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
         stateLabel.title =
             recording
@@ -196,7 +199,7 @@ final class MenuBarController {
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
         setCapturePrivacyItemsEnabled(!recording)
-        statusItem.button?.contentTintColor = recording ? .systemRed : nil
+        setRecordingIndicatorActive(recording)
     }
 
     func updateRequestingPermissions(for mode: RecordingMode) {
@@ -204,7 +207,7 @@ final class MenuBarController {
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
-        statusItem.button?.contentTintColor = .systemOrange
+        setRecordingIndicatorActive(false)
     }
 
     func updatePreparingScreenRecording() {
@@ -213,7 +216,7 @@ final class MenuBarController {
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
-        statusItem.button?.contentTintColor = .systemOrange
+        setRecordingIndicatorActive(false)
     }
 
     func updateStoppingRecording() {
@@ -313,6 +316,32 @@ final class MenuBarController {
         return image
     }
 
+    /// Template status-item images deliberately adapt between black and white.
+    /// Recording state must remain conspicuous on every menu-bar appearance,
+    /// so render the same NewKap ring as an explicit white, non-template image.
+    static func recordingMenuBarImage() -> NSImage? {
+        guard let source = menuBarImage() else { return nil }
+        let image = NSImage(size: source.size, flipped: false) { rect in
+            source.draw(in: rect)
+            NSColor.white.setFill()
+            rect.fill(using: .sourceIn)
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
+    static func recordingPulseAnimation() -> CABasicAnimation {
+        let animation = CABasicAnimation(keyPath: "opacity")
+        animation.fromValue = 1.0
+        animation.toValue = 0.35
+        animation.duration = 0.65
+        animation.autoreverses = true
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        return animation
+    }
+
     private static func privacyMenuItem(
         title: String,
         feature: CapturePrivacyFeature,
@@ -332,6 +361,26 @@ final class MenuBarController {
         hideNotificationsItem.isEnabled = enabled
         hideMenuBarItem.isEnabled = enabled
         hideDesktopItemsItem.isEnabled = enabled
+    }
+
+    private func setRecordingIndicatorActive(_ active: Bool) {
+        guard recordingIndicatorIsActive != active else { return }
+        recordingIndicatorIsActive = active
+        guard let button = statusItem.button else { return }
+
+        button.layer?.removeAnimation(forKey: Self.recordingPulseAnimationKey)
+        button.alphaValue = 1
+        button.contentTintColor = nil
+        button.image = active ? Self.recordingMenuBarImage() : Self.menuBarImage()
+
+        guard active, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            return
+        }
+        button.wantsLayer = true
+        button.layer?.add(
+            Self.recordingPulseAnimation(),
+            forKey: Self.recordingPulseAnimationKey
+        )
     }
 
     @objc private func toggleClicked() { onToggle?() }

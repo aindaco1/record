@@ -7,6 +7,7 @@ cd "$repo_root"
 ./scripts/ci/check-local-only.sh
 ./scripts/ci/test-local-only-guard.sh
 ./scripts/ci/test-model-installer.sh
+./scripts/ci/test-local-signing.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AudioSessionInspector.swift \

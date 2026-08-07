@@ -8,6 +8,7 @@ if [[ $# -gt 1 ]]; then
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$repo_root/scripts/lib/local-signing.sh"
 built_app="$repo_root/.build/release-artifacts/Record.app"
 temporary_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
 run_root="$temporary_root/record-local-run"
@@ -69,8 +70,22 @@ esac
 rm -rf "$run_root"
 mkdir -p "$run_root"
 ditto --norsrc --noextattr "$built_app" "$app_bundle"
-codesign --force --sign - \
-    --entitlements Configuration/Record.entitlements "$app_bundle"
+available_identities="$(/usr/bin/security find-identity -v -p codesigning 2>/dev/null || true)"
+signing_identity="$(
+    select_local_codesign_identity \
+        "${RECORD_CODESIGN_IDENTITY:-}" \
+        "$available_identities"
+)"
+if [[ -n "$signing_identity" ]]; then
+    echo "Signing local app with stable identity $signing_identity"
+    codesign --force --options runtime --timestamp=none \
+        --sign "$signing_identity" \
+        --entitlements Configuration/Record.entitlements "$app_bundle"
+else
+    echo "warning: no Apple signing identity found; TCC grants will not survive rebuilds" >&2
+    codesign --force --sign - \
+        --entitlements Configuration/Record.entitlements "$app_bundle"
+fi
 ./scripts/ci/check-signed-entitlements.sh "$app_bundle"
 
 case "$mode" in

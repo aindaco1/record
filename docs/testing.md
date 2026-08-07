@@ -40,9 +40,13 @@ matrix remain future acceptance criteria.
 Use synthetic or non-sensitive content for development recordings:
 
 1. Run `./script/build_and_run.sh --verify`, or use the Codex `Run` action.
-   This builds arm64, assembles the real app bundle, signs it ad hoc with the
-   reviewed sandbox entitlements, verifies those embedded entitlements, and
-   leaves Record running. The Record ring should appear in the menu bar.
+   This builds arm64, assembles the real app bundle, signs it with the first
+   available Developer ID or Apple Development identity plus the reviewed
+   sandbox entitlements, verifies those embedded entitlements, and leaves
+   Record running. Set `RECORD_CODESIGN_IDENTITY` to override the selection.
+   With no Apple identity it falls back to ad hoc signing and warns that TCC
+   grants will not survive a rebuild. The Record ring should appear in the
+   menu bar.
 2. Choose **Start screen recording**. Record should request microphone access
    first when needed, followed by **Screen & System Audio Recording**. It must
    not request **System Audio Recording Only** or open System Settings itself.
@@ -50,9 +54,9 @@ Use synthetic or non-sensitive content for development recordings:
    should terminate the old process; Record should reopen and resume the Start
    command once. On first use, also approve Desktop in the export-folder picker.
 3. Move a test window, speak into the selected microphone, and play a known
-   local audio clip for at least 15 seconds. Confirm the ring turns red, the
-   menu shows an increasing elapsed time, and the command becomes **Stop
-   recording**.
+   local audio clip for at least 15 seconds. Confirm the ring pulses white (or
+   remains steady white when Reduce Motion is enabled), the menu shows an
+   increasing elapsed time, and the command becomes **Stop recording**.
 4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
    template-named `.mov` appears on Desktop, opens in QuickTime,
    shows the main display at the expected aspect ratio, and contains both the
