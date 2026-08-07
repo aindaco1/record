@@ -54,15 +54,21 @@ Record after a changed toggle, Record replaces its process and resumes the
 single Start command that caused the request. That intent is consumed once and
 is never retained for an unrelated future launch.
 
-Raw, crash-recoverable sessions stay in Record's private session storage.
-Finished NewKap-style video exports default to the real Desktop. Because
+Active, failed, and not-yet-exported sessions stay in Record's private session
+storage. Finished NewKap-style screen sessions default to the real Desktop. Because
 Record is sandboxed, the menu's **Export folder: Desktop…** item asks for
 one-time folder approval and persists an app-scoped security bookmark. Record
 does not grant itself broad home-directory access. The first screen recording
-opens that picker if no destination has been approved. A crash-recoverable raw
-`recording.mov`, `system.caf`, and `mic.caf` remain in private session storage;
-the finished video copy on Desktop is written through a hidden partial file
-and renamed only after a complete copy.
+opens that picker if no destination has been approved. On clean stop, Record
+copies the complete session (`recording.mov`, `system.caf`, `mic.caf`, and
+`session.json`) into a hidden Desktop sibling, validates it, and exposes the
+named folder with one atomic rename. Only then is the finalized private working
+copy removed. Export failure leaves the private original untouched.
+
+Transient ScreenCaptureKit startup failures are retried twice with fresh
+streams, so a temporary display/audio-service race does not require repeated
+clicks. Permission and media-writer failures remain fail-fast, and failed
+manifests retain the classified cause for diagnosis.
 
 The built-in **Plugins → Rename Finished Recording** behavior is enabled by
 default. Its template editor accepts `{date}`, `{time}`, `{color}`,

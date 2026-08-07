@@ -12,11 +12,15 @@ struct RecordNotification: Equatable, Sendable {
 /// notification database. Resolution fails closed if the payload is altered.
 struct NotificationDirectoryReference: Equatable, Sendable {
     static let recordingsRootToken = "."
+    static let exportRootToken = "exports:."
+    static let exportPrefix = "exports:"
 
     let recordingsRoot: URL
+    let exportRoot: URL?
 
-    init(recordingsRoot: URL) {
+    init(recordingsRoot: URL, exportRoot: URL? = nil) {
         self.recordingsRoot = recordingsRoot.standardizedFileURL
+        self.exportRoot = exportRoot?.standardizedFileURL
     }
 
     func token(for directory: URL) -> String? {
@@ -25,7 +29,16 @@ struct NotificationDirectoryReference: Equatable, Sendable {
             return Self.recordingsRootToken
         }
         guard directory.deletingLastPathComponent() == recordingsRoot else {
-            return nil
+            guard let exportRoot else { return nil }
+            if directory == exportRoot {
+                return Self.exportRootToken
+            }
+            guard directory.deletingLastPathComponent() == exportRoot else {
+                return nil
+            }
+            let name = directory.lastPathComponent
+            guard Self.isSafeComponent(name) else { return nil }
+            return Self.exportPrefix + name
         }
         let name = directory.lastPathComponent
         guard Self.isSafeComponent(name) else { return nil }
@@ -33,14 +46,26 @@ struct NotificationDirectoryReference: Equatable, Sendable {
     }
 
     func resolve(_ token: String) -> URL? {
+        if token == Self.exportRootToken {
+            return exportRoot?.resolvingSymlinksInPath()
+        }
+        if token.hasPrefix(Self.exportPrefix) {
+            guard let exportRoot else { return nil }
+            let component = String(token.dropFirst(Self.exportPrefix.count))
+            return Self.resolve(component, under: exportRoot)
+        }
         if token == Self.recordingsRootToken {
             return recordingsRoot.resolvingSymlinksInPath()
         }
-        guard Self.isSafeComponent(token) else { return nil }
-        let candidate = recordingsRoot.appendingPathComponent(token, isDirectory: true)
+        return Self.resolve(token, under: recordingsRoot)
+    }
+
+    private static func resolve(_ component: String, under root: URL) -> URL? {
+        guard isSafeComponent(component) else { return nil }
+        let candidate = root.appendingPathComponent(component, isDirectory: true)
             .standardizedFileURL
-        guard candidate.deletingLastPathComponent() == recordingsRoot else { return nil }
-        let resolvedRoot = recordingsRoot.resolvingSymlinksInPath()
+        guard candidate.deletingLastPathComponent() == root else { return nil }
+        let resolvedRoot = root.resolvingSymlinksInPath()
         let resolved = candidate.resolvingSymlinksInPath()
         guard resolved.deletingLastPathComponent() == resolvedRoot else { return nil }
         return resolved
@@ -66,7 +91,8 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
     }
 
     private let center: UNUserNotificationCenter
-    private let directories: NotificationDirectoryReference
+    private let directoryLock = NSLock()
+    private var directories: NotificationDirectoryReference
 
     init(
         recordingsRoot: URL,
@@ -78,8 +104,20 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
         center.delegate = self
     }
 
+    func updateExportRoot(_ exportRoot: URL?) {
+        directoryLock.withLock {
+            directories = NotificationDirectoryReference(
+                recordingsRoot: directories.recordingsRoot,
+                exportRoot: exportRoot
+            )
+        }
+    }
+
     func post(_ notification: RecordNotification) {
-        guard let token = directories.token(for: notification.destinationDirectory) else {
+        let token = directoryLock.withLock {
+            directories.token(for: notification.destinationDirectory)
+        }
+        guard let token else {
             FileHandle.standardError.write(
                 Data("notification destination was outside recordings root\n".utf8)
             )
@@ -128,7 +166,9 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
             response.notification.request.content.userInfo[
                 UserInfoKey.directoryToken
             ] as? String
-        let directory = token.flatMap(directories.resolve)
+        let directory = token.flatMap { token in
+            directoryLock.withLock { directories.resolve(token) }
+        }
         if let directory {
             Task { @MainActor in
                 NSWorkspace.shared.activateFileViewerSelecting([directory])

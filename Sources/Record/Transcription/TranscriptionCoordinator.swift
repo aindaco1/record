@@ -46,21 +46,23 @@ actor TranscriptionCoordinator {
 
     /// Scan the recordings root for finalized sessions that were never
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
-    func resumePending(root: URL) {
-        let recovery = SessionRecovery.recover(in: root)
-        if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty {
-            let interruptedCount = recovery.interrupted.count
-            let failedCount = recovery.failed.count
-            let message =
-                "recovered \(interruptedCount) interrupted and marked "
-                + "\(failedCount) empty session(s) failed\n"
-            FileHandle.standardError.write(Data(message.utf8))
-        }
-        for failure in recovery.errors {
-            let directory = failure.directory.lastPathComponent
-            let message =
-                "warning: could not recover \(directory): \(failure.description)\n"
-            FileHandle.standardError.write(Data(message.utf8))
+    func resumePending(root: URL, recoverInterrupted: Bool = true) {
+        if recoverInterrupted {
+            let recovery = SessionRecovery.recover(in: root)
+            if !recovery.interrupted.isEmpty || !recovery.failed.isEmpty {
+                let interruptedCount = recovery.interrupted.count
+                let failedCount = recovery.failed.count
+                let message =
+                    "recovered \(interruptedCount) interrupted and marked "
+                    + "\(failedCount) empty session(s) failed\n"
+                FileHandle.standardError.write(Data(message.utf8))
+            }
+            for failure in recovery.errors {
+                let directory = failure.directory.lastPathComponent
+                let message =
+                    "warning: could not recover \(directory): \(failure.description)\n"
+                FileHandle.standardError.write(Data(message.utf8))
+            }
         }
         guard Config.transcriptionEnabled() else { return }
         let pending = Self.pendingSessionDirectories(root: root)

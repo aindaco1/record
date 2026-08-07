@@ -64,6 +64,73 @@ final class VideoRecordingSessionTests: XCTestCase {
         XCTAssertEqual(manifest.state, .failed)
         XCTAssertNotNil(manifest.endedAt)
         XCTAssertEqual(manifest.tracks.count, 3)
+        XCTAssertEqual(manifest.failure, failure)
+        XCTAssertEqual(builder.counts, .init(starts: 1, stops: 1))
+    }
+
+    func testTransientStartupFailuresRetryWithFreshPipelines() async throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let firstFailure = CaptureFailure(
+            code: .internalFailure,
+            summary: "shareable content was still settling"
+        )
+        let secondFailure = CaptureFailure(
+            code: .sourceUnavailable,
+            summary: "display list was temporarily empty"
+        )
+        let builder = FakeVideoCapturePipelineBuilder(
+            behaviors: [
+                .startFailure(firstFailure),
+                .startFailure(secondFailure),
+                .success,
+            ]
+        )
+        let session = try VideoRecordingSession(
+            root: fixture.root,
+            startedAt: fixture.startedAt,
+            pipelineBuilder: builder,
+            startupRetryPolicy: .init(delays: [.zero, .zero]),
+            eventHandler: { _ in }
+        )
+
+        try await session.start(configuration: fixture.configuration)
+        let outcome = try await session.stop(endedAt: fixture.endedAt)
+
+        XCTAssertEqual(outcome.state, .finalized)
+        XCTAssertEqual(builder.pipelineCount, 3)
+        XCTAssertEqual(builder.counts, .init(starts: 3, stops: 3))
+    }
+
+    func testPermissionFailureIsNeverRetried() async throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let failure = CaptureFailure(
+            code: .permissionDenied,
+            summary: "screen recording permission was denied"
+        )
+        let builder = FakeVideoCapturePipelineBuilder(
+            behaviors: [.startFailure(failure), .success]
+        )
+        let session = try VideoRecordingSession(
+            root: fixture.root,
+            startedAt: fixture.startedAt,
+            pipelineBuilder: builder,
+            startupRetryPolicy: .init(delays: [.zero, .zero]),
+            eventHandler: { _ in }
+        )
+
+        await XCTAssertThrowsErrorAsync(
+            try await session.start(configuration: fixture.configuration)
+        ) { error in
+            XCTAssertEqual(
+                error as? VideoRecordingSession.SessionError,
+                .captureFailed(failure)
+            )
+        }
+
+        XCTAssertEqual(builder.pipelineCount, 1)
+        XCTAssertEqual(builder.counts, .init(starts: 1, stops: 1))
     }
 
     func testWriterFailurePreservesFinalizedMediaInFailedManifest() async throws {
@@ -135,30 +202,40 @@ private final class FakeVideoCapturePipelineBuilder: VideoCapturePipelineBuildin
         case stopFailureWithMedia(CaptureFailure)
     }
 
-    private let behavior: Behavior
+    private let behaviors: [Behavior]
     private let lock = NSLock()
-    private var pipeline: FakeVideoCapturePipeline?
+    private var pipelines: [FakeVideoCapturePipeline] = []
 
     init(behavior: Behavior) {
-        self.behavior = behavior
+        behaviors = [behavior]
+    }
+
+    init(behaviors: [Behavior]) {
+        precondition(!behaviors.isEmpty)
+        self.behaviors = behaviors
     }
 
     var counts: Counts {
         lock.withLock {
             Counts(
-                starts: pipeline?.starts ?? 0,
-                stops: pipeline?.stops ?? 0
+                starts: pipelines.reduce(0) { $0 + $1.starts },
+                stops: pipelines.reduce(0) { $0 + $1.stops }
             )
         }
     }
+
+    var pipelineCount: Int { lock.withLock { pipelines.count } }
 
     func makePipeline(
         configuration: CaptureConfiguration,
         outputURL: URL,
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) async throws -> any VideoCapturePipeline {
+        let behavior = lock.withLock {
+            behaviors[min(pipelines.count, behaviors.count - 1)]
+        }
         let pipeline = FakeVideoCapturePipeline(outputURL: outputURL, behavior: behavior)
-        lock.withLock { self.pipeline = pipeline }
+        lock.withLock { pipelines.append(pipeline) }
         return pipeline
     }
 }

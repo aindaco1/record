@@ -57,6 +57,57 @@ final class NotificationDirectoryReferenceTests: XCTestCase {
         XCTAssertNil(reference.resolve("session"))
     }
 
+    func testRoundTripsExportedSessionWithoutPersistingItsAbsolutePath() throws {
+        let temporaryRoot = try makeTemporaryDirectory()
+        let recordingsRoot = temporaryRoot.appendingPathComponent(
+            "Recordings",
+            isDirectory: true
+        )
+        let exportRoot = temporaryRoot.appendingPathComponent("Desktop", isDirectory: true)
+        let exported = exportRoot.appendingPathComponent("Record Test", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: recordingsRoot,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(at: exported, withIntermediateDirectories: true)
+        let reference = NotificationDirectoryReference(
+            recordingsRoot: recordingsRoot,
+            exportRoot: exportRoot
+        )
+
+        let token = try XCTUnwrap(reference.token(for: exported))
+        XCTAssertEqual(token, "exports:Record Test")
+        XCTAssertFalse(token.contains(temporaryRoot.path))
+        XCTAssertEqual(reference.resolve(token), exported.standardizedFileURL)
+        XCTAssertEqual(reference.token(for: exportRoot), "exports:.")
+        XCTAssertEqual(
+            reference.resolve("exports:."),
+            exportRoot.standardizedFileURL
+        )
+    }
+
+    func testRejectsMalformedAndEscapingExportTokens() throws {
+        let temporaryRoot = try makeTemporaryDirectory()
+        let recordingsRoot = temporaryRoot.appendingPathComponent(
+            "Recordings",
+            isDirectory: true
+        )
+        let exportRoot = temporaryRoot.appendingPathComponent("Desktop", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: recordingsRoot,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createDirectory(at: exportRoot, withIntermediateDirectories: true)
+        let reference = NotificationDirectoryReference(
+            recordingsRoot: recordingsRoot,
+            exportRoot: exportRoot
+        )
+
+        for token in ["exports:", "exports:..", "exports:../Outside", "exports:a/b"] {
+            XCTAssertNil(reference.resolve(token))
+        }
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             UUID().uuidString,

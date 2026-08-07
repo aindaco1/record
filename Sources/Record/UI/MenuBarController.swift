@@ -198,6 +198,7 @@ final class MenuBarController {
         toggleItem.title = recording ? "Stop recording" : "Start screen recording"
         toggleItem.isEnabled = true
         audioOnlyItem.isEnabled = !recording
+        exportFolderItem.isEnabled = !recording
         setCapturePrivacyItemsEnabled(!recording)
         setRecordingIndicatorActive(recording)
     }
@@ -225,6 +226,16 @@ final class MenuBarController {
         toggleItem.isEnabled = false
         audioOnlyItem.isEnabled = false
         setCapturePrivacyItemsEnabled(false)
+    }
+
+    func updateSavingScreenRecording() {
+        stateLabel.title = "saving recording…"
+        toggleItem.title = "Saving recording…"
+        toggleItem.isEnabled = false
+        audioOnlyItem.isEnabled = false
+        exportFolderItem.isEnabled = false
+        setCapturePrivacyItemsEnabled(false)
+        setRecordingIndicatorActive(false)
     }
 
     func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {

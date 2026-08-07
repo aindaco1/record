@@ -129,6 +129,11 @@ final class AppController {
         }
     }
 
+    private enum VideoPublicationResult: Sendable {
+        case exported(FinishedSessionExport, cleanupWarning: String?)
+        case exportFailed(String)
+    }
+
     private let root: URL
     private let menuBar = MenuBarController()
     private let notifications: RecordNotificationCenter
@@ -143,6 +148,7 @@ final class AppController {
     private var ticker: Timer?
     private var videoStartTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
+    private var videoPublishTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
     private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
@@ -188,6 +194,7 @@ final class AppController {
         refreshGifskiMenu()
         refreshTranscriptionEngineMenu()
         restoreExportFolderAccess()
+        let restoredExportRoot = exportDirectoryLease?.url
 
         Task { [transcription, root] in
             await transcription.setStatusHandler { status in
@@ -196,6 +203,12 @@ final class AppController {
                 }
             }
             await transcription.resumePending(root: root)
+            if let restoredExportRoot {
+                await transcription.resumePending(
+                    root: restoredExportRoot,
+                    recoverInterrupted: false
+                )
+            }
         }
 
         if let recordingToResume {
@@ -208,11 +221,13 @@ final class AppController {
     /// Stop any live session cleanly (finalizing files) and exit.
     func shutdown() {
         quitAfterStop = true
-        guard activeRecording != nil else {
+        guard activeRecording != nil || videoPublishTask != nil else {
             NSApp.terminate(nil)
             return
         }
-        stopSession()
+        if activeRecording != nil {
+            stopSession()
+        }
     }
 
     private func toggle() {
@@ -227,7 +242,10 @@ final class AppController {
         _ mode: RecordingMode,
         resumingAfterRestart: Bool = false
     ) {
-        guard activeRecording == nil, permissionTask == nil else { return }
+        guard activeRecording == nil,
+            permissionTask == nil,
+            videoPublishTask == nil
+        else { return }
 
         // A second Start click after macOS returned a stale in-process denial
         // is an explicit fallback restart. Normally Privacy & Security sends
@@ -434,13 +452,12 @@ final class AppController {
         case .success(let outcome):
             logIngress(outcome.ingress)
             if outcome.state == .finalized, let mediaURL = outcome.mediaURL {
-                lastFinishedVideoURL = publishVideo(
+                beginVideoPublication(
+                    sessionDirectory: outcome.sessionDirectory,
                     mediaURL,
                     preferredBaseName: preferredExportName
                 )
-                refreshGifskiMenu()
-                let dir = outcome.sessionDirectory
-                Task { [transcription] in await transcription.enqueue(dir) }
+                return
             } else {
                 postNotification(
                     title: "Screen recording preserved",
@@ -459,39 +476,103 @@ final class AppController {
         terminateIfRequested()
     }
 
-    private func publishVideo(_ mediaURL: URL, preferredBaseName: String) -> URL {
-        let sessionDirectory = mediaURL.deletingLastPathComponent()
+    private func beginVideoPublication(
+        sessionDirectory: URL,
+        _ mediaURL: URL,
+        preferredBaseName: String
+    ) {
         guard let exportDirectoryLease else {
+            lastFinishedVideoURL = mediaURL
+            refreshGifskiMenu()
             postNotification(
                 title: "Screen recording ready",
                 body: "Saved locally. Click to open the recording folder.",
                 directory: sessionDirectory
             )
-            return mediaURL
+            Task { [transcription] in await transcription.enqueue(sessionDirectory) }
+            terminateIfRequested()
+            return
         }
-        do {
-            let exportedURL = try FinishedVideoExporter.export(
-                sourceURL: mediaURL,
-                to: exportDirectoryLease.url,
-                preferredBaseName: preferredBaseName
+
+        menuBar.updateSavingScreenRecording()
+        let exportRoot = exportDirectoryLease.url
+        let recordingsRoot = root
+        let worker = Task.detached(priority: .utility) {
+            () -> VideoPublicationResult in
+            do {
+                let export = try FinishedSessionExporter.export(
+                    sourceDirectory: sessionDirectory,
+                    to: exportRoot,
+                    preferredDirectoryName: preferredBaseName
+                )
+                var cleanupWarning: String?
+                do {
+                    try PrivateSessionCleaner.removeFinalizedSession(
+                        sessionDirectory,
+                        under: recordingsRoot
+                    )
+                } catch {
+                    cleanupWarning = String(describing: error)
+                }
+                return .exported(export, cleanupWarning: cleanupWarning)
+            } catch {
+                return .exportFailed(String(describing: error))
+            }
+        }
+        videoPublishTask = Task { [weak self] in
+            let result = await worker.value
+            self?.finishVideoPublication(
+                result,
+                originalMediaURL: mediaURL,
+                originalSessionDirectory: sessionDirectory,
+                exportRoot: exportRoot
             )
-            FileHandle.standardError.write(Data("○ video exported → \(exportedURL.path)\n".utf8))
+        }
+    }
+
+    private func finishVideoPublication(
+        _ result: VideoPublicationResult,
+        originalMediaURL: URL,
+        originalSessionDirectory: URL,
+        exportRoot: URL
+    ) {
+        videoPublishTask = nil
+        menuBar.update(recording: false, elapsed: nil)
+
+        let publishedDirectory: URL
+        switch result {
+        case .exported(let export, let cleanupWarning):
+            lastFinishedVideoURL = export.videoURL
+            publishedDirectory = export.directoryURL
+            FileHandle.standardError.write(
+                Data("○ recording exported → \(export.directoryURL.path)\n".utf8)
+            )
+            if let cleanupWarning {
+                FileHandle.standardError.write(
+                    Data("private session cleanup failed: \(cleanupWarning)\n".utf8)
+                )
+            }
             postNotification(
                 title: "Screen recording ready",
                 body:
-                    "Saved a copy to \(exportedURL.deletingLastPathComponent().lastPathComponent). Click to open the recording folder.",
-                directory: sessionDirectory
+                    cleanupWarning == nil
+                    ? "Saved to \(exportRoot.lastPathComponent). Click to open the recording folder."
+                    : "Saved to \(exportRoot.lastPathComponent), but the private working copy could not be removed.",
+                directory: export.directoryURL
             )
-            return exportedURL
-        } catch {
-            FileHandle.standardError.write(Data("video export failed: \(error)\n".utf8))
+        case .exportFailed(let message):
+            lastFinishedVideoURL = originalMediaURL
+            publishedDirectory = originalSessionDirectory
+            FileHandle.standardError.write(Data("recording export failed: \(message)\n".utf8))
             postNotification(
                 title: "Screen recording saved locally",
-                body: "The Desktop copy failed, but the original video is safe.",
-                directory: sessionDirectory
+                body: "The Desktop copy failed, but the original recording is safe.",
+                directory: originalSessionDirectory
             )
-            return mediaURL
         }
+        refreshGifskiMenu()
+        Task { [transcription] in await transcription.enqueue(publishedDirectory) }
+        terminateIfRequested()
     }
 
     private func handleVideoEvent(_ event: ScreenCaptureEvent) {
@@ -783,9 +864,15 @@ final class AppController {
 
     private func recordingDirectory(for url: URL) -> URL {
         let candidate = url.standardizedFileURL.deletingLastPathComponent()
-        return candidate.deletingLastPathComponent() == root.standardizedFileURL
-            ? candidate
-            : root
+        if candidate.deletingLastPathComponent() == root.standardizedFileURL {
+            return candidate
+        }
+        if let exportRoot = exportDirectoryLease?.url.standardizedFileURL,
+            candidate.deletingLastPathComponent() == exportRoot
+        {
+            return candidate
+        }
+        return root
     }
 
     private func restoreExportFolderAccess() {
@@ -797,6 +884,7 @@ final class AppController {
                 Data("saved export folder access was reset: \(error)\n".utf8)
             )
         }
+        notifications.updateExportRoot(exportDirectoryLease?.url)
         menuBar.updateExportDirectory(
             exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
         )
@@ -806,7 +894,14 @@ final class AppController {
         do {
             guard let selection = try exportDirectoryAccess.choose() else { return }
             exportDirectoryLease = selection
+            notifications.updateExportRoot(selection.url)
             menuBar.updateExportDirectory(selection.url)
+            Task { [transcription] in
+                await transcription.resumePending(
+                    root: selection.url,
+                    recoverInterrupted: false
+                )
+            }
         } catch {
             FileHandle.standardError.write(Data("export folder selection failed: \(error)\n".utf8))
             postNotification(

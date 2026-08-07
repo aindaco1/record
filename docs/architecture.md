@@ -55,6 +55,11 @@ The current screen-capture segment is deliberately split into
 each audio source remains independently playable and addressable in the
 manifest. All writers share the same capture-clock anchor, and the manifest
 stores each track's start offset for downstream transcription and editing.
+During capture this directory lives in private crash-recovery storage. A clean
+stop promotes the complete directory through an atomic copy/rename into the
+approved export root, then removes only the validated finalized private child.
+Transcription, notification navigation, and downstream handoffs use the
+promoted directory. Failed or unexported sessions remain private.
 
 State transitions are explicit:
 

@@ -14,7 +14,8 @@ regressions run on every pull request.
 - hardware-required HEVC/AAC writer settings, collision-safe independent video
   and audio paths, and empty-segment finalization without publishing invalid media
 - display-profile 4K/even-dimension bounds, video-session orchestration,
-  failure manifests, idempotent stops, and atomic non-overwriting exports
+  bounded fresh-stream startup retries, classified failure manifests,
+  idempotent stops, atomic whole-session exports, and contained source cleanup
 - model identifier validation and local-only failure behavior
 - command-scoped permission ordering, exact TCC service selection, and
   one-shot recording-intent recovery across a privacy restart
@@ -57,12 +58,13 @@ Use synthetic or non-sensitive content for development recordings:
    local audio clip for at least 15 seconds. Confirm the ring pulses white (or
    remains steady white when Reduce Motion is enabled), the menu shows an
    increasing elapsed time, and the command becomes **Stop recording**.
-4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
-   template-named `.mov` appears on Desktop, opens in QuickTime, and shows the
-   main display at the expected aspect ratio. In **Open session storage**, the
-   same session must contain video-only `recording.mov` plus independently
-   playable `mic.caf` and `system.caf` files. The mic file should contain your
-   voice and the system file the played clip.
+4. Stop recording and wait for **saving recording…** to return to idle. Confirm
+   a template-named session directory appears on Desktop containing
+   `session.json`, video-only `recording.mov`, and independently playable
+   `mic.caf` and `system.caf`. Open the MOV in QuickTime and confirm the main
+   display has the expected aspect ratio; the mic file should contain your
+   voice and the system file the played clip. Confirm the finalized private
+   working directory no longer appears in **Open session storage**.
 5. Revoke **System Audio Recording Only**, then choose **Start audio-only
    recording**. Record should request microphone access when needed, followed
    by System Audio Recording Only. It must not request screen capture. After a
@@ -129,10 +131,12 @@ queued next.
 
 In the signed sandboxed app, choose **Export folder: Desktop…** from the menu,
 approve Desktop, record a short video, quit, and relaunch. The menu should still
-show Desktop, the video should export without another prompt, and the raw
-session copy should remain private. Move or revoke the selected folder,
-relaunch, and confirm Record resets the saved grant without changing or
-deleting raw session media.
+show Desktop, the complete session directory should export without another
+prompt, and the finalized private working copy should be removed only after the
+Desktop copy validates. Click the completion and transcript notifications and
+confirm Finder selects the Desktop session. Move or revoke the selected folder,
+relaunch, and confirm Record resets the saved grant without changing or deleting
+unexported private session media.
 
 ## macOS hardware matrix
 

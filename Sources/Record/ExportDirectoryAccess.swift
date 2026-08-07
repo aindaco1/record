@@ -4,8 +4,8 @@ import Foundation
 import RecordCore
 
 /// Owns Record's persistent, user-approved access to the folder for finished
-/// exports. Raw crash-recovery sessions remain in the private recordings root;
-/// only derived, user-visible files belong here.
+/// exports. Active and failed recovery sessions remain private; clean screen
+/// sessions are promoted here only after a complete, validated copy.
 @MainActor
 final class ExportDirectoryAccess {
     enum AccessError: Error, CustomStringConvertible {
@@ -70,7 +70,7 @@ final class ExportDirectoryAccess {
     func choose() throws -> ExportDirectoryLease? {
         let panel = NSOpenPanel()
         panel.title = "Choose Export Folder"
-        panel.message = "Finished Record videos will be saved in this folder."
+        panel.message = "Finished Record sessions will be saved in this folder."
         panel.prompt = "Choose"
         panel.directoryURL = suggestedDirectory
         panel.canChooseDirectories = true

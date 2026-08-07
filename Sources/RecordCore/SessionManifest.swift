@@ -52,6 +52,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     public var startedAt: Date
     public var endedAt: Date?
     public var tracks: [Track]
+    public var failure: CaptureFailure?
 
     public init(
         schemaVersion: Int = SessionManifest.currentSchemaVersion,
@@ -60,7 +61,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         ownerProcessIdentifier: Int32? = nil,
         startedAt: Date,
         endedAt: Date? = nil,
-        tracks: [Track]
+        tracks: [Track],
+        failure: CaptureFailure? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -69,6 +71,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.tracks = tracks
+        self.failure = failure
     }
 
     enum CodingKeys: String, CodingKey {
@@ -79,6 +82,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case startedAt = "started_at"
         case endedAt = "ended_at"
         case tracks
+        case failure
     }
 
     public func finalized(at end: Date, tracks finalizedTracks: [Track]) throws -> Self {
