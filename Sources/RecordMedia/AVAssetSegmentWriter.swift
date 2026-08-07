@@ -28,8 +28,7 @@ public enum SegmentWriterResult: Equatable, Sendable {
 
 /// Serial real-time processor that writes screen video, system audio, and
 /// microphone audio as independently usable files. Each writer starts from
-/// the same ScreenCaptureKit clock anchor, preserving cross-track alignment
-/// without forcing players to choose between alternate audio tracks in a MOV.
+/// its track's first sample; the manifest preserves cross-track alignment.
 public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Sendable {
     public enum State: String, Equatable, Sendable {
         case configured
@@ -44,7 +43,7 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
     private let fileManager: FileManager
     private let tracks: [ScreenCaptureSampleKind: TrackWriter]
 
-    private var timeline: CommonMediaTimeline?
+    private var timeline = IndependentMediaTimeline()
     private var result: SegmentWriterResult?
     private var terminalFailure: CaptureFailure?
     private var preservesPartialOnFailure = false
@@ -109,24 +108,24 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
             return .dropped(.trackDisabled)
         }
 
-        if state == .configured {
-            do {
-                try startAll(at: sample.timestamp.time)
-                timeline = try CommonMediaTimeline(anchor: sample.timestamp.time)
-                state = .writing
-            } catch {
-                let failure = CaptureFailure(
-                    code: .encoderFailed,
-                    summary: "media encoders failed to start"
-                )
-                transitionToFailure(failure, removePartials: true)
-                throw MediaSampleProcessingFailure(failure)
-            }
+        do {
+            try track.startIfNeeded(at: sample.timestamp.time)
+            state = .writing
+        } catch {
+            let failure = CaptureFailure(
+                code: .encoderFailed,
+                summary: "a media encoder failed to start"
+            )
+            transitionToFailure(failure, removePartials: true)
+            throw MediaSampleProcessingFailure(failure)
         }
 
+        guard track.input.isReadyForMoreMediaData else {
+            return .dropped(.writerBackpressure)
+        }
         do {
-            _ = try timeline?.position(
-                for: sample.timestamp.time,
+            _ = try timeline.observe(
+                sample.timestamp.time,
                 kind: sample.kind
             )
         } catch {
@@ -137,10 +136,6 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
             transitionToFailure(failure, removePartials: true)
             throw MediaSampleProcessingFailure(failure)
         }
-
-        guard track.input.isReadyForMoreMediaData else {
-            return .dropped(.writerBackpressure)
-        }
         guard track.input.append(sample.buffer) else {
             let failure = CaptureFailure(
                 code: .writerFailed,
@@ -149,7 +144,7 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
             transitionToFailure(failure, removePartials: true)
             throw MediaSampleProcessingFailure(failure)
         }
-        track.recordAppend(at: sample.timestamp.time)
+        track.recordAppend()
         appendedSampleCount += 1
         return .consumed
     }
@@ -219,33 +214,16 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
             throw SegmentWriterError.writingFailed(failure)
         }
 
-        let anchor = timeline?.anchor.time ?? .zero
         let finalized = FinalizedSegmentArtifacts(
             files: Dictionary(
                 uniqueKeysWithValues: tracks.map { ($0.key, $0.value.output.finalURL) }
             ),
-            startOffsetMilliseconds: Dictionary(
-                uniqueKeysWithValues: tracks.compactMap { kind, track in
-                    guard let firstTimestamp = track.firstTimestamp else { return nil }
-                    let seconds = CMTimeGetSeconds(CMTimeSubtract(firstTimestamp, anchor))
-                    guard seconds.isFinite else { return nil }
-                    return (kind, max(0, Int((seconds * 1_000).rounded())))
-                }
-            )
+            startOffsetMilliseconds: timeline.startOffsetMilliseconds
         )
         let finalizedResult = SegmentWriterResult.finalized(finalized)
         result = finalizedResult
         state = .completed
         return finalizedResult
-    }
-
-    private func startAll(at anchor: CMTime) throws {
-        for track in tracks.values {
-            guard track.writer.startWriting() else {
-                throw SegmentWriterError.writerCreationFailed
-            }
-            track.writer.startSession(atSourceTime: anchor)
-        }
     }
 
     private func transitionToFailure(
@@ -273,7 +251,7 @@ private final class TrackWriter {
     let writer: AVAssetWriter
     let input: AVAssetWriterInput
     private(set) var appendedSampleCount = 0
-    private(set) var firstTimestamp: CMTime?
+    private var hasStarted = false
 
     init(
         kind: ScreenCaptureSampleKind,
@@ -303,10 +281,16 @@ private final class TrackWriter {
         writer.add(input)
     }
 
-    func recordAppend(at timestamp: CMTime) {
-        if firstTimestamp == nil {
-            firstTimestamp = timestamp
+    func startIfNeeded(at timestamp: CMTime) throws {
+        guard !hasStarted else { return }
+        guard writer.startWriting() else {
+            throw SegmentWriterError.writerCreationFailed
         }
+        writer.startSession(atSourceTime: timestamp)
+        hasStarted = true
+    }
+
+    func recordAppend() {
         appendedSampleCount += 1
     }
 

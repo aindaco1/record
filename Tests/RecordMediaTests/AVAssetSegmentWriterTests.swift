@@ -7,6 +7,65 @@ import RecordMedia
 import XCTest
 
 final class AVAssetSegmentWriterTests: XCTestCase {
+    func testFirstSamplesCanReachIndependentWritersOutOfTimestampOrder() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "record-independent-timeline-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let configuration = CaptureConfiguration(
+            source: .display(id: 1),
+            outputSize: .init(width: 64, height: 64)
+        )
+        let output = try SegmentOutputSet(
+            screenURL: directory.appendingPathComponent("recording.mov"),
+            includesSystemAudio: true,
+            includesMicrophone: true
+        )
+        let writer = try AVAssetSegmentWriter(
+            plan: SegmentWriterPlan(configuration: configuration),
+            output: output
+        )
+
+        // These mimic independent callback queues: arrival order is the
+        // reverse of presentation-time order.
+        try await processWhenReady(
+            makeTestAudioSample(value: 489_600, kind: .systemAudio),
+            with: writer
+        )
+        try await processWhenReady(
+            makeTestAudioSample(value: 484_800, kind: .microphone),
+            with: writer
+        )
+        try await processWhenReady(
+            makeTestSample(value: 600, width: 64, height: 64),
+            with: writer
+        )
+
+        let result = try await writer.finish()
+        guard case .finalized(let artifacts) = result else {
+            return XCTFail("expected finalized media")
+        }
+        XCTAssertEqual(
+            artifacts.startOffsetMilliseconds,
+            [.screen: 0, .microphone: 100, .systemAudio: 200]
+        )
+        for kind in ScreenCaptureSampleKind.allCases {
+            let file = try XCTUnwrap(artifacts[kind])
+            XCTAssertTrue(FileManager.default.fileExists(atPath: file.path))
+        }
+        let videoTracks = try await AVURLAsset(url: try XCTUnwrap(artifacts[.screen]))
+            .loadTracks(withMediaType: .video)
+        XCTAssertEqual(videoTracks.count, 1)
+        for kind in [ScreenCaptureSampleKind.systemAudio, .microphone] {
+            let audioTracks = try await AVURLAsset(url: try XCTUnwrap(artifacts[kind]))
+                .loadTracks(withMediaType: .audio)
+            XCTAssertEqual(audioTracks.count, 1)
+        }
+    }
+
     func testEmptySegmentFinishesWithoutPublishingAFile() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "record-empty-segment-\(UUID().uuidString)",
@@ -202,6 +261,15 @@ final class AVAssetSegmentWriterTests: XCTestCase {
             AVLinearPCMIsFloatKey: true,
             AVLinearPCMIsNonInterleaved: false,
         ]
+    }
+
+    private func processWhenReady(
+        _ sample: ScreenCaptureSample,
+        with writer: AVAssetSegmentWriter
+    ) async throws {
+        while try writer.process(sample) == .dropped(.writerBackpressure) {
+            try await Task.sleep(for: .milliseconds(1))
+        }
     }
 }
 

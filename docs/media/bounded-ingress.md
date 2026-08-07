@@ -16,15 +16,17 @@ waits for accepted work, and is safe to call repeatedly or concurrently. A
 processor failure clears retained buffers, returns a sanitized typed failure,
 and rejects later samples.
 
-`CommonMediaTimeline` uses one immutable host-time anchor without rewriting raw
-presentation timestamps. It preserves real gaps and rejects samples before the
-anchor or behind the last timestamp for their track.
+`IndependentMediaTimeline` validates that every track uses one capture-clock
+epoch and rejects per-track timestamp regressions. Because ScreenCaptureKit's
+three callback queues can deliver their first samples out of timestamp order,
+each independent writer starts at its own first sample instead of treating the
+first callback as a shared lower bound.
 
 The media processor creates separate atomic destinations for the three queues:
 video-only `recording.mov`, `system.caf`, and `mic.caf`. This preserves source
 separation and prevents players from treating system and microphone audio as
-alternative MOV tracks. The manifest records start offsets from the same
-capture-clock anchor.
+alternative MOV tracks. The manifest records each track's offset from the
+earliest first sample so downstream processing can restore alignment.
 
 The default capacities are three raw video frames and 32 buffers for each audio
 track. Video is constrained to `1...8` because raw 4K frames are expensive;
