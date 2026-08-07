@@ -2,6 +2,9 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+"$repo_root/scripts/ci/test-actions-pinning.sh"
+"$repo_root/scripts/ci/verify-actions-pinning.sh"
+
 case "$(uname -m)" in
     arm64 | aarch64)
         actionlint_digest="2ed5f65788d18230778f7187b1917bf5d3fcd6cb68bbc811a004078b9c935f27"
@@ -27,8 +30,5 @@ podman run --rm --pull=missing \
     --entrypoint /bin/shellcheck \
     --volume "$repo_root:/workspace:ro" --workdir /workspace \
     "$shellcheck_image" \
-    scripts/ci/validate.sh \
-    scripts/ci/verify-package.sh \
-    scripts/ci/container-lint.sh \
-    scripts/release/build-app.sh \
-    scripts/release/package.sh
+    script/*.sh scripts/ci/*.sh scripts/lib/*.sh scripts/qa/*.sh \
+    scripts/release/*.sh

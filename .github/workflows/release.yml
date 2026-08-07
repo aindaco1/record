@@ -34,13 +34,25 @@ jobs:
           persist-credentials: false
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Validate tag
+      - name: Define ephemeral signing paths
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "invalid release tag: $RELEASE_TAG" >&2
-            exit 1
-          fi
-          git verify-tag "$RELEASE_TAG"
+          {
+            printf 'SIGNING_CERTIFICATE_PATH=%s\n' \
+              "$RUNNER_TEMP/record-signing.p12"
+            printf 'SIGNING_KEYCHAIN_PATH=%s\n' \
+              "$RUNNER_TEMP/record-signing.keychain-db"
+            printf 'NOTARY_KEY_PATH=%s\n' \
+              "$RUNNER_TEMP/record-notary-key.p8"
+            printf 'NOTARIZATION_ZIP_PATH=%s\n' \
+              "$RUNNER_TEMP/Record-notarization.zip"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate signed tag
+        run: |
+          git config gpg.format ssh
+          git config gpg.ssh.allowedSignersFile \
+            "$GITHUB_WORKSPACE/.github/allowed_signers"
+          ./scripts/release/validate-tag.sh "$RELEASE_TAG"
 
       - name: Validate source
         run: ./scripts/ci/validate.sh
@@ -55,43 +67,44 @@ jobs:
 
       - name: Import signing identity
         env:
-          CERTIFICATE_P12_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_P12 }}
+          CERTIFICATE_P12_BASE64: ${{ secrets.CERTIFICATE_P12_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.RELEASE_KEYCHAIN_PASSWORD }}
         run: |
-          certificate_path="$RUNNER_TEMP/record-signing.p12"
-          keychain_path="$RUNNER_TEMP/record-signing.keychain-db"
-          printf '%s' "$CERTIFICATE_P12_BASE64" | base64 --decode > "$certificate_path"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security set-keychain-settings -lut 21600 "$keychain_path"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security import "$certificate_path" -k "$keychain_path" \
+          umask 077
+          printf '%s' "$CERTIFICATE_P12_BASE64" | base64 --decode \
+            > "$SIGNING_CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$SIGNING_KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN_PATH"
+          security import "$SIGNING_CERTIFICATE_PATH" -k "$SIGNING_KEYCHAIN_PATH" \
             -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s \
-            -k "$KEYCHAIN_PASSWORD" "$keychain_path"
-          security list-keychains -d user -s "$keychain_path"
+            -k "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN_PATH"
+          security list-keychains -d user -s "$SIGNING_KEYCHAIN_PATH"
+          rm -f "$SIGNING_CERTIFICATE_PATH"
 
       - name: Sign app
         env:
           SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
         run: |
           app=.build/release-artifacts/Record.app
-          codesign --force --options runtime --timestamp \
-            --sign "$SIGNING_IDENTITY" "$app"
-          codesign --verify --deep --strict --verbose=2 "$app"
+          ./scripts/release/sign-app.sh "$app" "$SIGNING_IDENTITY" timestamp
 
       - name: Notarize app
         env:
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
-          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
-          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$key_path"
-          ditto -c -k --keepParent .build/release-artifacts/Record.app \
-            "$RUNNER_TEMP/Record-notarization.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/Record-notarization.zip" \
-            --key "$key_path" --key-id "$APPLE_API_KEY_ID" \
+          umask 077
+          trap 'rm -f "$NOTARY_KEY_PATH" "$NOTARIZATION_ZIP_PATH"' EXIT
+          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
+          COPYFILE_DISABLE=1 ditto --norsrc --noextattr -c -k --keepParent \
+            .build/release-artifacts/Record.app \
+            "$NOTARIZATION_ZIP_PATH"
+          xcrun notarytool submit "$NOTARIZATION_ZIP_PATH" \
+            --key "$NOTARY_KEY_PATH" --key-id "$APPLE_API_KEY_ID" \
             --issuer "$APPLE_API_ISSUER_ID" --wait
           xcrun stapler staple .build/release-artifacts/Record.app
           xcrun stapler validate .build/release-artifacts/Record.app
@@ -99,21 +112,31 @@ jobs:
       - name: Package release
         env:
           SIGNING_IDENTITY: ${{ secrets.DEVELOPER_ID_APPLICATION }}
-          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
+          umask 077
+          trap 'rm -f "$NOTARY_KEY_PATH"' EXIT
+          printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
           ./scripts/release/package.sh
           dmg=.build/release-artifacts/Record.dmg
           codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$dmg"
-          key_path="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
-          xcrun notarytool submit "$dmg" --key "$key_path" \
+          xcrun notarytool submit "$dmg" --key "$NOTARY_KEY_PATH" \
             --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID" --wait
           xcrun stapler staple "$dmg"
           xcrun stapler validate "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
-          cd .build/release-artifacts
-          shasum -a 256 Record.zip Record.dmg > SHA256SUMS
+
+      - name: Generate signed update feed
+        env:
+          SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
+        run: ./scripts/release/generate-appcast.sh "$RELEASE_TAG"
+
+      - name: Finalize checksums
+        run: |
+          ./scripts/release/checksum-artifacts.sh
+          (cd .build/release-artifacts && shasum -a 256 -c SHA256SUMS)
 
       # actions/attest-build-provenance v2, pinned to a reviewed commit.
       - name: Attest artifacts
@@ -122,6 +145,7 @@ jobs:
           subject-path: |
             .build/release-artifacts/Record.zip
             .build/release-artifacts/Record.dmg
+            .build/release-artifacts/appcast.xml
 
       - name: Publish GitHub release
         env:
@@ -130,10 +154,16 @@ jobs:
           gh release create "$RELEASE_TAG" \
             .build/release-artifacts/Record.zip \
             .build/release-artifacts/Record.dmg \
+            .build/release-artifacts/appcast.xml \
             .build/release-artifacts/SHA256SUMS \
             .build/release-artifacts/Package.resolved \
-            --verify-tag --generate-notes --title "Record $RELEASE_TAG"
+            .build/release-artifacts/BUILD-METADATA.txt \
+            --verify-tag \
+            --notes-file "docs/releases/${RELEASE_TAG#v}.md" \
+            --title "Record ${RELEASE_TAG#v}"
 
-      - name: Remove temporary keychain
+      - name: Remove temporary signing material
         if: always()
-        run: security delete-keychain "$RUNNER_TEMP/record-signing.keychain-db" || true
+        run: |
+          rm -f "$SIGNING_CERTIFICATE_PATH" "$NOTARY_KEY_PATH" "$NOTARIZATION_ZIP_PATH"
+          security delete-keychain "$SIGNING_KEYCHAIN_PATH" || true

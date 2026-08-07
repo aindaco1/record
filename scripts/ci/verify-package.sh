@@ -14,7 +14,7 @@ if unzip -Z1 Record.zip | grep -Eq '(^|/)\._|(^|/)\.DS_Store$'; then
     echo "Record.zip contains forbidden macOS metadata files" >&2
     exit 1
 fi
-if grep -q '/Users/' Package.resolved; then
+if grep -q '/Users/' Package.resolved BUILD-METADATA.txt; then
     echo "release metadata contains an absolute user path" >&2
     exit 1
 fi

@@ -14,21 +14,38 @@ Record currently targets macOS 15+ on Apple Silicon with Swift 6.
 5. Avoid new dependencies when an Apple framework or a small local type is
    sufficient.
 
-Run the same entry point CI uses:
+Dependency changes require an explicit review for network clients, telemetry,
+process launching, file access, and implicit model downloads. Product targets
+must pass `scripts/ci/check-local-only.sh`; do not weaken its patterns or add a
+main-app network entitlement without a user-approved replacement for ADR 0002.
+Sparkle is a reviewed exception whose network access remains isolated in its
+sandboxed downloader service under ADR 0004.
+
+Run the fast source and test gate:
 
 ```sh
 ./scripts/ci/validate.sh
 ```
 
-Optional portable workflow and shell linting uses rootless Podman:
+Before handing off a branch, run the complete local equivalent of the hosted
+CI jobs. It checks the toolchain, uses rootless Podman for pinned workflow and
+shell linting, runs normal and sanitizer tests, builds arm64, assembles the
+sandboxed app, and mounts both release packages:
 
 ```sh
-./scripts/ci/container-lint.sh
+./scripts/ci/local-gate.sh
 ```
 
 Hardware capture changes must also complete the manual capture matrix in
 `docs/testing.md`. Never put recordings, transcripts, credentials, signing
 material, or model files in fixtures or build artifacts.
+
+Regenerate `Record.icns` from the canonical, reviewable SVG only when the
+artwork changes:
+
+```sh
+./scripts/release/generate-icon.sh
+```
 
 ## Pull requests
 

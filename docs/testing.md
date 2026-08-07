@@ -6,16 +6,165 @@ regressions run on every pull request.
 ## Automated on every pull request
 
 - typed configuration defaults and validation
+- capture configuration limits and lifecycle command/effect transitions
+- ScreenCaptureKit plan translation, source resolution, failure mapping,
+  timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
+- fixed-capacity media ingress eviction, metrics, failure cleanup, deterministic
+  draining, and shared-timeline mapping under delay, gaps, and clock regression
+- hardware-required HEVC/AAC writer settings, collision-safe independent video
+  and audio paths, and empty-segment finalization without publishing invalid media
+- display-profile 4K/even-dimension bounds, video-session orchestration,
+  bounded fresh-stream startup retries, classified failure manifests,
+  idempotent stops, atomic whole-session exports, and contained source cleanup
 - model identifier validation and local-only failure behavior
+- command-scoped permission ordering, exact TCC service selection, and
+  one-shot recording-intent recovery across a privacy restart
 - session state transitions and atomic manifest round trips
+- interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
+- native login-item state mapping and fail-closed approval handling
+- update menu wiring plus package checks for the Sparkle framework, feed
+  configuration, signature requirements, XPC Mach services, and main-app
+  network-entitlement denial
+- local-only source/entitlement guards and FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
+- the complete suite under ThreadSanitizer and AddressSanitizer
 - Swift formatting for new modular code
 
-Future pure tests will cover transcript merging, edit-operation serialization,
-frame-timestamp normalization, queue backpressure, segment recovery, recording
-name templates, click-event mapping, and plugin capability denial.
+Future pure tests will cover edit-operation serialization, segment recovery,
+click-event mapping, and out-of-process plugin capability denial.
+
+## Manual smoke test available now
+
+The current integrated build supports main-display video, audio-only recording,
+and the capture-privacy, recording-name, and Gifski handoff plugins. Camera
+overlays, source selection, pause/resume, editing, and an external plugin host
+are not yet integrated, so those rows in the hardware matrix remain future
+acceptance criteria.
+
+Use synthetic or non-sensitive content for development recordings:
+
+1. Run `./script/build_and_run.sh --verify`, or use the Codex `Run` action.
+   This builds arm64, assembles the real app bundle, signs it with the first
+   available Developer ID or Apple Development identity plus the reviewed
+   sandbox entitlements, verifies those embedded entitlements, and leaves
+   `~/Applications/Record.app` running. Set `RECORD_CODESIGN_IDENTITY` to
+   override the selection. With no Apple identity it falls back to ad hoc
+   signing and warns that TCC grants will not survive a rebuild. The Record
+   ring should appear in the menu bar. On first launch, allow notifications;
+   Record requests access before the first completion event so recording and
+   transcript banners cannot be lost to a late authorization prompt.
+2. Choose **Start screen recording**. Record should request microphone access
+   first when needed, followed by **Screen & System Audio Recording**. It must
+   not request **System Audio Recording Only** or open System Settings itself.
+   If you choose Open System Settings and enable Record, Privacy & Security
+   should terminate the old process; Record should reopen and resume the Start
+   command once. On first use, also approve Desktop in the export-folder picker.
+3. Move a test window, speak into the selected microphone, and play a known
+   local audio clip for at least 15 seconds. Confirm the ring pulses white (or
+   remains steady white when Reduce Motion is enabled), the menu shows an
+   increasing elapsed time, and the command becomes **Stop recording**.
+4. Stop recording and wait for **saving recording…** to return to idle. Confirm
+   a template-named session directory appears on Desktop containing
+   `session.json`, video-only `recording.mov`, and independently playable
+   `mic.caf` and `system.caf`. Open the MOV in QuickTime and confirm the main
+   display has the expected aspect ratio; the mic file should contain your
+   voice and the system file the played clip. Confirm the finalized private
+   working directory no longer appears in **Open temp session**.
+5. Revoke **System Audio Recording Only**, then choose **Start audio-only
+   recording**. Record should request microphone access when needed, followed
+   by System Audio Recording Only. It must not request screen capture. After a
+   changed toggle, confirm Record replaces its process and begins the requested
+   audio-only recording without creating a failed session first.
+6. Inspect the audio-only session with
+   `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
+   finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
+   readable durations, and nonnegative synchronization offsets.
+7. Listen to `mic.caf` and `system.caf`. The microphone track should contain
+   your voice; the system track should contain the played clip. Note silence,
+   channel leakage, distortion, timing drift, or the wrong input device.
+8. Confirm the complete audio-only session appears in the approved Desktop
+   folder, its private working directory is removed, and **Audio recording
+   ready** opens the exported folder in Finder. When transcription completes,
+   confirm **Transcript ready** opens that same folder.
+9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
+   `--debug` for LLDB when investigating a failure.
+
+Choose **Open at Login**, confirm Record appears in System Settings → General →
+Login Items, then disable it again. If macOS reports that approval is required,
+the menu should show a mixed state and open the Login Items pane without
+re-registering repeatedly.
+
+Open **Plugins → Recording Name Template…**, test date/time and bundled-word
+tokens, then use a synthetic clipboard value with `{clipboard}`. Confirm unsafe
+path punctuation is removed, a duplicate name receives a numeric suffix, and
+disabling **Rename Finished Recording** restores the plain legacy name. Never
+use sensitive clipboard content in a development test.
+
+With Gifski installed, record and stop a short synthetic video, then choose
+**Plugins → Open Last Video in Gifski**. Confirm Gifski receives the existing
+MOV and Record neither downloads a helper nor creates another media copy.
+
+Also exercise these negative paths before a release candidate:
+
+- deny microphone permission and verify recording fails without leaving a
+  live half-session;
+- revoke System Audio Recording access in System Settings and verify the error
+  identifies the relevant permission;
+- switch the default microphone between recordings;
+- record silence and an unplugged/reconnected external microphone;
+- interrupt a recording with sleep/wake, then with Quit Record, and inspect the
+  resulting session each time;
+- record for 30 minutes while watching memory, file growth, and menu timing.
+
+Never paste a recording, transcript, model, or private path into a public issue.
+Report the app commit, macOS version, Mac model, permission state, duration,
+track formats from the inspector, and a description using synthetic content.
+
+## Transcription engine checks
+
+Install the default development model once, then use the signed sandboxed app
+for the real test:
+
+```sh
+./scripts/setup/install-parakeet-model.sh
+./script/build_and_run.sh --verify
+```
+
+Stop a short audio-only recording and confirm `transcript.json` and
+`transcript.md` appear in its session directory. For the optional MacWhisper
+path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
+**Transcription Model → MacWhisper (Small)** in the Record menu and repeat the
+audio-only check. Switch back with **Parakeet (Default)**. A failed track must
+be reported in `transcribe.log` without deleting either CAF file, and a job
+where every available track fails must not create a successful transcript.
+Screen and audio-only sessions use the same independent CAF inputs for local
+transcription; selecting an engine affects whichever finalized session is
+queued next.
+
+## Export folder access
+
+In the signed sandboxed app, choose **Export folder…** from the menu, approve
+Desktop, record a short screen session and a short audio-only session, quit, and
+relaunch. The item tooltip should still show Desktop, both complete session
+directories should export without another prompt, and each finalized private
+working copy should be removed only after its Desktop copy validates. Click the
+completion and transcript notifications and confirm Finder selects each Desktop
+session. Move or revoke the selected folder, relaunch, and confirm Record resets
+the saved grant without changing or deleting unexported private session media.
+
+## Update checks
+
+Update cryptography and packaging are automated by
+`scripts/release/generate-appcast.sh` and the release gate. After publishing a
+release, install the prior notarized version on a clean test account, choose
+**Check for Updates…**, and verify the new version, release notes, download,
+replacement, and relaunch. Confirm a same-version check reports no update.
+
+Do not test against an unsigned ad hoc archive. The production feed must reject
+an archive with a changed byte, a feed with a changed byte after signing, an
+unexpected signing key, or a missing Developer ID/notarization chain.
 
 ## macOS hardware matrix
 

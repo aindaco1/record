@@ -1,87 +1,133 @@
 # Record
 
-Record is a private-by-design macOS recorder for screen video, system audio,
-microphone audio, camera overlays, and on-device transcription. It keeps the
-one-click menu-bar simplicity of Quill and the useful workflow ideas from
-NewKap without Electron, cloud processing, or arbitrary plugins in the capture
-process.
+Record is a local-first screen and audio recorder for macOS. It keeps Quill's
+small menu-bar workflow, adds useful NewKap-inspired controls, and uses native
+Swift instead of Electron.
 
-> [!IMPORTANT]
-> Record is pre-alpha. The inherited Quill audio recorder builds and its new
-> core is tested, but screen/video capture and the native app bundle are still
-> being implemented. Do not rely on it as the only recorder for important work.
+Record 1.0 captures the main display, microphone, and system audio; keeps the
+two audio sources as separate files; and can transcribe them locally. Finished
+sessions are exported to a user-approved folder, with Desktop as the default.
 
-## Product constraints
+## Requirements
 
 - macOS 15 or newer
-- Apple Silicon only
-- Swift 6, AppKit, and SwiftUI
-- ScreenCaptureKit, AVFoundation, VideoToolbox, and Metal
-- local media and local inference only
-- no accounts, analytics, recording uploads, or cloud transcription
+- Apple Silicon
+- Screen & System Audio Recording and/or System Audio Recording Only access
+- Microphone access when recording the microphone
 
-The application itself does not download transcription models. A release will
-include an offline model-import path and may bundle the default model. This
-keeps recording and transcription usable without granting Record network
-access.
+## Install
 
-## Current development build
+Download `Record.dmg` from the [latest GitHub release](https://github.com/aindaco1/record/releases/latest),
+open it, and copy Record to Applications. Releases are Developer ID signed,
+notarized, and accompanied by SHA-256 checksums and build provenance.
+
+Record has no Dock icon. Open it from the ring in the menu bar.
+
+## Use
+
+- **Start screen recording** records the main display to a video-only
+  `recording.mov` and writes `mic.caf` and `system.caf` independently.
+- **Start audio-only recording** writes the same two independent audio tracks
+  without capturing the display.
+- **Export folder…** changes the approved destination. Desktop is suggested on
+  first use, and the sandbox grant persists across launches.
+- **Open temp session** opens private recovery storage for sessions that have
+  not been exported.
+- **Check for Updates…** checks the signed GitHub release feed only when
+  selected and can install a newer notarized build.
+- **Open at Login** uses the macOS Login Items service and is off by default.
+
+Each exported session contains an atomic `session.json` manifest. Screen
+sessions also contain `recording.mov`; both recording modes retain `mic.caf`
+and `system.caf`. Record validates the exported copy before deleting its
+private finalized working directory. A failed export leaves the private copy
+recoverable.
+
+## Local transcription
+
+Parakeet v3 is the default transcription engine. Record never downloads a
+model at runtime. Development and personal installations can install the
+pinned model into Record's local container with:
+
+```sh
+./scripts/setup/install-parakeet-model.sh
+```
+
+If MacWhisper and its `mw` CLI are already installed, first install Record's
+validated user-script bridge:
+
+```sh
+./scripts/setup/install-macwhisper-cli.sh
+```
+
+Then choose **Transcription Model → MacWhisper (Small)**. Record validates the
+MacWhisper application signature before each invocation and never falls back
+silently from one engine to another.
+
+## Built-in plugins
+
+The Plugins menu contains small, capability-specific features rather than an
+in-process arbitrary-code plugin API:
+
+- hide notifications, the menu bar, or Desktop items from screen capture;
+- rename completed sessions using sanitized templates;
+- open the last completed video in an already-installed Gifski app.
+
+These settings do not modify global macOS display preferences, download
+helpers, or grant plugins network access.
+
+## Privacy and security
+
+Record does not upload recordings, transcripts, clipboard-derived names,
+diagnostics, or identifiers. It has no accounts, analytics, cloud
+transcription, or recording network client. The sandboxed main app has no
+incoming or outgoing network entitlement.
+
+The explicit update command is the narrow exception: Sparkle's sandboxed
+downloader service contacts the public GitHub release feed and accepts only an
+Ed25519-signed update archive. Enabling MacWhisper extends the local trust
+boundary to the separately installed MacWhisper app.
+
+See [Security](SECURITY.md) and the [local-only boundary](docs/security/local-only-boundary.md)
+for the enforceable invariants and limitations.
+
+See the plain-language [Privacy Policy](PRIVACY.md) for data handling.
+
+## Development
 
 ```sh
 swift build
 swift test
-swift run record doctor
-swift run record
+./scripts/ci/validate.sh
+./script/build_and_run.sh --verify
 ```
 
-The current binary records microphone and system audio into independently
-recoverable CAF tracks. A session starts with an atomic `session.json`
-manifest and is finalized before transcription is queued.
+`./scripts/ci/local-gate.sh` is the complete pre-release gate. It uses rootless
+Podman for pinned workflow and shell linting, runs the test and sanitizer
+suites, assembles the arm64 app, audits its entitlements, and verifies the ZIP
+and DMG structures.
 
-Optional configuration lives at `~/.config/record/config.json`:
+The project uses Swift 6, AppKit, ScreenCaptureKit, AVFoundation,
+VideoToolbox/AVAssetWriter, ServiceManagement, and Sparkle 2. See
+[Contributing](CONTRIBUTING.md) before changing dependencies or privacy
+boundaries.
 
-```json
-{
-  "schema_version": 1,
-  "recordings_directory": "~/Recordings",
-  "transcription": {
-    "enabled": true,
-    "engine": "parakeet",
-    "model": "parakeet-tdt-0.6b-v3-coreml"
-  },
-  "mic_voice_processing": false,
-  "completion_hook": {
-    "executable": "/absolute/path/to/local-tool",
-    "arguments": ["--session", "{session}"]
-  }
-}
-```
-
-Completion hooks are executed directly. Record never passes configuration to a
-shell, and hook executable paths must be absolute.
-
-## Architecture and roadmap
+## Documentation
 
 - [Architecture](docs/architecture.md)
-- [Quill issue and PR migration](docs/migration/quill-triage.md)
-- [Native Swift decision](docs/adr/0001-native-swift.md)
-- [Local-only security boundary](docs/adr/0002-local-only.md)
-- [Plugin isolation](docs/adr/0003-plugin-isolation.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
+- [Testing](docs/testing.md)
+- [Roadmap](ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- [Advanced configuration](docs/configuration.md)
+- [Release runbook](docs/runbooks/release.md)
+- [Quill migration record](docs/migration/quill-triage.md)
+- [Support](SUPPORT.md)
 
-The `RecordCore` module contains platform-independent session, configuration,
-model-registry, and plugin-lifecycle logic. Hardware and TCC-dependent capture
-code stays behind narrow adapters so most behavior can be exercised in normal
-unit tests.
+## Provenance and license
 
-## Provenance
+Record is a standalone project based on the MIT-licensed history of
+[digimata/quill](https://github.com/digimata/quill). Selected NewKap behaviors
+were reimplemented natively. See [third-party notices](THIRD_PARTY_NOTICES.md)
+for code and artwork attribution.
 
-Record is a new standalone project based on the MIT-licensed history of
-[digimata/quill](https://github.com/digimata/quill). NewKap and its plugins are
-used as product references; Record reimplements selected behaviors natively
-instead of embedding Electron, FFmpeg, or legacy plugin code.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+Record is available under the [MIT License](LICENSE).

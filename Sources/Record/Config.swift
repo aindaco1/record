@@ -27,11 +27,23 @@ enum Config {
     }
 
     static func transcriptionEngine() -> String {
-        current.transcription.engine
+        transcriptionSelection().engine.rawValue
     }
 
-    static func transcriptionModel() -> String {
-        current.transcription.model
+    static func transcriptionModel() -> String? {
+        transcriptionSelection().model
+    }
+
+    static func transcriptionExecutable() -> String? {
+        transcriptionSelection().executable
+    }
+
+    static func transcriptionLanguage() -> String {
+        transcriptionSelection().language
+    }
+
+    static func transcriptionSelection() -> TranscriptionSelection {
+        TranscriptionPreferences.effectiveSelection(configuration: current.transcription)
     }
 
     static func micVoiceProcessing() -> Bool {
@@ -53,9 +65,11 @@ enum Config {
         do {
             return try AppConfiguration.decode(Data(contentsOf: path))
         } catch {
-            FileHandle.standardError.write(Data(
-                "warning: invalid configuration at \(path.path): \(error) — using defaults\n".utf8
-            ))
+            FileHandle.standardError.write(
+                Data(
+                    "warning: invalid configuration at \(path.path): \(error) — using defaults\n"
+                        .utf8
+                ))
             return AppConfiguration()
         }
     }

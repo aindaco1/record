@@ -48,50 +48,66 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     public var schemaVersion: Int
     public var id: UUID
     public var state: State
+    public var ownerProcessIdentifier: Int32?
     public var startedAt: Date
     public var endedAt: Date?
     public var tracks: [Track]
+    public var failure: CaptureFailure?
 
     public init(
         schemaVersion: Int = SessionManifest.currentSchemaVersion,
         id: UUID = UUID(),
         state: State = .recording,
+        ownerProcessIdentifier: Int32? = nil,
         startedAt: Date,
         endedAt: Date? = nil,
-        tracks: [Track]
+        tracks: [Track],
+        failure: CaptureFailure? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
         self.state = state
+        self.ownerProcessIdentifier = ownerProcessIdentifier
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.tracks = tracks
+        self.failure = failure
     }
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case id
         case state
+        case ownerProcessIdentifier = "owner_process_id"
         case startedAt = "started_at"
         case endedAt = "ended_at"
         case tracks
+        case failure
     }
 
     public func finalized(at end: Date, tracks finalizedTracks: [Track]) throws -> Self {
-        guard state == .recording else {
+        guard state == .recording || state == .interrupted else {
             throw ManifestError.invalidTransition(from: state, to: .finalized)
         }
-        guard end >= startedAt else {
-            throw ManifestError.endBeforeStart
+        return try transitioned(to: .finalized, at: end, tracks: finalizedTracks)
+    }
+
+    public func interrupted(at end: Date) throws -> Self {
+        guard state == .recording else {
+            throw ManifestError.invalidTransition(from: state, to: .interrupted)
         }
-        var copy = self
-        copy.state = .finalized
-        copy.endedAt = end
-        copy.tracks = finalizedTracks
-        return copy
+        return try transitioned(to: .interrupted, at: end, tracks: tracks)
+    }
+
+    public func failed(at end: Date) throws -> Self {
+        guard state == .recording else {
+            throw ManifestError.invalidTransition(from: state, to: .failed)
+        }
+        return try transitioned(to: .failed, at: end, tracks: tracks)
     }
 
     public func write(to sessionDirectory: URL) throws {
+        try validate()
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -111,6 +127,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         guard manifest.schemaVersion == currentSchemaVersion else {
             throw ManifestError.unsupportedSchema(manifest.schemaVersion)
         }
+        try manifest.validate()
         return manifest
     }
 
@@ -118,6 +135,44 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case invalidTransition(from: State, to: State)
         case endBeforeStart
         case unsupportedSchema(Int)
+        case unsafeTrackFilename(String)
+        case duplicateTrackFilename(String)
+    }
+
+    private func transitioned(to nextState: State, at end: Date, tracks: [Track]) throws -> Self {
+        guard end >= startedAt else {
+            throw ManifestError.endBeforeStart
+        }
+        var copy = self
+        copy.state = nextState
+        copy.endedAt = end
+        copy.tracks = tracks
+        return copy
+    }
+
+    private func validate() throws {
+        var filenames: Set<String> = []
+        for track in tracks {
+            guard SessionPathPolicy.isSafeRelativeFilename(track.filename) else {
+                throw ManifestError.unsafeTrackFilename(track.filename)
+            }
+            guard filenames.insert(track.filename).inserted else {
+                throw ManifestError.duplicateTrackFilename(track.filename)
+            }
+        }
+    }
+}
+
+public enum SessionPathPolicy {
+    /// Session-owned artifacts are single relative path components. This keeps
+    /// malformed manifests from escaping the session directory.
+    public static func isSafeRelativeFilename(_ filename: String) -> Bool {
+        !filename.isEmpty
+            && filename != "."
+            && filename != ".."
+            && !filename.hasPrefix("/")
+            && !filename.contains("/")
+            && !filename.contains("\0")
     }
 }
 

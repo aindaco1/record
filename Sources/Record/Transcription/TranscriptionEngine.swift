@@ -9,8 +9,9 @@ struct TranscriptSegment: Sendable {
 }
 
 /// A speech-to-text engine Record can run locally. Engines are prepared lazily
-/// (model download + load) when the transcription queue has work and released
-/// when it drains, so Record never idles holding gigabytes of model weights.
+/// from models already present on disk when the transcription queue has work
+/// and released when it drains, so Record never idles holding gigabytes of
+/// model weights.
 protocol TranscriptionEngine: Sendable {
     /// Short engine identifier recorded as transcript.json provenance.
     var name: String { get }

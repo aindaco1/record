@@ -11,8 +11,12 @@ transcription, collaboration, or upload subsystem.
 
 Transcription engines load assets already present on disk. Models may be
 bundled with a release or imported through an explicit local-file workflow;
-the recording application does not fetch them. Software installation and
-updates happen outside Record through GitHub or Homebrew.
+the recording application does not fetch them.
+
+Record may check for software updates only after an explicit user command.
+ADR 0004 confines that request to Sparkle's sandboxed downloader service and
+requires a signed GitHub release feed and signed archive. No recording content,
+transcript, identifier, or diagnostic is part of the request.
 
 ## Consequences
 
@@ -20,5 +24,7 @@ updates happen outside Record through GitHub or Homebrew.
 - The stale NewKap Giphy configuration is not migrated.
 - Remote wallpaper URLs from the old desktop-icons plugin are not supported.
 - Network dependencies in core product targets require a new ADR and explicit
-  user approval.
+  user approval; Sparkle is the reviewed update-only exception in ADR 0004.
+- Signed app artifacts enable App Sandbox but intentionally omit client and
+  server network entitlements. CI verifies the embedded signing policy.
 - CI may access package and tool registries; CI never processes user media.
