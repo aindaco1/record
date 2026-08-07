@@ -73,8 +73,8 @@ struct ScreenRecordingPermissionPresentation: Equatable, Sendable {
     func captureDenialGuidance(restartRecommended: Bool) -> String {
         let nextStep =
             restartRecommended
-            ? "If Record is already enabled, return to the feather menu and choose Restart Record."
-            : "After enabling Record, return to the feather menu and choose Restart Record."
+            ? "If Record is already enabled, return to the Record menu and choose Restart Record."
+            : "After enabling Record, return to the Record menu and choose Restart Record."
         return """
             Record needs Screen & System Audio Recording access to capture video. Audio-only recording still works.
 

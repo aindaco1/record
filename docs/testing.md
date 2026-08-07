@@ -42,7 +42,7 @@ Use synthetic or non-sensitive content for development recordings:
 1. Run `./script/build_and_run.sh --verify`, or use the Codex `Run` action.
    This builds arm64, assembles the real app bundle, signs it ad hoc with the
    reviewed sandbox entitlements, verifies those embedded entitlements, and
-   leaves Record running. A feather should appear in the menu bar.
+   leaves Record running. The Record ring should appear in the menu bar.
 2. Choose **Set Up Recording Permissions…**. Record should show one explanation,
    then ask macOS to register both **Screen & System Audio Recording** and
    **System Audio Recording Only**, in that order. Apple may show one native
@@ -56,7 +56,7 @@ Use synthetic or non-sensitive content for development recordings:
 3. Choose **Start screen recording**. On first use, approve Desktop in the
    export-folder picker and grant microphone access if macOS prompts.
 4. Move a test window, speak into the selected microphone, and play a known
-   local audio clip for at least 15 seconds. Confirm the feather turns red, the
+   local audio clip for at least 15 seconds. Confirm the ring turns red, the
    menu shows an increasing elapsed time, and the command becomes **Stop
    recording**.
 5. Stop recording and wait for the menu to return to idle. Confirm a nonempty
@@ -113,7 +113,7 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Transcription → MacWhisper (Small)** in the feather menu and repeat the
+**Transcription → MacWhisper (Small)** in the Record menu and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either CAF file, and a job
 where every available track fails must not create a successful transcript.

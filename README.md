@@ -43,7 +43,7 @@ Quill workflow: microphone and system audio are written to independently
 recoverable CAF tracks and queued for local transcription after finalization.
 Every session starts with an atomic `session.json` manifest.
 
-The feather menu's **Set Up Recording Permissions…** action explains the two
+The Record ring menu's **Set Up Recording Permissions…** action explains the two
 independent macOS privacy services once, then registers Record for both Screen
 & System Audio Recording and System Audio Recording Only without capturing any
 samples. Apple can still show a separate native confirmation for each service,

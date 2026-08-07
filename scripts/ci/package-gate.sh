@@ -8,7 +8,14 @@ cd "$repo_root"
 ./scripts/release/build-app.sh
 
 test -x "$app_path/Contents/MacOS/record"
+test -f "$app_path/Contents/Resources/Record.icns"
+test -f "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
 plutil -lint "$app_path/Contents/Info.plist" >/dev/null
+icon_file="$(plutil -extract CFBundleIconFile raw -o - "$app_path/Contents/Info.plist")"
+if [[ "$icon_file" != "Record.icns" ]]; then
+    echo "expected Record.icns app icon, found: $icon_file" >&2
+    exit 1
+fi
 architectures="$(lipo -archs "$app_path/Contents/MacOS/record")"
 if [[ "$architectures" != "arm64" ]]; then
     echo "expected an arm64-only app binary, found: $architectures" >&2

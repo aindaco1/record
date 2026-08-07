@@ -199,15 +199,13 @@ final class MenuBarController {
         statusItem.menu = menu
 
         if let button = statusItem.button {
-            let image = Self.featherImage()
-            image?.isTemplate = true
-            button.image = image
+            button.image = Self.menuBarImage()
             button.imagePosition = .imageLeft
         }
     }
 
     /// Reflect recording state in the icon tint and menu item titles. The
-    /// menu bar shows only the feather (red while recording); the elapsed
+    /// menu bar shows only the Record ring (red while recording); the elapsed
     /// counter lives in the menu's state label. Call once a second while
     /// recording.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
@@ -308,24 +306,38 @@ final class MenuBarController {
         exportFolderItem.toolTip = url.path
     }
 
-    // Inlined Lucide feather SVG. Keeping it in source means the executable
-    // has no separate resource bundle to install alongside it — true
-    // single-binary.
-    private static let featherSVG = """
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" \
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" \
-        stroke-linecap="round" stroke-linejoin="round">\
-        <path d="M12.67 19a2 2 0 0 0 1.416-.588l6.154-6.172a6 6 0 0 0-8.49-8.49L5.586 9.914A2 2 0 0 0 5 11.328V18a1 1 0 0 0 1 1z"/>\
-        <path d="M16 8 2 22"/>\
-        <path d="M17.5 15H9"/>\
-        </svg>
+    // NewKap's MIT-licensed 2x menu-bar ring is embedded to preserve Record's
+    // single-binary LaunchAgent installation. Provenance lives in
+    // THIRD_PARTY_NOTICES.md.
+    private static let menuBarImageBase64 = """
+        iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAzNJREFU
+        WAnFl89rE0EUx+fNJqkYCYgetPYSEAVBwYNQKaUpUWgqiEVz0Xv+AK8WD6JX/4Dc7SWViqDx
+        kNJUKRZ66EEoCEIvMXpQhNAU82N3fN/ZTEhrYiZZSwJp0sl738/bmdk33yVh+Uqn05HSj1+z
+        5InbisQlUmJcEL/xUqLMY2Ue21FSvJ44fXItl8vVbaSpX1AiMX+mTvXHyqMHTIr1i/d/pwpJ
+        9SKiIk+Kxbff/5XTs4BUKjVW+d185CnxUCgVhQgHb5OkV0LKDyScryE3WsZ406mOK+GeE543
+        rTx1RwlxFeOCqCpJPI8dCz3L5/M1PXboT9cC9FWLxopSatLXoWUiZ3Fj7d3nQ/ld/52anbu
+        olPuU8++18jcjIrzQbTb+KmA6OXel6bpv+Kon+BJ2Jan7G8XCZldSn8GpxI1JT9ESL12cZ6
+        MUDqn594XCp860AwXgymuisaXhROvHnRN3V1dXfnYmDPo9mVw4te/uvWTNGRQxJsLXOmdCGk
+        GseZ2n3cAvX4jfDAqHNjSgxfB1aIMBluG2C8CG89ecdnHl2Wy2YYKCfkILmlhSMMAymnoJWl
+        P/hSuM8q69PuyaG9Fen/6eEB9xd/BSnMdS6BnAfQ44ES0fFRxFQRsMsDSTxyQ6nN9kcNs6i
+        72q/1/jhgEm2BLtFR2O12Lb9j4PUgwYYIEJtkRvh6DucEGUB8g1LLAlDhady+11AI1goS0W
+        2Nzo/BMNvT2Yqn22YYEtzZFqDhZ7meEj2yw+ztuNqBGr6Z4wvKx9ZpulBNsHNhNIpWrzrL1
+        EsMgO1jdsQl2APs+D6VpnGxbY2IQ7OpPNhLVC0MAWC2wJDwc9OJmgurb5hgW2hIHkHVCBjY
+        KTsRUZNk67JW3ZqAK2hHuFgYQgbNSwwrZ5hgEm2Po2hHvFEQkPhyPTVmzQOGiDAZZmsoAuQ
+        J/L7F4hCA8HGzWoeL94aPr+kKHMMras3YhgnfmsZvOp4vBwmUwm3E/U9ndoaV/I2mCAZXIP
+        dL+RmlJUhGkJOc4tXqMS78iZ/ebeVpA9gVxoQAuasOVm6rvOgBkc6YOJKWKkj2amCHzq2Rj
+        Fw2lnEfh+VI/nfwA+auCbxANjCwAAAABJRU5ErkJggg==
         """
 
-    private static func featherImage() -> NSImage? {
-        guard let data = featherSVG.data(using: .utf8),
+    static func menuBarImage() -> NSImage? {
+        guard
+            let data = Data(
+                base64Encoded: menuBarImageBase64,
+                options: .ignoreUnknownCharacters
+            ),
             let image = NSImage(data: data)
         else { return nil }
-        // Menu-bar status icons are nominally 18pt tall; size the SVG to match.
+        image.isTemplate = true
         image.size = NSSize(width: 16, height: 16)
         return image
     }

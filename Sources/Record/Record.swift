@@ -707,7 +707,7 @@ final class AppController {
             } catch {
                 self?.postNotification(
                     title: "Record couldn’t restart",
-                    body: "Quit Record from the feather menu, then open it again.",
+                    body: "Quit Record from the menu bar, then open it again.",
                     directory: self?.root
                 )
             }

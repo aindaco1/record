@@ -33,7 +33,8 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ],
-            exclude: ["Info.plist"],
+            // The app assembler installs these directly into Record.app.
+            exclude: ["Info.plist", "Resources"],
             linkerSettings: [
                 // Embed Info.plist into the binary so TCC can attribute the
                 // system-audio-capture permission to Record itself when it

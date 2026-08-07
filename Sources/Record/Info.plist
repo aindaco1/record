@@ -6,6 +6,8 @@
     <string>record</string>
     <key>CFBundleIdentifier</key>
     <string>com.aindaco.record</string>
+    <key>CFBundleIconFile</key>
+    <string>Record.icns</string>
     <key>CFBundleName</key>
     <string>Record</string>
     <key>CFBundlePackageType</key>

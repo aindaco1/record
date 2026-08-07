@@ -95,6 +95,6 @@ case "$mode" in
     --verify | verify)
         open_app
         wait_for_launch
-        echo "Record launched successfully; use the feather in the menu bar"
+        echo "Record launched successfully; use the ring in the menu bar"
         ;;
 esac

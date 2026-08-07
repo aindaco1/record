@@ -20,6 +20,10 @@ swift build -c release --arch arm64
 binary_path="$(swift build -c release --arch arm64 --show-bin-path)/record"
 install -m 0755 "$binary_path" "$app_path/Contents/MacOS/record"
 install -m 0644 Sources/Record/Info.plist "$app_path/Contents/Info.plist"
+install -m 0644 Sources/Record/Resources/Record.icns \
+    "$app_path/Contents/Resources/Record.icns"
+install -m 0644 THIRD_PARTY_NOTICES.md \
+    "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
 
 # SwiftPM ad-hoc signs build products in place. That signature is invalid once
 # the executable moves into a bundle; the release workflow signs the complete
