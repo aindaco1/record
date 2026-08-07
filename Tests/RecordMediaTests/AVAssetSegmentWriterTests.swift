@@ -1,3 +1,5 @@
+import AVFoundation
+import CoreVideo
 import Foundation
 import RecordCapture
 import RecordCore
@@ -17,8 +19,10 @@ final class AVAssetSegmentWriterTests: XCTestCase {
             source: .display(id: 1),
             outputSize: .init(width: 1_920, height: 1_080)
         )
-        let output = try SegmentOutput(
-            finalURL: directory.appendingPathComponent("segment-0001.mov")
+        let output = try SegmentOutputSet(
+            screenURL: directory.appendingPathComponent("segment-0001.mov"),
+            includesSystemAudio: true,
+            includesMicrophone: true
         )
         let writer = try AVAssetSegmentWriter(
             plan: SegmentWriterPlan(configuration: configuration),
@@ -30,8 +34,10 @@ final class AVAssetSegmentWriterTests: XCTestCase {
         XCTAssertEqual(firstResult, .empty)
         XCTAssertEqual(secondResult, .empty)
         XCTAssertEqual(writer.state, .completed)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: output.finalURL.path))
-        XCTAssertFalse(FileManager.default.fileExists(atPath: output.partialURL.path))
+        for destination in output.outputs.values {
+            XCTAssertFalse(FileManager.default.fileExists(atPath: destination.finalURL.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: destination.partialURL.path))
+        }
     }
 
     func testDisabledAudioTrackDropsWithoutStartingOrPublishing() async throws {
@@ -46,8 +52,10 @@ final class AVAssetSegmentWriterTests: XCTestCase {
             outputSize: .init(width: 1_920, height: 1_080),
             audio: .init(includeSystemAudio: false, includeMicrophone: false)
         )
-        let output = try SegmentOutput(
-            finalURL: directory.appendingPathComponent("segment-0001.mov")
+        let output = try SegmentOutputSet(
+            screenURL: directory.appendingPathComponent("segment-0001.mov"),
+            includesSystemAudio: false,
+            includesMicrophone: false
         )
         let writer = try AVAssetSegmentWriter(
             plan: SegmentWriterPlan(configuration: configuration),
@@ -62,6 +70,141 @@ final class AVAssetSegmentWriterTests: XCTestCase {
         XCTAssertEqual(writer.state, .configured)
         let result = try await writer.finish()
         XCTAssertEqual(result, .empty)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: output.finalURL.path))
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: try XCTUnwrap(output[.screen]).finalURL.path
+            )
+        )
     }
+
+    /// Opt-in regression harness for a real ScreenCaptureKit recording:
+    /// RECORD_MEDIA_FIXTURE=/path/to/multitrack.mov swift test --filter
+    /// AVAssetSegmentWriterTests/testExternalMultitrackFixtureSplitsIntoIndependentFiles
+    func testExternalMultitrackFixtureSplitsIntoIndependentFiles() async throws {
+        guard let fixturePath = ProcessInfo.processInfo.environment["RECORD_MEDIA_FIXTURE"] else {
+            throw XCTSkip("set RECORD_MEDIA_FIXTURE to a multitrack screen recording")
+        }
+        let fixtureURL = URL(fileURLWithPath: fixturePath)
+        let asset = AVURLAsset(url: fixtureURL)
+        let videoTracks = try await asset.loadTracks(withMediaType: .video)
+        let videoTrack = try XCTUnwrap(videoTracks.first)
+        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard audioTracks.count == 2 else {
+            return XCTFail("fixture must contain system and microphone audio tracks")
+        }
+
+        let size = try await videoTrack.load(.naturalSize)
+        let width = max(16, Int(abs(size.width)).roundedDownToEven)
+        let height = max(16, Int(abs(size.height)).roundedDownToEven)
+        let configuration = CaptureConfiguration(
+            source: .display(id: 1),
+            outputSize: .init(width: width, height: height)
+        )
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "record-external-segment-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let outputs = try SegmentOutputSet(
+            screenURL: directory.appendingPathComponent("recording.mov"),
+            includesSystemAudio: true,
+            includesMicrophone: true
+        )
+        let writer = try AVAssetSegmentWriter(
+            plan: SegmentWriterPlan(configuration: configuration),
+            output: outputs
+        )
+        let reader = try AVAssetReader(asset: asset)
+        reader.timeRange = CMTimeRange(
+            start: .zero, duration: CMTime(seconds: 2, preferredTimescale: 600))
+
+        let videoOutput = AVAssetReaderTrackOutput(
+            track: videoTrack,
+            outputSettings: [
+                kCVPixelBufferPixelFormatTypeKey as String:
+                    kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+            ]
+        )
+        let systemOutput = AVAssetReaderTrackOutput(
+            track: audioTracks[0],
+            outputSettings: Self.linearPCMAudioSettings()
+        )
+        let microphoneOutput = AVAssetReaderTrackOutput(
+            track: audioTracks[1],
+            outputSettings: Self.linearPCMAudioSettings()
+        )
+        let readerOutputs: [(ScreenCaptureSampleKind, AVAssetReaderOutput)] = [
+            (.screen, videoOutput),
+            (.systemAudio, systemOutput),
+            (.microphone, microphoneOutput),
+        ]
+        for (_, output) in readerOutputs {
+            XCTAssertTrue(reader.canAdd(output))
+            reader.add(output)
+        }
+        XCTAssertTrue(reader.startReading())
+
+        var pending = readerOutputs.map { kind, output in
+            (kind, output, output.copyNextSampleBuffer())
+        }
+        while let nextIndex = pending.indices.min(by: { left, right in
+            let lhs =
+                pending[left].2.map(CMSampleBufferGetPresentationTimeStamp) ?? .positiveInfinity
+            let rhs =
+                pending[right].2.map(CMSampleBufferGetPresentationTimeStamp) ?? .positiveInfinity
+            return CMTimeCompare(lhs, rhs) < 0
+        }), let sampleBuffer = pending[nextIndex].2 {
+            let kind = pending[nextIndex].0
+            let sample = ScreenCaptureSample(
+                kind: kind,
+                timestamp: try ScreenCaptureTimestamp(
+                    validating: CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+                ),
+                buffer: sampleBuffer
+            )
+            while try writer.process(sample) == .dropped(.writerBackpressure) {
+                try await Task.sleep(for: .milliseconds(1))
+            }
+            pending[nextIndex].2 = pending[nextIndex].1.copyNextSampleBuffer()
+        }
+        XCTAssertEqual(reader.status, .completed)
+
+        let result = try await writer.finish()
+        guard case .finalized(let artifacts) = result else {
+            return XCTFail("expected finalized media")
+        }
+        let screenURL = try XCTUnwrap(artifacts[.screen])
+        let systemURL = try XCTUnwrap(artifacts[.systemAudio])
+        let microphoneURL = try XCTUnwrap(artifacts[.microphone])
+        let outputMovie = AVURLAsset(url: screenURL)
+        let outputVideoTracks = try await outputMovie.loadTracks(withMediaType: .video)
+        let outputMovieAudioTracks = try await outputMovie.loadTracks(withMediaType: .audio)
+        let outputSystemTracks = try await AVURLAsset(url: systemURL).loadTracks(
+            withMediaType: .audio
+        )
+        let outputMicrophoneTracks = try await AVURLAsset(url: microphoneURL).loadTracks(
+            withMediaType: .audio
+        )
+        XCTAssertEqual(outputVideoTracks.count, 1)
+        XCTAssertEqual(outputMovieAudioTracks.count, 0)
+        XCTAssertEqual(outputSystemTracks.count, 1)
+        XCTAssertEqual(outputMicrophoneTracks.count, 1)
+    }
+
+    private static func linearPCMAudioSettings() -> [String: Any] {
+        [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 48_000,
+            AVNumberOfChannelsKey: 2,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsNonInterleaved: false,
+        ]
+    }
+}
+
+private extension Int {
+    var roundedDownToEven: Int { self - self % 2 }
 }

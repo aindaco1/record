@@ -4,14 +4,32 @@ import Foundation
 import RecordCapture
 import RecordCore
 
-public enum SegmentWriterResult: Equatable, Sendable {
-    case empty
-    case finalized(URL)
+public struct FinalizedSegmentArtifacts: Equatable, Sendable {
+    public let files: [ScreenCaptureSampleKind: URL]
+    public let startOffsetMilliseconds: [ScreenCaptureSampleKind: Int]
+
+    public init(
+        files: [ScreenCaptureSampleKind: URL],
+        startOffsetMilliseconds: [ScreenCaptureSampleKind: Int] = [:]
+    ) {
+        self.files = files
+        self.startOffsetMilliseconds = startOffsetMilliseconds
+    }
+
+    public subscript(kind: ScreenCaptureSampleKind) -> URL? {
+        files[kind]
+    }
 }
 
-/// Serial real-time processor for one independently finalized QuickTime
-/// segment. Use it behind `BoundedScreenCaptureSink`, then call `finish()` only
-/// after the ingress has drained.
+public enum SegmentWriterResult: Equatable, Sendable {
+    case empty
+    case finalized(FinalizedSegmentArtifacts)
+}
+
+/// Serial real-time processor that writes screen video, system audio, and
+/// microphone audio as independently usable files. Each writer starts from
+/// the same ScreenCaptureKit clock anchor, preserving cross-track alignment
+/// without forcing players to choose between alternate audio tracks in a MOV.
 public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Sendable {
     public enum State: String, Equatable, Sendable {
         case configured
@@ -23,12 +41,8 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
 
     public private(set) var state: State = .configured
 
-    private let output: SegmentOutput
     private let fileManager: FileManager
-    private let writer: AVAssetWriter
-    private let screenInput: AVAssetWriterInput
-    private let systemAudioInput: AVAssetWriterInput?
-    private let microphoneInput: AVAssetWriterInput?
+    private let tracks: [ScreenCaptureSampleKind: TrackWriter]
 
     private var timeline: CommonMediaTimeline?
     private var result: SegmentWriterResult?
@@ -38,60 +52,51 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
 
     public init(
         plan: SegmentWriterPlan,
-        output: SegmentOutput,
+        output: SegmentOutputSet,
         fileManager: FileManager = .default
     ) throws {
-        self.output = output
         self.fileManager = fileManager
+
+        var tracks: [ScreenCaptureSampleKind: TrackWriter] = [:]
         do {
-            writer = try AVAssetWriter(outputURL: output.partialURL, fileType: .mov)
+            guard let screenOutput = output[.screen] else {
+                throw SegmentWriterError.invalidOutputURL
+            }
+            tracks[.screen] = try TrackWriter(
+                kind: .screen,
+                output: screenOutput,
+                fileType: .mov,
+                outputSettings: plan.makeVideoSettings()
+            )
+            if plan.includesSystemAudio, let systemOutput = output[.systemAudio] {
+                tracks[.systemAudio] = try TrackWriter(
+                    kind: .systemAudio,
+                    output: systemOutput,
+                    fileType: .caf,
+                    outputSettings: plan.makeAudioSettings()
+                )
+            }
+            if plan.includesMicrophone, let microphoneOutput = output[.microphone] {
+                tracks[.microphone] = try TrackWriter(
+                    kind: .microphone,
+                    output: microphoneOutput,
+                    fileType: .caf,
+                    outputSettings: plan.makeAudioSettings()
+                )
+            }
+        } catch let error as SegmentWriterError {
+            tracks.values.forEach { $0.cancel(fileManager: fileManager) }
+            throw error
         } catch {
+            tracks.values.forEach { $0.cancel(fileManager: fileManager) }
             throw SegmentWriterError.writerCreationFailed
         }
-        writer.movieTimeScale = 600
-
-        screenInput = AVAssetWriterInput(
-            mediaType: .video,
-            outputSettings: plan.makeVideoSettings()
-        )
-        screenInput.expectsMediaDataInRealTime = true
-        screenInput.mediaTimeScale = CMTimeScale(plan.framesPerSecond * 10)
-
-        if plan.includesSystemAudio {
-            let input = AVAssetWriterInput(
-                mediaType: .audio,
-                outputSettings: plan.makeAudioSettings()
-            )
-            input.expectsMediaDataInRealTime = true
-            systemAudioInput = input
-        } else {
-            systemAudioInput = nil
-        }
-
-        if plan.includesMicrophone {
-            let input = AVAssetWriterInput(
-                mediaType: .audio,
-                outputSettings: plan.makeAudioSettings()
-            )
-            input.expectsMediaDataInRealTime = true
-            microphoneInput = input
-        } else {
-            microphoneInput = nil
-        }
-
-        try Self.add(screenInput, kind: .screen, to: writer)
-        if let systemAudioInput {
-            try Self.add(systemAudioInput, kind: .systemAudio, to: writer)
-        }
-        if let microphoneInput {
-            try Self.add(microphoneInput, kind: .microphone, to: writer)
-        }
+        self.tracks = tracks
     }
 
     deinit {
         guard state != .completed, !preservesPartialOnFailure else { return }
-        writer.cancelWriting()
-        try? fileManager.removeItem(at: output.partialURL)
+        cancelAll(removePartials: true)
     }
 
     public func process(
@@ -100,22 +105,23 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
         guard state == .configured || state == .writing else {
             throw SegmentWriterError.invalidState(state)
         }
-        guard let input = input(for: sample.kind) else {
+        guard let track = tracks[sample.kind] else {
             return .dropped(.trackDisabled)
         }
 
         if state == .configured {
-            guard writer.startWriting() else {
+            do {
+                try startAll(at: sample.timestamp.time)
+                timeline = try CommonMediaTimeline(anchor: sample.timestamp.time)
+                state = .writing
+            } catch {
                 let failure = CaptureFailure(
                     code: .encoderFailed,
-                    summary: "hardware encoder failed to start"
+                    summary: "media encoders failed to start"
                 )
-                transitionToFailure(failure, removePartial: true)
+                transitionToFailure(failure, removePartials: true)
                 throw MediaSampleProcessingFailure(failure)
             }
-            writer.startSession(atSourceTime: sample.timestamp.time)
-            timeline = try CommonMediaTimeline(anchor: sample.timestamp.time)
-            state = .writing
         }
 
         do {
@@ -128,21 +134,22 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
                 code: .writerFailed,
                 summary: "media timestamps became invalid"
             )
-            transitionToFailure(failure, removePartial: true)
+            transitionToFailure(failure, removePartials: true)
             throw MediaSampleProcessingFailure(failure)
         }
 
-        guard input.isReadyForMoreMediaData else {
+        guard track.input.isReadyForMoreMediaData else {
             return .dropped(.writerBackpressure)
         }
-        guard input.append(sample.buffer) else {
+        guard track.input.append(sample.buffer) else {
             let failure = CaptureFailure(
                 code: .writerFailed,
-                summary: "media segment could not accept a sample"
+                summary: "a media track could not accept a sample"
             )
-            transitionToFailure(failure, removePartial: true)
+            transitionToFailure(failure, removePartials: true)
             throw MediaSampleProcessingFailure(failure)
         }
+        track.recordAppend(at: sample.timestamp.time)
         appendedSampleCount += 1
         return .consumed
     }
@@ -150,16 +157,14 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
     public func finish() async throws -> SegmentWriterResult {
         switch state {
         case .configured:
-            writer.cancelWriting()
-            try? fileManager.removeItem(at: output.partialURL)
+            cancelAll(removePartials: true)
             state = .completed
             result = .empty
             return .empty
 
         case .writing:
             guard appendedSampleCount > 0 else {
-                writer.cancelWriting()
-                try? fileManager.removeItem(at: output.partialURL)
+                cancelAll(removePartials: true)
                 state = .completed
                 result = .empty
                 return .empty
@@ -172,57 +177,125 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
         case .failed:
             throw SegmentWriterError.writingFailed(
                 terminalFailure
-                    ?? CaptureFailure(code: .writerFailed, summary: "media segment failed")
+                    ?? CaptureFailure(code: .writerFailed, summary: "media tracks failed")
             )
         }
 
-        screenInput.markAsFinished()
-        systemAudioInput?.markAsFinished()
-        microphoneInput?.markAsFinished()
-        await withCheckedContinuation { continuation in
-            writer.finishWriting {
-                continuation.resume()
-            }
-        }
-
-        guard writer.status == .completed else {
+        guard tracks.values.allSatisfy({ $0.appendedSampleCount > 0 }) else {
             let failure = CaptureFailure(
                 code: .writerFailed,
-                summary: "media segment could not be finalized"
+                summary: "one or more requested media tracks captured no samples"
             )
-            transitionToFailure(failure, removePartial: true)
+            transitionToFailure(failure, removePartials: false)
+            throw SegmentWriterError.writingFailed(failure)
+        }
+
+        for kind in ScreenCaptureSampleKind.allCases {
+            guard let track = tracks[kind] else { continue }
+            track.input.markAsFinished()
+            await track.finish()
+        }
+
+        guard tracks.values.allSatisfy({ $0.writer.status == .completed }) else {
+            let failure = CaptureFailure(
+                code: .writerFailed,
+                summary: "media tracks could not be finalized"
+            )
+            transitionToFailure(failure, removePartials: false)
             throw SegmentWriterError.writingFailed(failure)
         }
 
         do {
-            try fileManager.moveItem(at: output.partialURL, to: output.finalURL)
+            for kind in ScreenCaptureSampleKind.allCases {
+                guard let output = tracks[kind]?.output else { continue }
+                try fileManager.moveItem(at: output.partialURL, to: output.finalURL)
+            }
         } catch {
             let failure = CaptureFailure(
                 code: .writerFailed,
-                summary: "finalized segment could not be promoted"
+                summary: "finalized media tracks could not be promoted"
             )
-            transitionToFailure(failure, removePartial: false)
+            transitionToFailure(failure, removePartials: false)
             throw SegmentWriterError.writingFailed(failure)
         }
-        let finalized = SegmentWriterResult.finalized(output.finalURL)
-        result = finalized
+
+        let anchor = timeline?.anchor.time ?? .zero
+        let finalized = FinalizedSegmentArtifacts(
+            files: Dictionary(
+                uniqueKeysWithValues: tracks.map { ($0.key, $0.value.output.finalURL) }
+            ),
+            startOffsetMilliseconds: Dictionary(
+                uniqueKeysWithValues: tracks.compactMap { kind, track in
+                    guard let firstTimestamp = track.firstTimestamp else { return nil }
+                    let seconds = CMTimeGetSeconds(CMTimeSubtract(firstTimestamp, anchor))
+                    guard seconds.isFinite else { return nil }
+                    return (kind, max(0, Int((seconds * 1_000).rounded())))
+                }
+            )
+        )
+        let finalizedResult = SegmentWriterResult.finalized(finalized)
+        result = finalizedResult
         state = .completed
-        return finalized
+        return finalizedResult
     }
 
-    private func input(for kind: ScreenCaptureSampleKind) -> AVAssetWriterInput? {
-        switch kind {
-        case .screen: screenInput
-        case .systemAudio: systemAudioInput
-        case .microphone: microphoneInput
+    private func startAll(at anchor: CMTime) throws {
+        for track in tracks.values {
+            guard track.writer.startWriting() else {
+                throw SegmentWriterError.writerCreationFailed
+            }
+            track.writer.startSession(atSourceTime: anchor)
         }
     }
 
-    private static func add(
-        _ input: AVAssetWriterInput,
+    private func transitionToFailure(
+        _ failure: CaptureFailure,
+        removePartials: Bool
+    ) {
+        state = .failed
+        terminalFailure = failure
+        preservesPartialOnFailure = !removePartials
+        cancelAll(removePartials: removePartials)
+    }
+
+    private func cancelAll(removePartials: Bool) {
+        tracks.values.forEach {
+            $0.writer.cancelWriting()
+            if removePartials {
+                try? fileManager.removeItem(at: $0.output.partialURL)
+            }
+        }
+    }
+}
+
+private final class TrackWriter {
+    let output: SegmentOutput
+    let writer: AVAssetWriter
+    let input: AVAssetWriterInput
+    private(set) var appendedSampleCount = 0
+    private(set) var firstTimestamp: CMTime?
+
+    init(
         kind: ScreenCaptureSampleKind,
-        to writer: AVAssetWriter
+        output: SegmentOutput,
+        fileType: AVFileType,
+        outputSettings: [String: Any]
     ) throws {
+        self.output = output
+        do {
+            writer = try AVAssetWriter(outputURL: output.partialURL, fileType: fileType)
+        } catch {
+            throw SegmentWriterError.writerCreationFailed
+        }
+        writer.movieTimeScale = 600
+        input = AVAssetWriterInput(
+            mediaType: kind == .screen ? .video : .audio,
+            outputSettings: outputSettings
+        )
+        input.expectsMediaDataInRealTime = true
+        if kind == .screen {
+            input.mediaTimeScale = 600
+        }
         guard writer.canAdd(input) else {
             writer.cancelWriting()
             throw SegmentWriterError.cannotAddTrack(kind)
@@ -230,16 +303,23 @@ public final class AVAssetSegmentWriter: MediaSampleProcessing, @unchecked Senda
         writer.add(input)
     }
 
-    private func transitionToFailure(
-        _ failure: CaptureFailure,
-        removePartial: Bool
-    ) {
-        state = .failed
-        terminalFailure = failure
-        preservesPartialOnFailure = !removePartial
-        writer.cancelWriting()
-        if removePartial {
-            try? fileManager.removeItem(at: output.partialURL)
+    func recordAppend(at timestamp: CMTime) {
+        if firstTimestamp == nil {
+            firstTimestamp = timestamp
         }
+        appendedSampleCount += 1
+    }
+
+    func finish() async {
+        await withCheckedContinuation { continuation in
+            writer.finishWriting {
+                continuation.resume()
+            }
+        }
+    }
+
+    func cancel(fileManager: FileManager) {
+        writer.cancelWriting()
+        try? fileManager.removeItem(at: output.partialURL)
     }
 }

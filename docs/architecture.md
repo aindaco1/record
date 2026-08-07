@@ -50,6 +50,12 @@ and transcripts. Raw segments are immutable. Trimming, speed changes, masks,
 camera placement, and annotations are stored as edit operations so exporting
 never destroys the source.
 
+The current screen-capture segment is deliberately split into
+`recording.mov`, `system.caf`, and `mic.caf`. The movie contains video only;
+each audio source remains independently playable and addressable in the
+manifest. All writers share the same capture-clock anchor, and the manifest
+stores each track's start offset for downstream transcription and editing.
+
 State transitions are explicit:
 
 ```mermaid

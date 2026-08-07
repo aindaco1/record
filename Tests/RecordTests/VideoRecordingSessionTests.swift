@@ -6,7 +6,7 @@ import RecordMedia
 import XCTest
 
 final class VideoRecordingSessionTests: XCTestCase {
-    func testCleanStopFinalizesOneImmutableScreenTrack() async throws {
+    func testCleanStopFinalizesVideoAndTwoIndependentAudioTracks() async throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }
         let builder = FakeVideoCapturePipelineBuilder(behavior: .success)
@@ -29,7 +29,11 @@ final class VideoRecordingSessionTests: XCTestCase {
         XCTAssertEqual(manifest.endedAt, fixture.endedAt)
         XCTAssertEqual(
             manifest.tracks,
-            [.init(kind: .screen, filename: "recording.mov")]
+            [
+                .init(kind: .screen, filename: "recording.mov"),
+                .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
+                .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+            ]
         )
     }
 
@@ -59,7 +63,7 @@ final class VideoRecordingSessionTests: XCTestCase {
         let manifest = try SessionManifest.read(from: session.dir)
         XCTAssertEqual(manifest.state, .failed)
         XCTAssertNotNil(manifest.endedAt)
-        XCTAssertTrue(manifest.tracks.isEmpty)
+        XCTAssertEqual(manifest.tracks.count, 3)
     }
 
     func testWriterFailurePreservesFinalizedMediaInFailedManifest() async throws {
@@ -83,7 +87,14 @@ final class VideoRecordingSessionTests: XCTestCase {
         XCTAssertNotNil(outcome.mediaURL)
         let manifest = try SessionManifest.read(from: session.dir)
         XCTAssertEqual(manifest.state, .failed)
-        XCTAssertEqual(manifest.tracks, [.init(kind: .screen, filename: "recording.mov")])
+        XCTAssertEqual(
+            manifest.tracks,
+            [
+                .init(kind: .screen, filename: "recording.mov"),
+                .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
+                .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+            ]
+        )
     }
 
     private func makeFixture() throws -> (
@@ -181,6 +192,14 @@ private final class FakeVideoCapturePipeline: VideoCapturePipeline, @unchecked S
         lock.withLock { stopCount += 1 }
         guard case .startFailure = behavior else {
             try? Data("movie".utf8).write(to: outputURL)
+            let systemURL = outputURL.deletingLastPathComponent().appendingPathComponent(
+                "system.caf"
+            )
+            let microphoneURL = outputURL.deletingLastPathComponent().appendingPathComponent(
+                "mic.caf"
+            )
+            try? Data("system".utf8).write(to: systemURL)
+            try? Data("microphone".utf8).write(to: microphoneURL)
             let failure: CaptureFailure?
             if case .stopFailureWithMedia(let value) = behavior {
                 failure = value
@@ -188,13 +207,19 @@ private final class FakeVideoCapturePipeline: VideoCapturePipeline, @unchecked S
                 failure = nil
             }
             return VideoCapturePipelineStopResult(
-                mediaURL: outputURL,
+                artifacts: FinalizedSegmentArtifacts(
+                    files: [
+                        .screen: outputURL,
+                        .systemAudio: systemURL,
+                        .microphone: microphoneURL,
+                    ]
+                ),
                 failure: failure,
                 ingress: MediaIngressSnapshot()
             )
         }
         return VideoCapturePipelineStopResult(
-            mediaURL: nil,
+            artifacts: nil,
             failure: nil,
             ingress: MediaIngressSnapshot()
         )

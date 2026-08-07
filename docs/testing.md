@@ -11,8 +11,8 @@ regressions run on every pull request.
   timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
 - fixed-capacity media ingress eviction, metrics, failure cleanup, deterministic
   draining, and shared-timeline mapping under delay, gaps, and clock regression
-- hardware-required HEVC/AAC writer settings, collision-safe partial paths, and
-  empty-segment finalization without publishing invalid media
+- hardware-required HEVC/AAC writer settings, collision-safe independent video
+  and audio paths, and empty-segment finalization without publishing invalid media
 - display-profile 4K/even-dimension bounds, video-session orchestration,
   failure manifests, idempotent stops, and atomic non-overwriting exports
 - model identifier validation and local-only failure behavior
@@ -58,10 +58,11 @@ Use synthetic or non-sensitive content for development recordings:
    remains steady white when Reduce Motion is enabled), the menu shows an
    increasing elapsed time, and the command becomes **Stop recording**.
 4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
-   template-named `.mov` appears on Desktop, opens in QuickTime,
-   shows the main display at the expected aspect ratio, and contains both the
-   microphone and played system audio. Record keeps the raw `recording.mov` in
-   **Open session storage** for recovery.
+   template-named `.mov` appears on Desktop, opens in QuickTime, and shows the
+   main display at the expected aspect ratio. In **Open session storage**, the
+   same session must contain video-only `recording.mov` plus independently
+   playable `mic.caf` and `system.caf` files. The mic file should contain your
+   voice and the system file the played clip.
 5. Revoke **System Audio Recording Only**, then choose **Start audio-only
    recording**. Record should request microphone access when needed, followed
    by System Audio Recording Only. It must not request screen capture. After a
@@ -120,8 +121,9 @@ path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either CAF file, and a job
 where every available track fails must not create a successful transcript.
-Video-session audio extraction/transcription is a follow-up; selecting an
-engine currently affects audio-only sessions.
+Screen and audio-only sessions use the same independent CAF inputs for local
+transcription; selecting an engine affects whichever finalized session is
+queued next.
 
 ## Export folder access
 

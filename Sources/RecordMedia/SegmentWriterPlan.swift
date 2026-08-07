@@ -80,8 +80,9 @@ public struct SegmentOutput: Equatable, Sendable {
         identifier: UUID = UUID(),
         fileManager: FileManager = .default
     ) throws {
+        let pathExtension = finalURL.pathExtension.lowercased()
         guard finalURL.isFileURL,
-            finalURL.pathExtension.lowercased() == "mov",
+            pathExtension == "mov" || pathExtension == "caf",
             !finalURL.hasDirectoryPath
         else {
             throw SegmentWriterError.invalidOutputURL
@@ -100,9 +101,49 @@ public struct SegmentOutput: Equatable, Sendable {
 
         self.finalURL = standardizedURL
         partialURL = parentURL.appendingPathComponent(
-            ".\(standardizedURL.deletingPathExtension().lastPathComponent).\(identifier.uuidString).partial.mov",
+            ".\(standardizedURL.deletingPathExtension().lastPathComponent).\(identifier.uuidString).partial.\(pathExtension)",
             isDirectory: false
         )
+    }
+}
+
+public struct SegmentOutputSet: Equatable, Sendable {
+    public let outputs: [ScreenCaptureSampleKind: SegmentOutput]
+
+    public init(
+        screenURL: URL,
+        includesSystemAudio: Bool,
+        includesMicrophone: Bool,
+        identifier: UUID = UUID(),
+        fileManager: FileManager = .default
+    ) throws {
+        let directory = screenURL.deletingLastPathComponent()
+        var outputs: [ScreenCaptureSampleKind: SegmentOutput] = [
+            .screen: try SegmentOutput(
+                finalURL: screenURL,
+                identifier: identifier,
+                fileManager: fileManager
+            )
+        ]
+        if includesSystemAudio {
+            outputs[.systemAudio] = try SegmentOutput(
+                finalURL: directory.appendingPathComponent("system.caf"),
+                identifier: identifier,
+                fileManager: fileManager
+            )
+        }
+        if includesMicrophone {
+            outputs[.microphone] = try SegmentOutput(
+                finalURL: directory.appendingPathComponent("mic.caf"),
+                identifier: identifier,
+                fileManager: fileManager
+            )
+        }
+        self.outputs = outputs
+    }
+
+    public subscript(kind: ScreenCaptureSampleKind) -> SegmentOutput? {
+        outputs[kind]
     }
 }
 

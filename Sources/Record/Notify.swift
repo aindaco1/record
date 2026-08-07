@@ -131,7 +131,7 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
         let directory = token.flatMap(directories.resolve)
         if let directory {
             Task { @MainActor in
-                NSWorkspace.shared.open(directory)
+                NSWorkspace.shared.activateFileViewerSelecting([directory])
             }
         }
         completionHandler()

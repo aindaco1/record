@@ -20,6 +20,12 @@ and rejects later samples.
 presentation timestamps. It preserves real gaps and rejects samples before the
 anchor or behind the last timestamp for their track.
 
+The media processor creates separate atomic destinations for the three queues:
+video-only `recording.mov`, `system.caf`, and `mic.caf`. This preserves source
+separation and prevents players from treating system and microphone audio as
+alternative MOV tracks. The manifest records start offsets from the same
+capture-clock anchor.
+
 The default capacities are three raw video frames and 32 buffers for each audio
 track. Video is constrained to `1...8` because raw 4K frames are expensive;
 audio is constrained to `1...128`. Changing those limits requires measurement

@@ -10,11 +10,13 @@ fi
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$repo_root/scripts/lib/local-signing.sh"
 built_app="$repo_root/.build/release-artifacts/Record.app"
+unregistered_built_app="$repo_root/.build/release-artifacts/Record.build-artifact"
 temporary_root="$(cd "${TMPDIR:-/tmp}" && pwd -P)"
 run_root="$temporary_root/record-local-run"
 app_bundle="$run_root/Record.app"
 app_binary="$app_bundle/Contents/MacOS/record"
 process_name="record"
+lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 stop_running_app() {
     if ! pgrep -x "$process_name" >/dev/null; then
@@ -67,9 +69,19 @@ case "$run_root" in
     "$temporary_root"/record-local-run) ;;
     *) echo "refusing unsafe local run path: $run_root" >&2; exit 1 ;;
 esac
+
 rm -rf "$run_root"
 mkdir -p "$run_root"
 ditto --norsrc --noextattr "$built_app" "$app_bundle"
+
+# The iCloud-backed workspace can cause Launch Services to discover this
+# unsigned assembler output. Once copied, remove its .app suffix so a later
+# notification click cannot resolve to it. build-app.sh recreates it each run.
+if [[ -x "$lsregister" ]]; then
+    "$lsregister" -u "$built_app" >/dev/null 2>&1 || true
+fi
+mv "$built_app" "$unregistered_built_app"
+
 available_identities="$(/usr/bin/security find-identity -v -p codesigning 2>/dev/null || true)"
 signing_identity="$(
     select_local_codesign_identity \
@@ -87,6 +99,13 @@ else
         --entitlements Configuration/Record.entitlements "$app_bundle"
 fi
 ./scripts/ci/check-signed-entitlements.sh "$app_bundle"
+
+# Notification clicks ask Launch Services to activate Record before the app's
+# delegate reveals the recording in Finder. Keep the unsigned assembler output
+# out of Launch Services so it cannot be chosen instead of this signed bundle.
+if [[ -x "$lsregister" ]]; then
+    "$lsregister" -f "$app_bundle" >/dev/null
+fi
 
 case "$mode" in
     run)

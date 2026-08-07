@@ -37,8 +37,10 @@ swift run record
 ```
 
 **Start screen recording** captures the main display at 30 fps, includes the
-cursor, microphone, and system audio, and writes a hardware-encoded HEVC/AAC
-QuickTime file capped at 4K. **Start audio-only recording** keeps the inherited
+cursor, microphone, and system audio, and writes three synchronized sources:
+a hardware-encoded HEVC `recording.mov`, AAC `system.caf`, and AAC `mic.caf`.
+The two audio sources stay independent for playback, editing, and local
+transcription. **Start audio-only recording** keeps the inherited
 Quill workflow: microphone and system audio are written to independently
 recoverable CAF tracks and queued for local transcription after finalization.
 Every session starts with an atomic `session.json` manifest.
@@ -58,8 +60,9 @@ Record is sandboxed, the menu's **Export folder: Desktop…** item asks for
 one-time folder approval and persists an app-scoped security bookmark. Record
 does not grant itself broad home-directory access. The first screen recording
 opens that picker if no destination has been approved. A crash-recoverable raw
-`recording.mov` remains in private session storage; the Desktop copy is written
-through a hidden partial file and renamed only after a complete copy.
+`recording.mov`, `system.caf`, and `mic.caf` remain in private session storage;
+the finished video copy on Desktop is written through a hidden partial file
+and renamed only after a complete copy.
 
 The built-in **Plugins → Rename Finished Recording** behavior is enabled by
 default. Its template editor accepts `{date}`, `{time}`, `{color}`,

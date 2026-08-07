@@ -33,6 +33,26 @@ final class SegmentOutputTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: finalURL), existing)
     }
 
+    func testOutputSetKeepsVideoAndAudioInIndependentFiles() throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let identifier = try XCTUnwrap(
+            UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+        )
+
+        let outputs = try SegmentOutputSet(
+            screenURL: directory.appendingPathComponent("recording.mov"),
+            includesSystemAudio: true,
+            includesMicrophone: true,
+            identifier: identifier
+        )
+
+        XCTAssertEqual(outputs[.screen]?.finalURL.lastPathComponent, "recording.mov")
+        XCTAssertEqual(outputs[.systemAudio]?.finalURL.lastPathComponent, "system.caf")
+        XCTAssertEqual(outputs[.microphone]?.finalURL.lastPathComponent, "mic.caf")
+        XCTAssertEqual(Set(outputs.outputs.values.map(\.partialURL)).count, 3)
+    }
+
     func testRejectsNonMovieAndMissingDirectoryTargets() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

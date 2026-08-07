@@ -439,6 +439,8 @@ final class AppController {
                     preferredBaseName: preferredExportName
                 )
                 refreshGifskiMenu()
+                let dir = outcome.sessionDirectory
+                Task { [transcription] in await transcription.enqueue(dir) }
             } else {
                 postNotification(
                     title: "Screen recording preserved",

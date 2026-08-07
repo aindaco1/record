@@ -80,6 +80,10 @@ final class SegmentWriterPlanTests: XCTestCase {
         XCTAssertTrue(
             writer.canApply(outputSettings: plan.makeAudioSettings(), forMediaType: .audio)
         )
+        let cafWriter = try validationAudioWriter()
+        XCTAssertTrue(
+            cafWriter.canApply(outputSettings: plan.makeAudioSettings(), forMediaType: .audio)
+        )
     }
 
     private func validationWriter() throws -> AVAssetWriter {
@@ -87,5 +91,12 @@ final class SegmentWriterPlanTests: XCTestCase {
             "record-writer-settings-\(UUID().uuidString).mov"
         )
         return try AVAssetWriter(outputURL: outputURL, fileType: .mov)
+    }
+
+    private func validationAudioWriter() throws -> AVAssetWriter {
+        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "record-writer-settings-\(UUID().uuidString).caf"
+        )
+        return try AVAssetWriter(outputURL: outputURL, fileType: .caf)
     }
 }

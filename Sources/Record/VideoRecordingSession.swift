@@ -4,9 +4,11 @@ import RecordCore
 import RecordMedia
 
 struct VideoCapturePipelineStopResult: Sendable {
-    let mediaURL: URL?
+    let artifacts: FinalizedSegmentArtifacts?
     let failure: CaptureFailure?
     let ingress: MediaIngressSnapshot
+
+    var mediaURL: URL? { artifacts?[.screen] }
 }
 
 protocol VideoCapturePipeline: AnyObject, Sendable {
@@ -29,7 +31,11 @@ struct ScreenCaptureVideoPipelineBuilder: VideoCapturePipelineBuilding {
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) async throws -> any VideoCapturePipeline {
         let plan = try SegmentWriterPlan(configuration: configuration)
-        let output = try SegmentOutput(finalURL: outputURL)
+        let output = try SegmentOutputSet(
+            screenURL: outputURL,
+            includesSystemAudio: plan.includesSystemAudio,
+            includesMicrophone: plan.includesMicrophone
+        )
         let writer = try AVAssetSegmentWriter(plan: plan, output: output)
         let sink = BoundedScreenCaptureSink(
             configuration: try MediaIngressConfiguration(),
@@ -80,17 +86,17 @@ private actor ScreenCaptureVideoPipeline: VideoCapturePipeline {
             failure = failure ?? Self.failure(for: error)
         }
 
-        var mediaURL: URL?
+        var artifacts: FinalizedSegmentArtifacts?
         do {
-            if case .finalized(let url) = try await writer.finish() {
-                mediaURL = url
+            if case .finalized(let finalized) = try await writer.finish() {
+                artifacts = finalized
             }
         } catch {
             failure = failure ?? Self.failure(for: error)
         }
 
         let result = VideoCapturePipelineStopResult(
-            mediaURL: mediaURL,
+            artifacts: artifacts,
             failure: failure,
             ingress: sink.snapshot()
         )
@@ -152,7 +158,12 @@ actor VideoRecordingSession {
         self.pipelineBuilder = pipelineBuilder
         self.eventHandler = eventHandler
         dir = try SessionFolderAllocator.createDirectory(under: root, startedAt: startedAt)
-        manifest = SessionManifest(id: id, startedAt: startedAt, tracks: [])
+        manifest = SessionManifest(
+            id: id,
+            ownerProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
+            startedAt: startedAt,
+            tracks: Self.expectedTracks
+        )
         try manifest.write(to: dir)
     }
 
@@ -181,7 +192,7 @@ actor VideoRecordingSession {
                 _ = try? stateMachine.handle(.fail(failure))
             }
             let stopped = await pipeline?.stop()
-            try markFailed(mediaURL: stopped?.mediaURL, at: Date())
+            try markFailed(artifacts: stopped?.artifacts, at: Date())
             throw SessionError.captureFailed(failure)
         }
     }
@@ -199,7 +210,7 @@ actor VideoRecordingSession {
                 code: .internalFailure,
                 summary: "video capture was not prepared"
             )
-            try markFailed(mediaURL: nil, at: endedAt)
+            try markFailed(artifacts: nil, at: endedAt)
             throw SessionError.captureFailed(failure)
         }
 
@@ -210,7 +221,7 @@ actor VideoRecordingSession {
                 failure
                 ?? CaptureFailure(code: .writerFailed, summary: "no video samples were captured")
             terminalFailure = resolvedFailure
-            try markFailed(mediaURL: nil, at: endedAt)
+            try markFailed(artifacts: nil, at: endedAt)
             throw failure == nil
                 ? SessionError.noMediaSamples
                 : SessionError.captureFailed(resolvedFailure)
@@ -218,10 +229,10 @@ actor VideoRecordingSession {
 
         if let failure {
             terminalFailure = failure
-            try markFailed(mediaURL: mediaURL, at: endedAt)
+            try markFailed(artifacts: stopped.artifacts, at: endedAt)
         } else {
-            let track = SessionManifest.Track(kind: .screen, filename: mediaURL.lastPathComponent)
-            manifest = try manifest.finalized(at: endedAt, tracks: [track])
+            let tracks = Self.manifestTracks(from: stopped.artifacts)
+            manifest = try manifest.finalized(at: endedAt, tracks: tracks)
             try manifest.write(to: dir)
             _ = try stateMachine.handle(.stopped)
         }
@@ -243,20 +254,54 @@ actor VideoRecordingSession {
                 // Report only once, but always forward the original event.
             } else {
                 _ = try? stateMachine.handle(.fail(failure))
-                try? markFailed(mediaURL: nil, at: Date())
+                try? markFailed(artifacts: nil, at: Date())
             }
         }
         eventHandler(event)
     }
 
-    private func markFailed(mediaURL: URL?, at endedAt: Date) throws {
+    private func markFailed(
+        artifacts: FinalizedSegmentArtifacts?,
+        at endedAt: Date
+    ) throws {
         manifest.state = .failed
         manifest.endedAt = max(endedAt, startedAt)
-        manifest.tracks =
-            mediaURL.map {
-                [.init(kind: .screen, filename: $0.lastPathComponent)]
-            } ?? []
+        manifest.tracks = Self.manifestTracks(from: artifacts)
         try manifest.write(to: dir)
+    }
+
+    private static let expectedTracks: [SessionManifest.Track] = [
+        .init(kind: .screen, filename: "recording.mov"),
+        .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
+        .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+    ]
+
+    private static func manifestTracks(
+        from artifacts: FinalizedSegmentArtifacts?
+    ) -> [SessionManifest.Track] {
+        guard let artifacts else { return expectedTracks }
+        return ScreenCaptureSampleKind.allCases.compactMap { kind in
+            guard let url = artifacts[kind] else { return nil }
+            let manifestKind: SessionManifest.TrackKind
+            let speaker: String?
+            switch kind {
+            case .screen:
+                manifestKind = .screen
+                speaker = nil
+            case .systemAudio:
+                manifestKind = .systemAudio
+                speaker = "them"
+            case .microphone:
+                manifestKind = .microphone
+                speaker = "me"
+            }
+            return SessionManifest.Track(
+                kind: manifestKind,
+                filename: url.lastPathComponent,
+                speaker: speaker,
+                startOffsetMilliseconds: artifacts.startOffsetMilliseconds[kind] ?? 0
+            )
+        }
     }
 
     private static func failure(for error: Error) -> CaptureFailure {
