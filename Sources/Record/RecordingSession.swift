@@ -18,6 +18,7 @@ final class RecordingSession {
         root: URL,
         startedAt: Date = Date(),
         id: UUID = UUID(),
+        preparedSystemAudioTap: PreparedSystemAudioTap? = nil,
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) throws {
         self.id = id
@@ -25,7 +26,10 @@ final class RecordingSession {
         let health = CaptureHealthLedger(onEvent: onHealth)
         self.health = health
         mic = MicRecorder(startedAt: startedAt) { health.record($0) }
-        system = SystemAudioRecorder(startedAt: startedAt) { health.record($0) }
+        system = SystemAudioRecorder(
+            startedAt: startedAt,
+            preparedTap: preparedSystemAudioTap
+        ) { health.record($0) }
         dir = try SessionFolderAllocator.createDirectory(
             under: root,
             startedAt: startedAt
@@ -110,10 +114,11 @@ private final class CaptureHealthLedger: @unchecked Sendable {
     }
 
     func record(_ event: CaptureHealthEvent) {
-        let (copy, persistence) = lock.withLock { () -> (
-            [CaptureHealthEvent],
-            (@Sendable ([CaptureHealthEvent]) -> Void)?
-        ) in
+        let (copy, persistence) = lock.withLock {
+            () -> (
+                [CaptureHealthEvent],
+                (@Sendable ([CaptureHealthEvent]) -> Void)?
+            ) in
             events.append(event)
             return (events, self.persistence)
         }

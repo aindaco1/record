@@ -2,6 +2,64 @@ import RecordCore
 import XCTest
 
 final class CaptureHealthTests: XCTestCase {
+    func testPostRestartGuardDefersSelfNotificationAndAcceptsRecentCallbacks() {
+        var guardState = MicrophoneRestartLivenessGuard()
+        guardState.begin(atMilliseconds: 10_000, voiceProcessingEnabled: true)
+
+        XCTAssertTrue(
+            guardState.shouldDeferEngineConfigurationChange(atMilliseconds: 11_400)
+        )
+        XCTAssertEqual(
+            guardState.evaluate(
+                atMilliseconds: 12_000,
+                lastCallbackAtMilliseconds: 11_900,
+                captureIsRunning: true
+            ),
+            .healthy
+        )
+        XCTAssertFalse(
+            guardState.shouldDeferEngineConfigurationChange(atMilliseconds: 12_001)
+        )
+    }
+
+    func testPostRestartGuardFallsBackOnceWhenVoiceProcessingStopsCallbacks() {
+        var guardState = MicrophoneRestartLivenessGuard()
+        guardState.begin(atMilliseconds: 20_000, voiceProcessingEnabled: true)
+
+        XCTAssertTrue(
+            guardState.shouldDeferEngineConfigurationChange(atMilliseconds: 21_388)
+        )
+        XCTAssertEqual(
+            guardState.evaluate(
+                atMilliseconds: 22_000,
+                lastCallbackAtMilliseconds: 21_900,
+                captureIsRunning: false
+            ),
+            .fallBackToRaw
+        )
+        XCTAssertNil(
+            guardState.evaluate(
+                atMilliseconds: 24_000,
+                lastCallbackAtMilliseconds: nil,
+                captureIsRunning: false
+            )
+        )
+    }
+
+    func testPostRestartGuardRetriesWhenRawCaptureHasNoRecentCallbacks() {
+        var guardState = MicrophoneRestartLivenessGuard()
+        guardState.begin(atMilliseconds: 30_000, voiceProcessingEnabled: false)
+
+        XCTAssertEqual(
+            guardState.evaluate(
+                atMilliseconds: 32_000,
+                lastCallbackAtMilliseconds: nil,
+                captureIsRunning: false
+            ),
+            .retryCapture
+        )
+    }
+
     func testRouteChangesDebounceAndRecoverThroughExplicitEffects() {
         var state = MicrophoneRouteRecoveryStateMachine()
         XCTAssertEqual(state.handle(.start), [])

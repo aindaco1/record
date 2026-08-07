@@ -21,7 +21,8 @@ regressions run on every pull request.
 - model identifier validation, local-only failure behavior, pinned SHA-256
   verification, symbolic-link rejection, and atomic model replacement
 - command-scoped permission ordering, exact TCC service selection, and
-  one-shot recording-intent recovery across a privacy restart
+  one-shot recording-intent recovery across a privacy restart, including
+  one-time transfer of the successful audio-only permission tap into capture
 - session state transitions and atomic manifest round trips
 - interrupted-session recovery, playable-partial promotion, byte-preserving
   corrupt quarantine, content-free recovery summaries, live-process protection,

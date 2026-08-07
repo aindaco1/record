@@ -312,7 +312,11 @@ final class AppController {
                 self.permissionFlow.clear()
                 switch mode {
                 case .screen: self.startVideoSessionAfterPermission()
-                case .audioOnly: self.startAudioSessionAfterPermission()
+                case .audioOnly:
+                    self.startAudioSessionAfterPermission(
+                        preparedSystemAudioTap: self.recordingPermission
+                            .takePreparedSystemAudioTap()
+                    )
                 }
             case .waitingForRestart(let blocker):
                 self.menuBar.update(recording: false, elapsed: nil)
@@ -330,11 +334,16 @@ final class AppController {
         }
     }
 
-    private func startAudioSessionAfterPermission() {
+    private func startAudioSessionAfterPermission(
+        preparedSystemAudioTap: PreparedSystemAudioTap?
+    ) {
         guard activeRecording == nil else { return }
         ensureExportFolderAccess()
         do {
-            let newSession = try RecordingSession(root: root) { [weak self] event in
+            let newSession = try RecordingSession(
+                root: root,
+                preparedSystemAudioTap: preparedSystemAudioTap
+            ) { [weak self] event in
                 Task { @MainActor [weak self] in self?.handleCaptureHealth(event) }
             }
             recordingExportName = recordingNamePreferences.renderName(
