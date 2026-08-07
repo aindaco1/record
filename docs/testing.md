@@ -16,8 +16,8 @@ regressions run on every pull request.
 - display-profile 4K/even-dimension bounds, video-session orchestration,
   failure manifests, idempotent stops, and atomic non-overwriting exports
 - model identifier validation and local-only failure behavior
-- unified recording-permission setup ordering, cancellation, and no-capture
-  behavior with injected TCC adapters
+- command-scoped permission ordering, exact TCC service selection, and
+  one-shot recording-intent recovery across a privacy restart
 - session state transitions and atomic manifest round trips
 - interrupted-session recovery, live-process protection, and path traversal rejection
 - deterministic folder collision handling
@@ -43,28 +43,27 @@ Use synthetic or non-sensitive content for development recordings:
    This builds arm64, assembles the real app bundle, signs it ad hoc with the
    reviewed sandbox entitlements, verifies those embedded entitlements, and
    leaves Record running. The Record ring should appear in the menu bar.
-2. Choose **Set Up Recording Permissions…**. Record should show one explanation,
-   then ask macOS to register both **Screen & System Audio Recording** and
-   **System Audio Recording Only**, in that order. Apple may show one native
-   confirmation for each independent permission. Choose Allow when prompted;
-   the setup itself must not create a recording or media file. The settings
-   page should open with Record present in both lists without using the `+`
-   buttons. macOS still requires you to control each toggle. If it requests a
-   relaunch, Record should reopen itself after the old process exits. If it
-   does not, reopen the same signed app bundle without rebuilding it and report
-   the failure.
-3. Choose **Start screen recording**. On first use, approve Desktop in the
-   export-folder picker and grant microphone access if macOS prompts.
-4. Move a test window, speak into the selected microphone, and play a known
+2. Choose **Start screen recording**. Record should request microphone access
+   first when needed, followed by **Screen & System Audio Recording**. It must
+   not request **System Audio Recording Only** or open System Settings itself.
+   If you choose Open System Settings and enable Record, Privacy & Security
+   should terminate the old process; Record should reopen and resume the Start
+   command once. On first use, also approve Desktop in the export-folder picker.
+3. Move a test window, speak into the selected microphone, and play a known
    local audio clip for at least 15 seconds. Confirm the ring turns red, the
    menu shows an increasing elapsed time, and the command becomes **Stop
    recording**.
-5. Stop recording and wait for the menu to return to idle. Confirm a nonempty
+4. Stop recording and wait for the menu to return to idle. Confirm a nonempty
    template-named `.mov` appears on Desktop, opens in QuickTime,
    shows the main display at the expected aspect ratio, and contains both the
    microphone and played system audio. Record keeps the raw `recording.mov` in
    **Open session storage** for recovery.
-6. Repeat with **Start audio-only recording**, then inspect that session with
+5. Revoke **System Audio Recording Only**, then choose **Start audio-only
+   recording**. Record should request microphone access when needed, followed
+   by System Audio Recording Only. It must not request screen capture. After a
+   changed toggle, confirm Record replaces its process and begins the requested
+   audio-only recording without creating a failed session first.
+6. Inspect the audio-only session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
    finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
    readable durations, and nonnegative synchronization offsets.

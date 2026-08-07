@@ -133,7 +133,8 @@ final class AppController {
     private let menuBar = MenuBarController()
     private let notifications: RecordNotificationCenter
     private let transcription: TranscriptionCoordinator
-    private let screenRecordingPermission = ScreenRecordingPermissionController()
+    private let recordingPermission: RecordingPermissionController
+    private let pendingRecordingIntentStore: PendingRecordingIntentStore
     private let exportDirectoryAccess = ExportDirectoryAccess()
     private let capturePrivacyPreferences = CapturePrivacyPreferences()
     private let recordingNamePreferences = RecordingNamePreferences()
@@ -142,23 +143,32 @@ final class AppController {
     private var ticker: Timer?
     private var videoStartTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
+    private var permissionTask: Task<Void, Never>?
+    private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
     private var quitAfterStop = false
-    private var relaunchAfterPrivacySettingsQuit = false
     private var videoExportName: String?
     private var lastFinishedVideoURL: URL?
 
-    init(root: URL) {
+    init(
+        root: URL,
+        recordingPermission: RecordingPermissionController =
+            RecordingPermissionController(),
+        pendingRecordingIntentStore: PendingRecordingIntentStore =
+            PendingRecordingIntentStore()
+    ) {
         self.root = root
+        self.recordingPermission = recordingPermission
+        self.pendingRecordingIntentStore = pendingRecordingIntentStore
+        let recordingToResume = pendingRecordingIntentStore.consume()
         let notifications = RecordNotificationCenter(recordingsRoot: root)
         self.notifications = notifications
         transcription = TranscriptionCoordinator { notification in
             notifications.post(notification)
         }
         menuBar.onToggle = { [weak self] in self?.toggle() }
-        menuBar.onStartAudioOnly = { [weak self] in self?.startAudioSession() }
-        menuBar.onManageScreenRecordingPermission = { [weak self] in
-            self?.manageScreenRecordingPermission()
+        menuBar.onStartAudioOnly = { [weak self] in
+            self?.requestRecording(.audioOnly)
         }
         menuBar.onToggleCapturePrivacy = { [weak self] in self?.toggleCapturePrivacy($0) }
         menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
@@ -171,10 +181,8 @@ final class AppController {
         }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
-        menuBar.onRestart = { [weak self] in self?.restart() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
-        refreshScreenRecordingPermissionMenu()
         refreshCapturePrivacyMenu()
         refreshRecordingNameMenu()
         refreshGifskiMenu()
@@ -188,6 +196,12 @@ final class AppController {
                 }
             }
             await transcription.resumePending(root: root)
+        }
+
+        if let recordingToResume {
+            DispatchQueue.main.async { [weak self] in
+                self?.requestRecording(recordingToResume, resumingAfterRestart: true)
+            }
         }
     }
 
@@ -203,13 +217,60 @@ final class AppController {
 
     private func toggle() {
         if activeRecording == nil {
-            startVideoSession()
+            requestRecording(.screen)
         } else {
             stopSession()
         }
     }
 
-    private func startAudioSession() {
+    private func requestRecording(
+        _ mode: RecordingMode,
+        resumingAfterRestart: Bool = false
+    ) {
+        guard activeRecording == nil, permissionTask == nil else { return }
+
+        // A second Start click after macOS returned a stale in-process denial
+        // is an explicit fallback restart. Normally Privacy & Security sends
+        // the quit event itself as soon as the user enables the toggle.
+        if permissionFlow.begin(
+            mode,
+            resumingAfterRestart: resumingAfterRestart
+        ) == .restart {
+            restart(resuming: mode)
+            return
+        }
+
+        menuBar.updateRequestingPermissions(for: mode)
+        permissionTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let preparation = await self.recordingPermission.prepare(for: mode)
+            guard !Task.isCancelled else { return }
+            self.permissionTask = nil
+
+            switch preparation {
+            case .ready:
+                self.permissionFlow.clear()
+                switch mode {
+                case .screen: self.startVideoSessionAfterPermission()
+                case .audioOnly: self.startAudioSessionAfterPermission()
+                }
+            case .waitingForRestart(let blocker):
+                self.menuBar.update(recording: false, elapsed: nil)
+                if resumingAfterRestart,
+                    !self.recordingPermission.presentSettingsRequired(for: blocker)
+                {
+                    self.permissionFlow.clear()
+                }
+            case .needsSettings(let blocker):
+                self.menuBar.update(recording: false, elapsed: nil)
+                if !self.recordingPermission.presentSettingsRequired(for: blocker) {
+                    self.permissionFlow.clear()
+                }
+            }
+        }
+    }
+
+    private func startAudioSessionAfterPermission() {
         guard activeRecording == nil else { return }
         do {
             let newSession = try RecordingSession(root: root)
@@ -230,21 +291,13 @@ final class AppController {
         startTicker()
     }
 
-    private func startVideoSession() {
+    private func startVideoSessionAfterPermission() {
         guard activeRecording == nil else { return }
-        switch screenRecordingPermission.prepareForCapture() {
-        case .ready:
-            break
-        case .setupStarted:
-            relaunchAfterPrivacySettingsQuit = true
-            refreshScreenRecordingPermissionMenu()
-            return
-        case .cancelled:
-            refreshScreenRecordingPermissionMenu()
-            return
-        }
-        refreshScreenRecordingPermissionMenu()
         if exportDirectoryLease == nil {
+            // A permission-triggered process replacement may leave System
+            // Settings frontmost. Activate before presenting the sandboxed
+            // folder picker so it cannot appear behind another app.
+            NSApp.activate(ignoringOtherApps: true)
             chooseExportFolder()
         }
 
@@ -459,8 +512,12 @@ final class AppController {
         videoExportName = nil
         menuBar.update(recording: false, elapsed: nil)
         if Self.captureFailure(from: error)?.code == .permissionDenied {
-            screenRecordingPermission.presentCaptureDenial()
-            refreshScreenRecordingPermissionMenu()
+            permissionFlow.arm(.screen)
+            if !recordingPermission.presentSettingsRequired(
+                for: .screenAndSystemAudio
+            ) {
+                permissionFlow.clear()
+            }
         } else {
             reportRecordingStartFailure(error, directory: session.dir)
         }
@@ -635,21 +692,13 @@ final class AppController {
         NSWorkspace.shared.open(root)
     }
 
-    private func manageScreenRecordingPermission() {
-        if screenRecordingPermission.setupPermissions() {
-            relaunchAfterPrivacySettingsQuit = true
-        }
-        refreshScreenRecordingPermissionMenu()
-    }
-
     func handleTerminationRequest(
         appleEvent: NSAppleEventDescriptor?
     ) -> Bool {
-        guard relaunchAfterPrivacySettingsQuit else { return false }
+        guard let pendingRecordingMode = permissionFlow.pendingMode else { return false }
         guard Self.isPrivacySettingsQuitEvent(appleEvent) else { return false }
 
-        relaunchAfterPrivacySettingsQuit = false
-        restart()
+        restart(resuming: pendingRecordingMode)
         return true
     }
 
@@ -686,12 +735,13 @@ final class AppController {
         )
     }
 
-    private func refreshScreenRecordingPermissionMenu() {
-        menuBar.updateScreenRecordingPermission(screenRecordingPermission.presentation)
-    }
-
-    private func restart() {
+    private func restart(resuming mode: RecordingMode) {
         guard activeRecording == nil else { return }
+        permissionFlow.clear()
+        permissionTask?.cancel()
+        permissionTask = nil
+        pendingRecordingIntentStore.save(mode)
+
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
         configuration.createsNewApplicationInstance = true
@@ -705,6 +755,7 @@ final class AppController {
                 )
                 NSApp.terminate(nil)
             } catch {
+                self?.pendingRecordingIntentStore.clear()
                 self?.postNotification(
                     title: "Record couldn’t restart",
                     body: "Quit Record from the menu bar, then open it again.",

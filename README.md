@@ -43,12 +43,14 @@ Quill workflow: microphone and system audio are written to independently
 recoverable CAF tracks and queued for local transcription after finalization.
 Every session starts with an atomic `session.json` manifest.
 
-The Record ring menu's **Set Up Recording Permissions…** action explains the two
-independent macOS privacy services once, then registers Record for both Screen
-& System Audio Recording and System Audio Recording Only without capturing any
-samples. Apple can still show a separate native confirmation for each service,
-and only the user can enable its toggle. Record opens the shared System
-Settings page after registration so neither entry needs to be added manually.
+Permissions are requested by the command that needs them. **Start screen
+recording** requests microphone plus Screen & System Audio Recording access;
+**Start audio-only recording** requests microphone plus System Audio Recording
+Only access. Requests are sequential so native prompts never stack, and Record
+does not open System Settings behind them. When Privacy & Security terminates
+Record after a changed toggle, Record replaces its process and resumes the
+single Start command that caused the request. That intent is consumed once and
+is never retained for an unrelated future launch.
 
 Raw, crash-recoverable sessions stay in Record's private session storage.
 Finished NewKap-style video exports default to the real Desktop. Because
