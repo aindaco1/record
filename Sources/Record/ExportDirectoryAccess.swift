@@ -5,7 +5,8 @@ import RecordCore
 
 /// Owns Record's persistent, user-approved access to the folder for finished
 /// exports. Active and failed recovery sessions remain private; clean screen
-/// sessions are promoted here only after a complete, validated copy.
+/// and audio-only sessions are promoted here only after a complete, validated
+/// copy.
 @MainActor
 final class ExportDirectoryAccess {
     enum AccessError: Error, CustomStringConvertible {

@@ -3,6 +3,12 @@ import XCTest
 
 @MainActor
 final class MenuBarControllerTests: XCTestCase {
+    func testMenuUsesStableActionLabels() {
+        XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcription Model")
+        XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Export folder…")
+        XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
+    }
+
     func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {
         let image = try XCTUnwrap(MenuBarController.menuBarImage())
 

@@ -64,7 +64,7 @@ Use synthetic or non-sensitive content for development recordings:
    `mic.caf` and `system.caf`. Open the MOV in QuickTime and confirm the main
    display has the expected aspect ratio; the mic file should contain your
    voice and the system file the played clip. Confirm the finalized private
-   working directory no longer appears in **Open session storage**.
+   working directory no longer appears in **Open temp session**.
 5. Revoke **System Audio Recording Only**, then choose **Start audio-only
    recording**. Record should request microphone access when needed, followed
    by System Audio Recording Only. It must not request screen capture. After a
@@ -77,7 +77,11 @@ Use synthetic or non-sensitive content for development recordings:
 7. Listen to `mic.caf` and `system.caf`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
-8. Quit Record from its menu. Rerun with `--logs` for unified process logs or
+8. Confirm the complete audio-only session appears in the approved Desktop
+   folder, its private working directory is removed, and **Audio recording
+   ready** opens the exported folder in Finder. When transcription completes,
+   confirm **Transcript ready** opens that same folder.
+9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
 Open **Plugins → Recording Name Template…**, test date/time and bundled-word
@@ -119,7 +123,7 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Transcription → MacWhisper (Small)** in the Record menu and repeat the
+**Transcription Model → MacWhisper (Small)** in the Record menu and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either CAF file, and a job
 where every available track fails must not create a successful transcript.
@@ -129,14 +133,14 @@ queued next.
 
 ## Export folder access
 
-In the signed sandboxed app, choose **Export folder: Desktop…** from the menu,
-approve Desktop, record a short video, quit, and relaunch. The menu should still
-show Desktop, the complete session directory should export without another
-prompt, and the finalized private working copy should be removed only after the
-Desktop copy validates. Click the completion and transcript notifications and
-confirm Finder selects the Desktop session. Move or revoke the selected folder,
-relaunch, and confirm Record resets the saved grant without changing or deleting
-unexported private session media.
+In the signed sandboxed app, choose **Export folder…** from the menu, approve
+Desktop, record a short screen session and a short audio-only session, quit, and
+relaunch. The item tooltip should still show Desktop, both complete session
+directories should export without another prompt, and each finalized private
+working copy should be removed only after its Desktop copy validates. Click the
+completion and transcript notifications and confirm Finder selects each Desktop
+session. Move or revoke the selected folder, relaunch, and confirm Record resets
+the saved grant without changing or deleting unexported private session media.
 
 ## macOS hardware matrix
 

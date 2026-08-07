@@ -129,7 +129,7 @@ final class AppController {
         }
     }
 
-    private enum VideoPublicationResult: Sendable {
+    private enum SessionPublicationResult: Sendable {
         case exported(FinishedSessionExport, cleanupWarning: String?)
         case exportFailed(String)
     }
@@ -148,12 +148,12 @@ final class AppController {
     private var ticker: Timer?
     private var videoStartTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
-    private var videoPublishTask: Task<Void, Never>?
+    private var sessionPublishTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
     private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
     private var quitAfterStop = false
-    private var videoExportName: String?
+    private var recordingExportName: String?
     private var lastFinishedVideoURL: URL?
 
     init(
@@ -221,7 +221,7 @@ final class AppController {
     /// Stop any live session cleanly (finalizing files) and exit.
     func shutdown() {
         quitAfterStop = true
-        guard activeRecording != nil || videoPublishTask != nil else {
+        guard activeRecording != nil || sessionPublishTask != nil else {
             NSApp.terminate(nil)
             return
         }
@@ -244,7 +244,7 @@ final class AppController {
     ) {
         guard activeRecording == nil,
             permissionTask == nil,
-            videoPublishTask == nil
+            sessionPublishTask == nil
         else { return }
 
         // A second Start click after macOS returned a stale in-process denial
@@ -290,12 +290,18 @@ final class AppController {
 
     private func startAudioSessionAfterPermission() {
         guard activeRecording == nil else { return }
+        ensureExportFolderAccess()
         do {
             let newSession = try RecordingSession(root: root)
+            recordingExportName = recordingNamePreferences.renderName(
+                at: newSession.startedAt,
+                clipboard: NSPasteboard.general.string(forType: .string)
+            )
             try newSession.start()
             activeRecording = .audio(newSession)
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
+            recordingExportName = nil
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
             postNotification(
                 title: "Audio recording couldn’t start",
@@ -311,13 +317,7 @@ final class AppController {
 
     private func startVideoSessionAfterPermission() {
         guard activeRecording == nil else { return }
-        if exportDirectoryLease == nil {
-            // A permission-triggered process replacement may leave System
-            // Settings frontmost. Activate before presenting the sandboxed
-            // folder picker so it cannot appear behind another app.
-            NSApp.activate(ignoringOtherApps: true)
-            chooseExportFolder()
-        }
+        ensureExportFolderAccess()
 
         let newSession: VideoRecordingSession
         do {
@@ -329,7 +329,7 @@ final class AppController {
             return
         }
 
-        videoExportName = recordingNamePreferences.renderName(
+        recordingExportName = recordingNamePreferences.renderName(
             at: newSession.startedAt,
             clipboard: NSPasteboard.general.string(forType: .string)
         )
@@ -410,9 +410,19 @@ final class AppController {
         menuBar.update(recording: false, elapsed: nil)
 
         if finalized {
-            let dir = session.dir
-            Task { [transcription] in await transcription.enqueue(dir) }
+            let preferredExportName =
+                recordingExportName
+                ?? RecordingNameTemplate.legacyValue.render(at: session.startedAt)
+            recordingExportName = nil
+            beginSessionPublication(
+                sessionDirectory: session.dir,
+                mode: .audioOnly,
+                originalVideoURL: nil,
+                preferredBaseName: preferredExportName
+            )
+            return
         }
+        recordingExportName = nil
         terminateIfRequested()
     }
 
@@ -440,9 +450,9 @@ final class AppController {
         videoStopTask = nil
         pendingVideoStop = false
         let preferredExportName =
-            videoExportName
+            recordingExportName
             ?? RecordingNameTemplate.legacyValue.render(at: session.startedAt)
-        videoExportName = nil
+        recordingExportName = nil
         if case .video(let active) = activeRecording, active === session {
             activeRecording = nil
         }
@@ -452,9 +462,10 @@ final class AppController {
         case .success(let outcome):
             logIngress(outcome.ingress)
             if outcome.state == .finalized, let mediaURL = outcome.mediaURL {
-                beginVideoPublication(
+                beginSessionPublication(
                     sessionDirectory: outcome.sessionDirectory,
-                    mediaURL,
+                    mode: .screen,
+                    originalVideoURL: mediaURL,
                     preferredBaseName: preferredExportName
                 )
                 return
@@ -476,16 +487,19 @@ final class AppController {
         terminateIfRequested()
     }
 
-    private func beginVideoPublication(
+    private func beginSessionPublication(
         sessionDirectory: URL,
-        _ mediaURL: URL,
+        mode: RecordingMode,
+        originalVideoURL: URL?,
         preferredBaseName: String
     ) {
         guard let exportDirectoryLease else {
-            lastFinishedVideoURL = mediaURL
+            if let originalVideoURL {
+                lastFinishedVideoURL = originalVideoURL
+            }
             refreshGifskiMenu()
             postNotification(
-                title: "Screen recording ready",
+                title: Self.readyNotificationTitle(for: mode),
                 body: "Saved locally. Click to open the recording folder.",
                 directory: sessionDirectory
             )
@@ -494,11 +508,11 @@ final class AppController {
             return
         }
 
-        menuBar.updateSavingScreenRecording()
+        menuBar.updateSavingRecording()
         let exportRoot = exportDirectoryLease.url
         let recordingsRoot = root
         let worker = Task.detached(priority: .utility) {
-            () -> VideoPublicationResult in
+            () -> SessionPublicationResult in
             do {
                 let export = try FinishedSessionExporter.export(
                     sourceDirectory: sessionDirectory,
@@ -519,30 +533,34 @@ final class AppController {
                 return .exportFailed(String(describing: error))
             }
         }
-        videoPublishTask = Task { [weak self] in
+        sessionPublishTask = Task { [weak self] in
             let result = await worker.value
-            self?.finishVideoPublication(
+            self?.finishSessionPublication(
                 result,
-                originalMediaURL: mediaURL,
+                mode: mode,
+                originalVideoURL: originalVideoURL,
                 originalSessionDirectory: sessionDirectory,
                 exportRoot: exportRoot
             )
         }
     }
 
-    private func finishVideoPublication(
-        _ result: VideoPublicationResult,
-        originalMediaURL: URL,
+    private func finishSessionPublication(
+        _ result: SessionPublicationResult,
+        mode: RecordingMode,
+        originalVideoURL: URL?,
         originalSessionDirectory: URL,
         exportRoot: URL
     ) {
-        videoPublishTask = nil
+        sessionPublishTask = nil
         menuBar.update(recording: false, elapsed: nil)
 
         let publishedDirectory: URL
         switch result {
         case .exported(let export, let cleanupWarning):
-            lastFinishedVideoURL = export.videoURL
+            if mode == .screen {
+                lastFinishedVideoURL = export.videoURL ?? originalVideoURL
+            }
             publishedDirectory = export.directoryURL
             FileHandle.standardError.write(
                 Data("○ recording exported → \(export.directoryURL.path)\n".utf8)
@@ -553,7 +571,7 @@ final class AppController {
                 )
             }
             postNotification(
-                title: "Screen recording ready",
+                title: Self.readyNotificationTitle(for: mode),
                 body:
                     cleanupWarning == nil
                     ? "Saved to \(exportRoot.lastPathComponent). Click to open the recording folder."
@@ -561,12 +579,14 @@ final class AppController {
                 directory: export.directoryURL
             )
         case .exportFailed(let message):
-            lastFinishedVideoURL = originalMediaURL
+            if mode == .screen {
+                lastFinishedVideoURL = originalVideoURL
+            }
             publishedDirectory = originalSessionDirectory
             FileHandle.standardError.write(Data("recording export failed: \(message)\n".utf8))
             postNotification(
-                title: "Screen recording saved locally",
-                body: "The Desktop copy failed, but the original recording is safe.",
+                title: Self.savedLocallyNotificationTitle(for: mode),
+                body: "The export failed, but the original recording is safe.",
                 directory: originalSessionDirectory
             )
         }
@@ -592,7 +612,7 @@ final class AppController {
             activeRecording = nil
         }
         pendingVideoStop = false
-        videoExportName = nil
+        recordingExportName = nil
         menuBar.update(recording: false, elapsed: nil)
         if Self.captureFailure(from: error)?.code == .permissionDenied {
             permissionFlow.arm(.screen)
@@ -638,6 +658,20 @@ final class AppController {
             "Screen Recording permission is required. Audio-only recording still works."
         case .internalFailure, nil:
             "Record couldn’t prepare screen capture. The failed session was preserved."
+        }
+    }
+
+    static func readyNotificationTitle(for mode: RecordingMode) -> String {
+        switch mode {
+        case .screen: "Screen recording ready"
+        case .audioOnly: "Audio recording ready"
+        }
+    }
+
+    static func savedLocallyNotificationTitle(for mode: RecordingMode) -> String {
+        switch mode {
+        case .screen: "Screen recording saved locally"
+        case .audioOnly: "Audio recording saved locally"
         }
     }
 
@@ -888,6 +922,12 @@ final class AppController {
         menuBar.updateExportDirectory(
             exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
         )
+    }
+
+    private func ensureExportFolderAccess() {
+        guard exportDirectoryLease == nil else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        chooseExportFolder()
     }
 
     private func chooseExportFolder() {

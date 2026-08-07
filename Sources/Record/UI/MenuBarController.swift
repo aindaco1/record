@@ -8,6 +8,9 @@ import RecordCore
 @MainActor
 final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
+    static let transcriptionModelMenuTitle = "Transcription Model"
+    static let openTempSessionMenuTitle = "Open temp session"
+    static let exportFolderMenuTitle = "Export folder…"
 
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
@@ -114,7 +117,7 @@ final class MenuBarController {
         menu.addItem(pluginsItem)
 
         transcriptionEngineItem = NSMenuItem(
-            title: "Transcription: Parakeet",
+            title: Self.transcriptionModelMenuTitle,
             action: nil,
             keyEquivalent: ""
         )
@@ -139,14 +142,14 @@ final class MenuBarController {
         menu.addItem(transcriptionEngineItem)
 
         let openFolder = NSMenuItem(
-            title: "Open session storage",
+            title: Self.openTempSessionMenuTitle,
             action: #selector(openFolderClicked),
             keyEquivalent: "o"
         )
         menu.addItem(openFolder)
 
         exportFolderItem = NSMenuItem(
-            title: "Export folder: Desktop…",
+            title: Self.exportFolderMenuTitle,
             action: #selector(chooseExportFolderClicked),
             keyEquivalent: ""
         )
@@ -228,7 +231,7 @@ final class MenuBarController {
         setCapturePrivacyItemsEnabled(false)
     }
 
-    func updateSavingScreenRecording() {
+    func updateSavingRecording() {
         stateLabel.title = "saving recording…"
         toggleItem.title = "Saving recording…"
         toggleItem.isEnabled = false
@@ -270,7 +273,6 @@ final class MenuBarController {
         _ engine: TranscriptionEngineOption,
         macWhisperAvailable: Bool
     ) {
-        transcriptionEngineItem.title = "Transcription: \(engine.displayName)"
         parakeetEngineItem.state = engine == .parakeet ? .on : .off
         macWhisperEngineItem.state = engine == .macwhisper ? .on : .off
         macWhisperEngineItem.isEnabled = macWhisperAvailable
@@ -287,7 +289,7 @@ final class MenuBarController {
     /// Show the default or approved destination for finished exports. An
     /// ellipsis communicates that selecting the item opens a folder picker.
     func updateExportDirectory(_ url: URL) {
-        exportFolderItem.title = "Export folder: \(url.lastPathComponent)…"
+        exportFolderItem.title = Self.exportFolderMenuTitle
         exportFolderItem.toolTip = url.path
     }
 

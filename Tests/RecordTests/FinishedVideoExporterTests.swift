@@ -20,19 +20,40 @@ final class FinishedSessionExporterTests: XCTestCase {
         )
 
         XCTAssertNotEqual(first.directoryURL, second.directoryURL)
-        XCTAssertEqual(first.videoURL.lastPathComponent, "recording.mov")
+        XCTAssertEqual(first.videoURL?.lastPathComponent, "recording.mov")
         for export in [first, second] {
             XCTAssertEqual(
                 Set(try FileManager.default.contentsOfDirectory(atPath: export.directoryURL.path)),
                 ["session.json", "recording.mov", "system.caf", "mic.caf"]
             )
-            XCTAssertEqual(try Data(contentsOf: export.videoURL), Data("video".utf8))
+            XCTAssertEqual(
+                try Data(contentsOf: XCTUnwrap(export.videoURL)),
+                Data("video".utf8)
+            )
             XCTAssertEqual(try SessionManifest.read(from: export.directoryURL).state, .finalized)
         }
         let names = try FileManager.default.contentsOfDirectory(
             atPath: fixture.destination.path
         )
         XCTAssertFalse(names.contains { $0.hasPrefix(".") || $0.contains("partial") })
+    }
+
+    func testExportPublishesACompleteAudioOnlySession() throws {
+        let fixture = try makeFixture(includesScreen: false)
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+
+        let exported = try FinishedSessionExporter.export(
+            sourceDirectory: fixture.source,
+            to: fixture.destination,
+            preferredDirectoryName: "Audio Test"
+        )
+
+        XCTAssertNil(exported.videoURL)
+        XCTAssertEqual(
+            Set(try FileManager.default.contentsOfDirectory(atPath: exported.directoryURL.path)),
+            ["session.json", "system.caf", "mic.caf"]
+        )
+        XCTAssertEqual(try SessionManifest.read(from: exported.directoryURL).state, .finalized)
     }
 
     func testExportRejectsMissingOrEmptyDeclaredTrack() throws {
@@ -131,7 +152,8 @@ final class FinishedSessionExporterTests: XCTestCase {
     }
 
     private func makeFixture(
-        state: SessionManifest.State = .finalized
+        state: SessionManifest.State = .finalized,
+        includesScreen: Bool = true
     ) throws -> (
         root: URL,
         recordingsRoot: URL,
@@ -150,19 +172,24 @@ final class FinishedSessionExporterTests: XCTestCase {
             at: destination,
             withIntermediateDirectories: true
         )
-        try Data("video".utf8).write(to: source.appendingPathComponent("recording.mov"))
+        if includesScreen {
+            try Data("video".utf8).write(to: source.appendingPathComponent("recording.mov"))
+        }
         try Data("system".utf8).write(to: source.appendingPathComponent("system.caf"))
         try Data("microphone".utf8).write(to: source.appendingPathComponent("mic.caf"))
         let start = Date(timeIntervalSince1970: 100)
+        var tracks: [SessionManifest.Track] = [
+            .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
+            .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+        ]
+        if includesScreen {
+            tracks.insert(.init(kind: .screen, filename: "recording.mov"), at: 0)
+        }
         try SessionManifest(
             state: state,
             startedAt: start,
             endedAt: start.addingTimeInterval(10),
-            tracks: [
-                .init(kind: .screen, filename: "recording.mov"),
-                .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
-                .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
-            ]
+            tracks: tracks
         ).write(to: source)
         return (root, recordingsRoot, source, destination)
     }

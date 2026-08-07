@@ -8,6 +8,73 @@ struct RecordNotification: Equatable, Sendable {
     let destinationDirectory: URL
 }
 
+private enum NotificationUserInfoKey {
+    static let directoryToken = "recordDirectoryToken"
+}
+
+private actor RecordNotificationDelivery {
+    private let center: UNUserNotificationCenter
+    private var authorizationRequest: Task<Bool, Error>?
+
+    init(center: UNUserNotificationCenter) {
+        self.center = center
+    }
+
+    func post(_ notification: RecordNotification, directoryToken: String) async {
+        do {
+            guard try await canDeliverNotifications() else { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = notification.title
+            content.body = notification.body
+            content.sound = .default
+            content.threadIdentifier = "record.recordings"
+            content.userInfo = [NotificationUserInfoKey.directoryToken: directoryToken]
+
+            try await center.add(
+                UNNotificationRequest(
+                    identifier: UUID().uuidString,
+                    content: content,
+                    trigger: nil
+                )
+            )
+        } catch {
+            Self.logNotificationFailure(error)
+        }
+    }
+
+    private func canDeliverNotifications() async throws -> Bool {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        case .notDetermined:
+            if let authorizationRequest {
+                return try await authorizationRequest.value
+            }
+            let request = Task {
+                try await center.requestAuthorization(options: [.alert, .sound])
+            }
+            authorizationRequest = request
+            defer { authorizationRequest = nil }
+            return try await request.value
+        case .denied:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
+    private static func logNotificationFailure(_ error: Error) {
+        let error = error as NSError
+        FileHandle.standardError.write(
+            Data(
+                "Record could not post a notification (\(error.domain) \(error.code))\n".utf8
+            )
+        )
+    }
+}
+
 /// Stores only a direct child name (or the recordings root marker) in the
 /// notification database. Resolution fails closed if the payload is altered.
 struct NotificationDirectoryReference: Equatable, Sendable {
@@ -86,11 +153,7 @@ struct NotificationDirectoryReference: Equatable, Sendable {
 final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate,
     @unchecked Sendable
 {
-    private enum UserInfoKey {
-        static let directoryToken = "recordDirectoryToken"
-    }
-
-    private let center: UNUserNotificationCenter
+    private let delivery: RecordNotificationDelivery
     private let directoryLock = NSLock()
     private var directories: NotificationDirectoryReference
 
@@ -98,7 +161,7 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
         recordingsRoot: URL,
         center: UNUserNotificationCenter = .current()
     ) {
-        self.center = center
+        delivery = RecordNotificationDelivery(center: center)
         directories = NotificationDirectoryReference(recordingsRoot: recordingsRoot)
         super.init()
         center.delegate = self
@@ -124,25 +187,8 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
             return
         }
 
-        center.getNotificationSettings { [weak self] settings in
-            guard let self else { return }
-            switch settings.authorizationStatus {
-            case .authorized, .provisional, .ephemeral:
-                self.enqueue(notification, directoryToken: token)
-            case .notDetermined:
-                self.center.requestAuthorization(options: [.alert, .sound]) {
-                    [weak self] granted, error in
-                    if granted {
-                        self?.enqueue(notification, directoryToken: token)
-                    } else if error != nil {
-                        Self.logNotificationFailure()
-                    }
-                }
-            case .denied:
-                break
-            @unknown default:
-                break
-            }
+        Task { [delivery] in
+            await delivery.post(notification, directoryToken: token)
         }
     }
 
@@ -164,7 +210,7 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
     ) {
         let token =
             response.notification.request.content.userInfo[
-                UserInfoKey.directoryToken
+                NotificationUserInfoKey.directoryToken
             ] as? String
         let directory = token.flatMap { token in
             directoryLock.withLock { directories.resolve(token) }
@@ -175,30 +221,5 @@ final class RecordNotificationCenter: NSObject, UNUserNotificationCenterDelegate
             }
         }
         completionHandler()
-    }
-
-    private func enqueue(_ notification: RecordNotification, directoryToken: String) {
-        let content = UNMutableNotificationContent()
-        content.title = notification.title
-        content.body = notification.body
-        content.sound = .default
-        content.threadIdentifier = "record.recordings"
-        content.userInfo = [UserInfoKey.directoryToken: directoryToken]
-
-        center.add(
-            UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: nil
-            )
-        ) { error in
-            if error != nil {
-                Self.logNotificationFailure()
-            }
-        }
-    }
-
-    private static func logNotificationFailure() {
-        FileHandle.standardError.write(Data("Record could not post a notification\n".utf8))
     }
 }

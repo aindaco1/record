@@ -3,7 +3,7 @@ import RecordCore
 
 struct FinishedSessionExport: Equatable, Sendable {
     let directoryURL: URL
-    let videoURL: URL
+    let videoURL: URL?
 }
 
 /// Copies one finalized session into a user-approved destination as a complete
@@ -73,13 +73,11 @@ enum FinishedSessionExporter {
         _ = try validatedManifest(in: partialURL, fileManager: fileManager)
         try fileManager.moveItem(at: partialURL, to: finalURL)
 
-        guard let videoFilename = manifest.tracks.first(where: { $0.kind == .screen })?.filename
-        else {
-            throw ExportError.invalidSource
-        }
         return FinishedSessionExport(
             directoryURL: finalURL,
-            videoURL: finalURL.appendingPathComponent(videoFilename, isDirectory: false)
+            videoURL: manifest.tracks.first(where: { $0.kind == .screen }).map {
+                finalURL.appendingPathComponent($0.filename, isDirectory: false)
+            }
         )
     }
 
@@ -91,7 +89,8 @@ enum FinishedSessionExporter {
             !isSymbolicLink(sourceDirectory),
             let manifest = try? SessionManifest.read(from: sourceDirectory),
             manifest.state == .finalized,
-            manifest.tracks.filter({ $0.kind == .screen }).count == 1
+            !manifest.tracks.isEmpty,
+            manifest.tracks.filter({ $0.kind == .screen }).count <= 1
         else {
             throw ExportError.invalidSource
         }

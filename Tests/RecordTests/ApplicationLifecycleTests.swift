@@ -4,6 +4,25 @@ import XCTest
 
 @MainActor
 final class ApplicationLifecycleTests: XCTestCase {
+    func testPublicationNotificationsDescribeTheRecordingMode() {
+        XCTAssertEqual(
+            AppController.readyNotificationTitle(for: .audioOnly),
+            "Audio recording ready"
+        )
+        XCTAssertEqual(
+            AppController.readyNotificationTitle(for: .screen),
+            "Screen recording ready"
+        )
+        XCTAssertEqual(
+            AppController.savedLocallyNotificationTitle(for: .audioOnly),
+            "Audio recording saved locally"
+        )
+        XCTAssertEqual(
+            AppController.savedLocallyNotificationTitle(for: .screen),
+            "Screen recording saved locally"
+        )
+    }
+
     func testPrivacySettingsQuitIsTheOnlyRelaunchTrigger() {
         XCTAssertTrue(
             AppController.shouldRelaunchAfterPrivacySettingsQuit(
