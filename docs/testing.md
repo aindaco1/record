@@ -21,7 +21,10 @@ regressions run on every pull request.
 - command-scoped permission ordering, exact TCC service selection, and
   one-shot recording-intent recovery across a privacy restart
 - session state transitions and atomic manifest round trips
-- interrupted-session recovery, live-process protection, and path traversal rejection
+- interrupted-session recovery, content-free recovery summaries, live-process
+  protection, and path traversal rejection
+- manifest-derived recent-recording discovery plus symlink and nesting rejection
+- failed-transcription retry menu state and no-op behavior without a failed job
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
 - native login-item state mapping and fail-closed approval handling
@@ -89,7 +92,8 @@ Use synthetic or non-sensitive content for development recordings:
 8. Confirm the complete audio-only session appears in the approved Desktop
    folder, its private working directory is removed, and **Audio recording
    ready** opens the exported folder in Finder. When transcription completes,
-   confirm **Transcript ready** opens that same folder.
+   confirm **Transcript ready** opens that same folder. Quit and reopen Record,
+   then choose **Open last recording** and confirm Finder reveals that session.
 9. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
@@ -142,6 +146,9 @@ path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either CAF file, and a job
 where every available track fails must not create a successful transcript.
+After a failure, choose **Transcription Model → Retry Failed Transcription**
+and confirm the action disappears while the job runs and a successful retry
+creates the canonical transcript without changing either source file.
 Screen and audio-only sessions use the same independent CAF inputs for local
 transcription; selecting an engine affects whichever finalized session is
 queued next.
@@ -174,7 +181,7 @@ release, install the prior notarized version on a clean test account, choose
 replacement, and relaunch. Confirm a same-version check reports no update.
 
 Before updating, grant all three Record privacy services and capture a short
-screen and audio-only session. After updating 1.0.0 to 1.0.1, confirm the
+screen and audio-only session. After updating 1.0.1 to 1.0.2, confirm the
 toggles still identify Record as enabled and neither recording mode repeats an
 already-approved prompt. Run
 `./scripts/ci/check-tcc-identity.sh /Applications/Record.app` on both builds;

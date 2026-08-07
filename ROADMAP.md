@@ -3,29 +3,37 @@
 Record 1.0 intentionally focuses on dependable main-display and audio capture.
 Priorities may change as real recordings expose better opportunities.
 
-## 1.0.1 maintenance
+## 1.0.2 maintenance
 
-- Guided, hash-verified import for the default Parakeet v3 model.
-- Stable signing-identity enforcement so privacy grants survive updates.
-- Reliable native Open at Login registration and optional-engine discovery.
+- One-click retry for the most recent failed local transcription.
+- A manifest-derived **Open last recording** action without a history database.
+- Human-readable recovery summaries for interrupted or malformed temp sessions.
+- A smaller issue backlog centered on observed reliability needs.
 
 ## Next
 
 - Display, window, application, and region source selection.
 - Pause and resume with lossless segment concatenation.
 - First-class microphone and frame-rate selection.
-- Recovery UX for interrupted but salvageable sessions.
+- Safe microphone route-change recovery and visible per-track health.
 - A settings window for output, transcription, and plugin preferences.
-- Automated update-feed integration tests using an isolated local fixture.
+- Lightweight recording history and configurable shortcuts.
+- Optional Homebrew Cask after clean install/uninstall verification.
 - Direct source selection and pause/resume acceptance tests on real hardware.
 
-## Later
+## Parked ideas
+
+These are useful possibilities, not active commitments. They do not need open
+umbrella issues until a real use case justifies the complexity.
 
 - Camera overlay with reconnect-safe device handling.
 - Non-destructive trim, crop, mask, and annotation operations.
 - Export presets with transparent format and quality tradeoffs.
 - A capability-limited, out-of-process extension protocol.
 - Optional cursor-click visualization and per-source audio controls.
+- Optional first-party Whisper/translation if MacWhisper stops meeting the need.
+- Reversible cross-track echo detection backed by a representative local corpus.
+- An opt-in local browser speaker-metadata bridge.
 - Localization and VoiceOver-focused accessibility review.
 
 ## Non-goals

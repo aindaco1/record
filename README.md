@@ -37,6 +37,9 @@ preferences, temporary recovery sessions, and installed transcription model.
   first use, and the sandbox grant persists across launches.
 - **Open temp session** opens private recovery storage for sessions that have
   not been exported.
+- **Open last recording** reveals the newest finished session from private or
+  approved export storage. Record derives this from `session.json` and keeps no
+  separate activity database.
 - **Check for Updates…** checks the signed GitHub release feed only when
   selected and can install a newer notarized build.
 - **Open at Login** uses the macOS Login Items service and is off by default.
@@ -73,6 +76,11 @@ Choose **Transcription Model → MacWhisper (Small)**. This option is absent
 unless MacWhisper, its bundled `mw`, and Record's sandbox helper are all
 available. Record validates the MacWhisper application signature before each
 invocation and never falls back silently from one engine to another.
+
+If a local transcription fails, **Transcription Model → Retry Failed
+Transcription** appears until the job is retried. Record keeps both source audio
+files unchanged. A startup recovery scan also summarizes interrupted sessions
+and opens only Record's temporary recovery folder from the notification.
 
 ## Built-in plugins
 
@@ -132,7 +140,7 @@ boundaries.
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
 - [Quill migration record](docs/migration/quill-triage.md)
-- [Current GitHub issue triage](docs/project/issue-triage-2026-08-07.md)
+- [Current GitHub issue triage](docs/project/issue-triage-1.0.2.md)
 - [Support](SUPPORT.md)
 
 ## Provenance and license

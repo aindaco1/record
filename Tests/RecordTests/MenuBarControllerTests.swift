@@ -7,8 +7,32 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcription Model")
         XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Export folder…")
         XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
+        XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
         XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
+    }
+
+    func testRetryTranscriptionAppearsOnlyForAnActionableFailure() {
+        let menu = MenuBarController()
+
+        menu.updateTranscription("transcribing")
+        XCTAssertFalse(menu.isRetryTranscriptionMenuItemVisible)
+
+        menu.updateTranscription("transcription failed", retryAvailable: true)
+        XCTAssertTrue(menu.isRetryTranscriptionMenuItemVisible)
+
+        menu.updateTranscription(nil)
+        XCTAssertFalse(menu.isRetryTranscriptionMenuItemVisible)
+    }
+
+    func testLastRecordingStartsDisabledAndBecomesActionable() {
+        let menu = MenuBarController()
+
+        XCTAssertFalse(menu.isOpenLastRecordingEnabled)
+        menu.updateLastRecording(available: true)
+        XCTAssertTrue(menu.isOpenLastRecordingEnabled)
+        menu.updateLastRecording(available: false)
+        XCTAssertFalse(menu.isOpenLastRecordingEnabled)
     }
 
     func testMacWhisperIsAbsentUnlessTheIntegrationIsAvailable() {

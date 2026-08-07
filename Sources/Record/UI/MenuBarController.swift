@@ -10,6 +10,7 @@ final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
     static let transcriptionModelMenuTitle = "Transcription Model"
     static let openTempSessionMenuTitle = "Open temp session"
+    static let openLastRecordingMenuTitle = "Open last recording"
     static let exportFolderMenuTitle = "Export folder…"
     static let checkForUpdatesMenuTitle = "Check for Updates…"
     static let launchAtLoginMenuTitle = "Open at Login"
@@ -29,12 +30,16 @@ final class MenuBarController {
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
     private let parakeetModelSetupItem: NSMenuItem
+    private let retryTranscriptionItem: NSMenuItem
+    private let openLastRecordingItem: NSMenuItem
     private let exportFolderItem: NSMenuItem
     private let checkForUpdatesItem: NSMenuItem
     private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
 
     var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
+    var isRetryTranscriptionMenuItemVisible: Bool { !retryTranscriptionItem.isHidden }
+    var isOpenLastRecordingEnabled: Bool { openLastRecordingItem.isEnabled }
 
     var onToggle: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
@@ -44,7 +49,9 @@ final class MenuBarController {
     var onOpenLastVideoInGifski: (() -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
     var onSetUpParakeetModel: (() -> Void)?
+    var onRetryTranscription: (() -> Void)?
     var onOpenFolder: (() -> Void)?
+    var onOpenLastRecording: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
     var onToggleLaunchAtLogin: (() -> Void)?
@@ -155,6 +162,15 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         transcriptionMenu.addItem(parakeetModelSetupItem)
+        transcriptionMenu.addItem(.separator())
+        retryTranscriptionItem = NSMenuItem(
+            title: "Retry Failed Transcription",
+            action: #selector(retryTranscriptionClicked),
+            keyEquivalent: ""
+        )
+        retryTranscriptionItem.isHidden = true
+        retryTranscriptionItem.isEnabled = false
+        transcriptionMenu.addItem(retryTranscriptionItem)
         transcriptionEngineItem.submenu = transcriptionMenu
         menu.addItem(transcriptionEngineItem)
 
@@ -164,6 +180,14 @@ final class MenuBarController {
             keyEquivalent: "o"
         )
         menu.addItem(openFolder)
+
+        openLastRecordingItem = NSMenuItem(
+            title: Self.openLastRecordingMenuTitle,
+            action: #selector(openLastRecordingClicked),
+            keyEquivalent: ""
+        )
+        openLastRecordingItem.isEnabled = false
+        menu.addItem(openLastRecordingItem)
 
         exportFolderItem = NSMenuItem(
             title: Self.exportFolderMenuTitle,
@@ -209,7 +233,9 @@ final class MenuBarController {
             parakeetEngineItem,
             macWhisperEngineItem,
             parakeetModelSetupItem,
+            retryTranscriptionItem,
             openFolder,
+            openLastRecordingItem,
             exportFolderItem,
             checkForUpdatesItem,
             launchAtLoginItem,
@@ -300,9 +326,11 @@ final class MenuBarController {
     /// Show transcription progress/failure as a second status line in the
     /// menu; nil hides it. Independent of recording state — a new recording
     /// can run while the last one transcribes.
-    func updateTranscription(_ text: String?) {
+    func updateTranscription(_ text: String?, retryAvailable: Bool = false) {
         transcriptionLabel.title = text ?? ""
         transcriptionLabel.isHidden = text == nil
+        retryTranscriptionItem.isHidden = !retryAvailable
+        retryTranscriptionItem.isEnabled = retryAvailable
     }
 
     func updateTranscriptionEngine(
@@ -326,6 +354,13 @@ final class MenuBarController {
     func updateExportDirectory(_ url: URL) {
         exportFolderItem.title = Self.exportFolderMenuTitle
         exportFolderItem.toolTip = url.path
+    }
+
+    func updateLastRecording(available: Bool) {
+        openLastRecordingItem.title = Self.openLastRecordingMenuTitle
+        openLastRecordingItem.isEnabled = available
+        openLastRecordingItem.toolTip =
+            available ? "Reveal the most recently finished recording in Finder" : nil
     }
 
     func updateLaunchAtLogin(_ state: LaunchAtLoginState) {
@@ -469,7 +504,9 @@ final class MenuBarController {
         onSelectTranscriptionEngine?(engine)
     }
     @objc private func setUpParakeetModelClicked() { onSetUpParakeetModel?() }
+    @objc private func retryTranscriptionClicked() { onRetryTranscription?() }
     @objc private func openFolderClicked() { onOpenFolder?() }
+    @objc private func openLastRecordingClicked() { onOpenLastRecording?() }
     @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
     @objc private func checkForUpdatesClicked() { onCheckForUpdates?() }
     @objc private func toggleLaunchAtLoginClicked() { onToggleLaunchAtLogin?() }

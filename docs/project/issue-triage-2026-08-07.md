@@ -1,5 +1,7 @@
 # GitHub issue triage — 2026-08-07
 
+Superseded by the narrower [Record 1.0.2 triage](issue-triage-1.0.2.md).
+
 All open issues were reviewed against the 1.0.0 source, tests, release
 artifacts, and the 1.0.1 candidate. None were stale by age: every issue had
 been updated on August 6 or 7. The useful distinction is completed, maintenance,

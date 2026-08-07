@@ -157,12 +157,14 @@ final class AppController {
     private var videoStartTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
     private var sessionPublishTask: Task<Void, Never>?
+    private var recentRecordingRefreshTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
     private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
     private var quitAfterStop = false
     private var recordingExportName: String?
     private var lastFinishedVideoURL: URL?
+    private var lastFinishedRecordingDirectory: URL?
     private var presentedMissingModelPrompt = false
     private var modelImportInProgress = false
 
@@ -198,18 +200,22 @@ final class AppController {
         menuBar.onSetUpParakeetModel = { [weak self] in
             self?.presentParakeetModelSetup()
         }
+        menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
         menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
+        menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
         menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
         menuBar.onToggleLaunchAtLogin = { [weak self] in self?.toggleLaunchAtLogin() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        menuBar.updateLastRecording(available: false)
         refreshCapturePrivacyMenu()
         refreshRecordingNameMenu()
         refreshGifskiMenu()
         refreshTranscriptionEngineMenu()
         refreshLaunchAtLoginMenu()
         restoreExportFolderAccess()
+        refreshRecentRecordingMenu()
         let restoredExportRoot = exportDirectoryLease?.url
 
         Task { [transcription, root] in
@@ -533,6 +539,7 @@ final class AppController {
             if let originalVideoURL {
                 lastFinishedVideoURL = originalVideoURL
             }
+            setLastFinishedRecordingDirectory(sessionDirectory)
             refreshGifskiMenu()
             postNotification(
                 title: Self.readyNotificationTitle(for: mode),
@@ -626,6 +633,7 @@ final class AppController {
                 directory: originalSessionDirectory
             )
         }
+        setLastFinishedRecordingDirectory(publishedDirectory)
         refreshGifskiMenu()
         Task { [transcription] in await transcription.enqueue(publishedDirectory) }
         terminateIfRequested()
@@ -813,7 +821,19 @@ final class AppController {
                 queued > 0 ? "transcribing \(name) · \(queued) queued" : "transcribing \(name)"
             )
         case .failed(let name):
-            menuBar.updateTranscription("transcription failed · \(name)")
+            menuBar.updateTranscription(
+                "transcription failed · \(name)",
+                retryAvailable: true
+            )
+        }
+    }
+
+    private func retryTranscription() {
+        menuBar.updateTranscription("retrying transcription…")
+        Task { [weak self, transcription] in
+            if !(await transcription.retryLastFailure()) {
+                self?.menuBar.updateTranscription(nil)
+            }
         }
     }
 
@@ -943,6 +963,49 @@ final class AppController {
     private func openFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
+    }
+
+    private func openLastRecording() {
+        guard
+            let directory = lastFinishedRecordingDirectory,
+            RecentRecordingLocator.isFinishedSession(
+                directory,
+                under: recentRecordingRoots
+            )
+        else {
+            setLastFinishedRecordingDirectory(nil)
+            refreshRecentRecordingMenu()
+            return
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([directory])
+    }
+
+    private var recentRecordingRoots: [URL] {
+        [exportDirectoryLease?.url, root].compactMap { $0 }
+    }
+
+    private func setLastFinishedRecordingDirectory(_ directory: URL?) {
+        let directory = directory?.standardizedFileURL
+        let validated = directory.flatMap {
+            RecentRecordingLocator.isFinishedSession($0, under: recentRecordingRoots)
+                ? $0
+                : nil
+        }
+        lastFinishedRecordingDirectory = validated
+        menuBar.updateLastRecording(available: validated != nil)
+    }
+
+    private func refreshRecentRecordingMenu() {
+        recentRecordingRefreshTask?.cancel()
+        let roots = recentRecordingRoots
+        recentRecordingRefreshTask = Task { [weak self] in
+            let directory = await Task.detached(priority: .utility) {
+                RecentRecordingLocator.mostRecent(under: roots)
+            }.value
+            guard !Task.isCancelled else { return }
+            self?.setLastFinishedRecordingDirectory(directory)
+            self?.recentRecordingRefreshTask = nil
+        }
     }
 
     private func checkForUpdates() {
@@ -1119,6 +1182,7 @@ final class AppController {
             exportDirectoryLease = selection
             notifications.updateExportRoot(selection.url)
             menuBar.updateExportDirectory(selection.url)
+            refreshRecentRecordingMenu()
             Task { [transcription] in
                 await transcription.resumePending(
                     root: selection.url,
