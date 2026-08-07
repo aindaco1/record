@@ -37,6 +37,56 @@ struct RegionSelectionGeometry {
     }
 }
 
+struct RegionDisplayCandidate: Equatable, Sendable {
+    let displayID: UInt32
+    let bounds: CaptureRect
+}
+
+enum RegionDisplayResolver {
+    static func displayID(
+        selectedDisplayID: UInt32?,
+        contentRect: CaptureRect,
+        candidates: [RegionDisplayCandidate]
+    ) -> UInt32? {
+        if let selectedDisplayID,
+            candidates.contains(where: { $0.displayID == selectedDisplayID })
+        {
+            return selectedDisplayID
+        }
+
+        let tolerance = 1.0
+        let geometryMatches = candidates.filter {
+            approximatelyEqual($0.bounds.x, contentRect.x, tolerance: tolerance)
+                && approximatelyEqual($0.bounds.y, contentRect.y, tolerance: tolerance)
+                && approximatelyEqual($0.bounds.width, contentRect.width, tolerance: tolerance)
+                && approximatelyEqual($0.bounds.height, contentRect.height, tolerance: tolerance)
+        }
+        if geometryMatches.count == 1 {
+            return geometryMatches[0].displayID
+        }
+
+        let sizeMatches = candidates.filter {
+            approximatelyEqual($0.bounds.width, contentRect.width, tolerance: tolerance)
+                && approximatelyEqual($0.bounds.height, contentRect.height, tolerance: tolerance)
+        }
+        if sizeMatches.count == 1 {
+            return sizeMatches[0].displayID
+        }
+
+        // A single physical display is unambiguous even when a beta OS returns
+        // incomplete picker metadata or a different global coordinate origin.
+        return candidates.count == 1 ? candidates[0].displayID : nil
+    }
+
+    private static func approximatelyEqual(
+        _ lhs: Double,
+        _ rhs: Double,
+        tolerance: Double
+    ) -> Bool {
+        abs(lhs - rhs) <= tolerance
+    }
+}
+
 /// A short-lived, noncapturing overlay used after the system picker selects a
 /// display. It emits only display-local geometry and never takes a screenshot.
 @MainActor
@@ -76,7 +126,7 @@ final class RegionSelectionController {
                     }
                 }
 
-                let panel = NSPanel(
+                let panel = RegionSelectionPanel(
                     contentRect: screen.frame,
                     styleMask: [.borderless],
                     backing: .buffered,
@@ -89,10 +139,10 @@ final class RegionSelectionController {
                 panel.isOpaque = false
                 panel.hasShadow = false
                 panel.contentView = view
-                panel.makeFirstResponder(view)
+                self.panel = panel
                 NSApp.activate(ignoringOtherApps: true)
                 panel.makeKeyAndOrderFront(nil)
-                self.panel = panel
+                panel.makeFirstResponder(view)
             }
         } onCancel: {
             Task { @MainActor [weak self] in
@@ -112,26 +162,39 @@ final class RegionSelectionController {
     private static func screen(
         for selection: SystemScreenCaptureSelection
     ) -> NSScreen? {
-        let candidates: [(screen: NSScreen, id: UInt32)] = NSScreen.screens.compactMap { screen in
-            guard let number = screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber
-            else { return nil }
-            return (screen, number.uint32Value)
-        }
-        if let selectedDisplayID = selection.selectedDisplayID {
-            return candidates.first { $0.id == selectedDisplayID }?.screen
-        }
-
-        let selected = selection.plan.contentRect
-        let tolerance = 1.0
-        let matches = candidates.filter { candidate in
-            let bounds = CGDisplayBounds(candidate.id)
-            return abs(bounds.origin.x - selected.x) <= tolerance
-                && abs(bounds.origin.y - selected.y) <= tolerance
-                && abs(bounds.width - selected.width) <= tolerance
-                && abs(bounds.height - selected.height) <= tolerance
-        }
-        return matches.count == 1 ? matches[0].screen : nil
+        let candidates: [(screen: NSScreen, descriptor: RegionDisplayCandidate)] =
+            NSScreen.screens.compactMap { screen in
+                guard let number = screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber
+                else { return nil }
+                let displayID = number.uint32Value
+                let bounds = CGDisplayBounds(displayID)
+                return (
+                    screen,
+                    .init(
+                        displayID: displayID,
+                        bounds: .init(
+                            x: bounds.origin.x,
+                            y: bounds.origin.y,
+                            width: bounds.width,
+                            height: bounds.height
+                        )
+                    )
+                )
+            }
+        guard
+            let displayID = RegionDisplayResolver.displayID(
+                selectedDisplayID: selection.selectedDisplayID,
+                contentRect: selection.plan.contentRect,
+                candidates: candidates.map(\.descriptor)
+            )
+        else { return nil }
+        return candidates.first { $0.descriptor.displayID == displayID }?.screen
     }
+}
+
+@MainActor
+final class RegionSelectionPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
 
 @MainActor

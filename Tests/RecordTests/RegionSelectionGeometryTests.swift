@@ -39,4 +39,74 @@ final class RegionSelectionGeometryTests: XCTestCase {
             )
         )
     }
+
+    func testDisplayResolverPrefersPickerIdentifierAndUniqueGeometry() {
+        let candidates = [
+            RegionDisplayCandidate(
+                displayID: 1,
+                bounds: .init(x: 0, y: 0, width: 1_728, height: 1_117)
+            ),
+            RegionDisplayCandidate(
+                displayID: 2,
+                bounds: .init(x: 1_728, y: 0, width: 1_920, height: 1_080)
+            ),
+        ]
+
+        XCTAssertEqual(
+            RegionDisplayResolver.displayID(
+                selectedDisplayID: 2,
+                contentRect: .init(x: 0, y: 0, width: 1, height: 1),
+                candidates: candidates
+            ),
+            2
+        )
+        XCTAssertEqual(
+            RegionDisplayResolver.displayID(
+                selectedDisplayID: nil,
+                contentRect: .init(x: 0, y: 0, width: 1_728, height: 1_117),
+                candidates: candidates
+            ),
+            1
+        )
+    }
+
+    func testDisplayResolverUsesOnlyUnambiguousFallbacks() {
+        let soleCandidate = RegionDisplayCandidate(
+            displayID: 1,
+            bounds: .init(x: 0, y: 0, width: 1_728, height: 1_117)
+        )
+        XCTAssertEqual(
+            RegionDisplayResolver.displayID(
+                selectedDisplayID: nil,
+                contentRect: .init(x: 99, y: 99, width: 100, height: 100),
+                candidates: [soleCandidate]
+            ),
+            1
+        )
+        XCTAssertNil(
+            RegionDisplayResolver.displayID(
+                selectedDisplayID: nil,
+                contentRect: .init(x: 99, y: 99, width: 100, height: 100),
+                candidates: [
+                    soleCandidate,
+                    .init(
+                        displayID: 2,
+                        bounds: .init(x: 1_728, y: 0, width: 1_920, height: 1_080)
+                    ),
+                ]
+            )
+        )
+    }
+
+    @MainActor
+    func testBorderlessSelectionPanelCanBecomeKey() {
+        let panel = RegionSelectionPanel(
+            contentRect: .init(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+
+        XCTAssertTrue(panel.canBecomeKey)
+    }
 }

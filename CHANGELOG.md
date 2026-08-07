@@ -14,6 +14,9 @@ All notable changes to Record are documented here. Record follows
   failure callbacks from ReplayKit's XPC queue onto the main actor. This
   prevents Swift 6 isolation traps after choosing a display, application, or
   window and allows the custom-region overlay to open after choosing a display.
+- Resolve custom-region displays without guessing on ambiguous multi-display
+  layouts, and let the borderless selection overlay become key before assigning
+  its first responder so it reliably receives drag and Escape events.
 
 ## [1.1.0] - 2026-08-07
 
