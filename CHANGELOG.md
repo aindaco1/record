@@ -6,6 +6,8 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-07
+
 ### Added
 
 - A persistent **Screen source** mode with the main-display fast path, Apple's
@@ -20,6 +22,9 @@ All notable changes to Record are documented here. Record follows
 - Final screen export joins compatible HEVC segments through AVFoundation's
   passthrough composition and remuxes AAC packets into the canonical CAF files
   without re-encoding either audio source.
+- The macOS release gate now health-checks rootless Podman through a user-level
+  launchd watchdog, preventing automation process cleanup from terminating the
+  VM or its `gvproxy` bridge.
 
 ### Security
 
@@ -140,7 +145,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/aindaco1/record/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/aindaco1/record/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/aindaco1/record/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/aindaco1/record/compare/v1.0.0...v1.0.1
