@@ -6,6 +6,18 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Changed
+
+- Extracted Record's offline Parakeet runtime and bounded offline speaker
+  diarization adapter into the reusable `RecordSpeech` library product. Record
+  continues to use the same local-only implementation through a thin app
+  adapter, and sibling Dust Wave tools can reuse it without forking model code.
+
+### Fixed
+
+- Preserve source audio duration when FluidAudio reports a zero-duration
+  Parakeet result.
+
 ## [1.0.2] - 2026-08-07
 
 ### Added

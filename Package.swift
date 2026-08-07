@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "RecordCore", targets: ["RecordCore"]),
         .library(name: "RecordCapture", targets: ["RecordCapture"]),
         .library(name: "RecordMedia", targets: ["RecordMedia"]),
+        .library(name: "RecordSpeech", targets: ["RecordSpeech"]),
         .executable(name: "record", targets: ["Record"]),
     ],
     dependencies: [
@@ -25,12 +26,20 @@ let package = Package(
             name: "RecordMedia",
             dependencies: ["RecordCapture", "RecordCore"]
         ),
+        .target(
+            name: "RecordSpeech",
+            dependencies: [
+                "RecordCore",
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ]
+        ),
         .executableTarget(
             name: "Record",
             dependencies: [
                 "RecordCapture",
                 "RecordCore",
                 "RecordMedia",
+                "RecordSpeech",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 .product(name: "Sparkle", package: "Sparkle"),
@@ -58,6 +67,7 @@ let package = Package(
             name: "RecordTests",
             dependencies: [
                 "Record",
+                "RecordSpeech",
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ]
         ),
@@ -68,6 +78,14 @@ let package = Package(
         .testTarget(
             name: "RecordMediaTests",
             dependencies: ["RecordCapture", "RecordCore", "RecordMedia"]
+        ),
+        .testTarget(
+            name: "RecordSpeechTests",
+            dependencies: [
+                "RecordCore",
+                "RecordSpeech",
+                .product(name: "FluidAudio", package: "FluidAudio"),
+            ]
         ),
     ]
 )
