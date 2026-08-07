@@ -23,7 +23,9 @@ only when the user chooses **Check for Updates…**.
 
 Record uses `SMAppService.mainApp` for **Open at Login**. The option is disabled
 by default, exposes macOS's requires-approval state, and never installs a
-custom daemon or LaunchAgent.
+custom daemon or LaunchAgent. Because `.notFound` may be returned before first
+registration for a valid installed main app, Record treats it as an actionable
+off state; `register()` remains macOS's authoritative eligibility check.
 
 ## Consequences
 

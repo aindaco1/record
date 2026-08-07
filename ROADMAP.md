@@ -3,6 +3,12 @@
 Record 1.0 intentionally focuses on dependable main-display and audio capture.
 Priorities may change as real recordings expose better opportunities.
 
+## 1.0.1 maintenance
+
+- Guided, hash-verified import for the default Parakeet v3 model.
+- Stable signing-identity enforcement so privacy grants survive updates.
+- Reliable native Open at Login registration and optional-engine discovery.
+
 ## Next
 
 - Display, window, application, and region source selection.
@@ -11,6 +17,7 @@ Priorities may change as real recordings expose better opportunities.
 - Recovery UX for interrupted but salvageable sessions.
 - A settings window for output, transcription, and plugin preferences.
 - Automated update-feed integration tests using an isolated local fixture.
+- Direct source selection and pause/resume acceptance tests on real hardware.
 
 ## Later
 

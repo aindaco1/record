@@ -4,6 +4,91 @@ import Foundation
 import XCTest
 
 final class MacWhisperEngineTests: XCTestCase {
+    func testResolverRequiresMacWhisperAppCLIAndSandboxHelper() {
+        let appCLI = URL(fileURLWithPath: "/Applications/MacWhisper.app/Contents/MacOS/mw")
+        let helper = URL(fileURLWithPath: "/Library/Application Scripts/record-macwhisper")
+        let executables = Set([appCLI.path, helper.path])
+
+        XCTAssertEqual(
+            MacWhisperExecutable.resolve(
+                configuredPath: nil,
+                sandboxed: true,
+                applicationScript: helper,
+                installedCLI: appCLI,
+                isExecutable: executables.contains,
+                helperIsTrusted: { $0 == helper }
+            ),
+            helper
+        )
+        XCTAssertNil(
+            MacWhisperExecutable.resolve(
+                configuredPath: nil,
+                sandboxed: true,
+                applicationScript: helper,
+                installedCLI: nil,
+                isExecutable: executables.contains,
+                helperIsTrusted: { $0 == helper }
+            )
+        )
+    }
+
+    func testResolverHidesMacWhisperWhenHelperIsMissingInSandbox() {
+        let appCLI = URL(fileURLWithPath: "/Applications/MacWhisper.app/Contents/MacOS/mw")
+
+        XCTAssertNil(
+            MacWhisperExecutable.resolve(
+                configuredPath: nil,
+                sandboxed: true,
+                applicationScript: nil,
+                installedCLI: appCLI,
+                isExecutable: { $0 == appCLI.path },
+                helperIsTrusted: { _ in true }
+            )
+        )
+    }
+
+    func testResolverHidesModifiedSandboxHelper() {
+        let appCLI = URL(fileURLWithPath: "/Applications/MacWhisper.app/Contents/MacOS/mw")
+        let helper = URL(fileURLWithPath: "/Library/Application Scripts/record-macwhisper")
+
+        XCTAssertNil(
+            MacWhisperExecutable.resolve(
+                configuredPath: nil,
+                sandboxed: true,
+                applicationScript: helper,
+                installedCLI: appCLI,
+                isExecutable: { _ in true },
+                helperIsTrusted: { _ in false }
+            )
+        )
+    }
+
+    func testBundledHelperInstallsOnceAndRefusesSilentReplacement() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "record-macwhisper-helper-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let source = root.appendingPathComponent("bundled-helper")
+        let destination = root.appendingPathComponent("Application Scripts/record-macwhisper")
+        try Data("trusted".utf8).write(to: source)
+
+        try MacWhisperExecutable.installBundledApplicationScriptIfNeeded(
+            source: source,
+            destination: destination
+        )
+        XCTAssertTrue(FileManager.default.isExecutableFile(atPath: destination.path))
+        XCTAssertEqual(try Data(contentsOf: destination), Data("trusted".utf8))
+
+        try Data("changed".utf8).write(to: source)
+        try MacWhisperExecutable.installBundledApplicationScriptIfNeeded(
+            source: source,
+            destination: destination
+        )
+        XCTAssertEqual(try Data(contentsOf: destination), Data("trusted".utf8))
+    }
+
     func testTranscribesWithExactArgumentsAndConvertsMilliseconds() async throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.directory) }

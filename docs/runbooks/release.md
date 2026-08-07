@@ -38,8 +38,10 @@ trust root requires the same security review as changing release credentials.
 
 The release workflow revalidates the tag and source, requires the tag to identify
 the checked-out commit, builds arm64, signs Sparkle's nested helpers inside-out
-and then Record with hardened runtime and audited entitlements, notarizes and
-staples the app and DMG, and publishes provenance. It generates `appcast.xml`
+and then Record with hardened runtime and audited entitlements. It rejects any
+change to the bundle identifier, Apple signing team, or Developer ID designated
+requirement recorded in `Configuration/TCCIdentity.plist`, notarizes and staples
+the app and DMG, and publishes provenance. It generates `appcast.xml`
 from the final notarized ZIP and signs both the update archive and feed with the
 protected Sparkle key.
 
@@ -58,3 +60,6 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
    permission flow, local-only boundary, recording, recovery, and uninstall.
 5. Install the previous release, choose **Check for Updates…**, and verify the
    signed feed downloads, replaces, and relaunches the new notarized version.
+6. Confirm the previous version's microphone, screen/system-audio, and
+   system-audio-only grants remain enabled and neither recording path repeats
+   an approved prompt. Compare both apps with `scripts/ci/check-tcc-identity.sh`.

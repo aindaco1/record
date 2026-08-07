@@ -6,6 +6,26 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-07
+
+### Added
+
+- Missing-model detection plus a guided, verified Parakeet v3 local import.
+- A release gate that preserves Record's bundle identifier, Apple signing
+  team, hardened runtime, and designated requirement across updates.
+
+### Fixed
+
+- Open at Login remains actionable when ServiceManagement initially reports
+  `.notFound` for an app that is already installed in Applications.
+- MacWhisper appears only when MacWhisper, its `mw` CLI, and Record's sandbox
+  helper are all present; an unavailable saved selection returns to Parakeet.
+
+### Upstream
+
+- Submitted a FluidAudio manifest fix so its Parakeet benchmark Markdown file
+  can be excluded from SwiftPM source discovery in the next dependency update.
+
 ## [1.0.0] - 2026-08-07
 
 ### Added
@@ -35,5 +55,6 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/aindaco1/record/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/aindaco1/record/releases/tag/v1.0.0

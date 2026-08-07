@@ -1,8 +1,19 @@
 @testable import Record
+import ServiceManagement
 import XCTest
 
 @MainActor
 final class LaunchAtLoginControllerTests: XCTestCase {
+    func testMainAppNotFoundStatusRemainsActionable() {
+        XCTAssertEqual(SystemLaunchAtLoginService.state(for: .notFound), .disabled)
+    }
+
+    func testMainAppStatusesMapWithoutGuessingAboutInstallLocation() {
+        XCTAssertEqual(SystemLaunchAtLoginService.state(for: .notRegistered), .disabled)
+        XCTAssertEqual(SystemLaunchAtLoginService.state(for: .enabled), .enabled)
+        XCTAssertEqual(SystemLaunchAtLoginService.state(for: .requiresApproval), .requiresApproval)
+    }
+
     func testDisabledServiceRegistersAndBecomesEnabled() throws {
         let service = FakeLaunchAtLoginService(state: .disabled)
         let controller = LaunchAtLoginController(service: service)
