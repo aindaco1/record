@@ -112,9 +112,11 @@ public actor ParakeetTranscriber {
 
     public func transcribe(_ audio: URL) async throws -> ParakeetTranscriptResult {
         guard let manager else { throw TranscriberError.notPrepared }
+        let audioDuration: TimeInterval
         do {
             let probe = try AVAudioFile(forReading: audio)
             guard probe.length > 0 else { throw TranscriberError.unreadableAudio(audio, nil) }
+            audioDuration = TimeInterval(probe.length) / probe.fileFormat.sampleRate
         } catch let error as TranscriberError {
             throw error
         } catch {
@@ -126,7 +128,7 @@ public actor ParakeetTranscriber {
         let tokenTimings = result.tokenTimings ?? []
         return ParakeetTranscriptResult(
             text: result.text,
-            durationSeconds: result.duration,
+            durationSeconds: Self.resolvedDuration(reported: result.duration, audio: audioDuration),
             confidence: result.confidence,
             tokens: tokenTimings.map {
                 ParakeetTranscriptToken(
@@ -150,5 +152,9 @@ public actor ParakeetTranscriber {
     public func release() async {
         if let manager { await manager.cleanup() }
         manager = nil
+    }
+
+    static func resolvedDuration(reported: TimeInterval, audio: TimeInterval) -> TimeInterval {
+        reported > 0 ? reported : audio
     }
 }

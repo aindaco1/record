@@ -36,4 +36,9 @@ final class RecordSpeechTests: XCTestCase {
             XCTAssertTrue(String(describing: error).contains("Preprocessor.mlmodelc/coremldata.bin is missing"))
         }
     }
+
+    func testAudioDurationFillsFluidAudioZeroDuration() {
+        XCTAssertEqual(ParakeetTranscriber.resolvedDuration(reported: 0, audio: 87), 87)
+        XCTAssertEqual(ParakeetTranscriber.resolvedDuration(reported: 86.9, audio: 87), 86.9)
+    }
 }

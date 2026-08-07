@@ -40,6 +40,9 @@ All notable changes to Record are documented here. Record follows
 
 ### Fixed
 
+- Preserve source audio duration when FluidAudio reports a zero-duration
+  Parakeet result.
+
 - Open at Login remains actionable when ServiceManagement initially reports
   `.notFound` for an app that is already installed in Applications.
 - MacWhisper appears only when MacWhisper, its `mw` CLI, and Record's sandbox
