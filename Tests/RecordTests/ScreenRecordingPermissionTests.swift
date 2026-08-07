@@ -20,8 +20,12 @@ final class ScreenRecordingPermissionTests: XCTestCase {
         )
     }
 
-    func testDeniedPermissionRequestsOnceAndShowsHumanGuidance() {
-        let provider = FakePermissionProvider(isGranted: false, requestResult: false)
+    func testInitialDeniedRequestReliesOnNativePromptWithoutStackingGuidance() {
+        let provider = FakePermissionProvider(
+            isGranted: false,
+            hasRequestedAccess: false,
+            requestResult: false
+        )
         var presented: [String] = []
         let controller = ScreenRecordingPermissionController(provider: provider) {
             presented.append($0)
@@ -29,9 +33,31 @@ final class ScreenRecordingPermissionTests: XCTestCase {
 
         XCTAssertFalse(controller.ensureAccess())
         XCTAssertEqual(provider.requestCount, 1)
+        XCTAssertTrue(provider.hasRequestedAccess)
+        XCTAssertTrue(presented.isEmpty)
+        XCTAssertEqual(
+            controller.presentation.menuTitle,
+            "Open Screen Recording Settings…"
+        )
+    }
+
+    func testRetryAfterNativeRequestShowsOneHumanGuidanceWithoutRequestingAgain() {
+        let provider = FakePermissionProvider(
+            isGranted: false,
+            hasRequestedAccess: true,
+            requestResult: false
+        )
+        var presented: [String] = []
+        let controller = ScreenRecordingPermissionController(provider: provider) {
+            presented.append($0)
+        }
+
+        XCTAssertFalse(controller.ensureAccess())
+        XCTAssertEqual(provider.requestCount, 0)
         XCTAssertEqual(presented.count, 1)
         XCTAssertTrue(presented[0].contains("Audio-only recording still works"))
         XCTAssertTrue(presented[0].contains("Restart Record"))
+        XCTAssertTrue(presented[0].contains("System Audio Recording Only"))
         XCTAssertFalse(presented[0].contains("permissionDenied"))
     }
 
@@ -84,20 +110,25 @@ final class ScreenRecordingPermissionTests: XCTestCase {
     }
 }
 
-private final class FakePermissionProvider: ScreenRecordingPermissionProviding,
-    @unchecked Sendable
-{
+private final class FakePermissionProvider: ScreenRecordingPermissionProviding {
     let isGranted: Bool
+    private(set) var hasRequestedAccess: Bool
     let requestResult: Bool
     private(set) var requestCount = 0
 
-    init(isGranted: Bool, requestResult: Bool) {
+    init(
+        isGranted: Bool,
+        hasRequestedAccess: Bool = false,
+        requestResult: Bool
+    ) {
         self.isGranted = isGranted
+        self.hasRequestedAccess = hasRequestedAccess
         self.requestResult = requestResult
     }
 
     func requestAccess() -> Bool {
         requestCount += 1
+        hasRequestedAccess = true
         return requestResult
     }
 }

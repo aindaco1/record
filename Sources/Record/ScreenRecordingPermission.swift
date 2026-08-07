@@ -2,32 +2,52 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-protocol ScreenRecordingPermissionProviding: Sendable {
+protocol ScreenRecordingPermissionProviding {
     var isGranted: Bool { get }
+    var hasRequestedAccess: Bool { get }
     func requestAccess() -> Bool
 }
 
-struct SystemScreenRecordingPermissionProvider: ScreenRecordingPermissionProviding {
+final class SystemScreenRecordingPermissionProvider: ScreenRecordingPermissionProviding {
+    private static let requestRecordedKey =
+        "screenRecordingPermissionRequestRecorded"
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
     var isGranted: Bool { CGPreflightScreenCaptureAccess() }
+    var hasRequestedAccess: Bool { defaults.bool(forKey: Self.requestRecordedKey) }
 
     func requestAccess() -> Bool {
-        CGRequestScreenCaptureAccess()
+        // Record this before entering TCC because the native prompt can block
+        // and the process may be restarted immediately after the response.
+        defaults.set(true, forKey: Self.requestRecordedKey)
+        return CGRequestScreenCaptureAccess()
     }
 }
 
 struct ScreenRecordingPermissionPresentation: Equatable, Sendable {
     let isGranted: Bool
+    let hasRequestedAccess: Bool
 
     var menuTitle: String {
-        isGranted
-            ? "Screen Recording Permission: Granted"
+        if isGranted { return "Screen Recording Permission: Granted" }
+        return hasRequestedAccess
+            ? "Open Screen Recording Settings…"
             : "Grant Screen Recording Permission…"
     }
 
     var menuToolTip: String {
-        isGranted
-            ? "Record can capture your screen."
-            : "Required only for video. Audio-only recording remains available."
+        if isGranted { return "Record can capture your screen." }
+        if hasRequestedAccess {
+            return
+                "Permission was already requested. Enable Record in System Settings, then restart it."
+        }
+        return
+            "Requests screen access. macOS groups it under Screen & System Audio Recording."
     }
 
     func guidance(restartRecommended: Bool) -> String {
@@ -38,7 +58,9 @@ struct ScreenRecordingPermissionPresentation: Equatable, Sendable {
         return """
             Record needs Screen Recording access to capture video. Audio-only recording still works.
 
-            Open System Settings, enable Record under Privacy & Security › Screen & System Audio Recording, then return to Record. \(nextStep)
+            macOS groups screen access under Privacy & Security › Screen & System Audio Recording. The separate System Audio Recording Only permission is requested only when an audio recording starts.
+
+            Open System Settings, enable Record, then return to Record. \(nextStep)
             """
     }
 }
@@ -64,14 +86,24 @@ final class ScreenRecordingPermissionController {
     }
 
     var presentation: ScreenRecordingPermissionPresentation {
-        ScreenRecordingPermissionPresentation(isGranted: provider.isGranted)
+        ScreenRecordingPermissionPresentation(
+            isGranted: provider.isGranted,
+            hasRequestedAccess: provider.hasRequestedAccess
+        )
     }
 
     func ensureAccess() -> Bool {
         if provider.isGranted { return true }
-        if provider.requestAccess() { return true }
+        if !provider.hasRequestedAccess {
+            // CGRequestScreenCaptureAccess presents Apple's native prompt.
+            // Do not stack a second Record alert while that prompt is active.
+            return provider.requestAccess()
+        }
         deniedPresenter(
-            ScreenRecordingPermissionPresentation(isGranted: false).guidance(
+            ScreenRecordingPermissionPresentation(
+                isGranted: false,
+                hasRequestedAccess: true
+            ).guidance(
                 restartRecommended: false
             )
         )
@@ -80,7 +112,10 @@ final class ScreenRecordingPermissionController {
 
     func presentCaptureDenial() {
         deniedPresenter(
-            ScreenRecordingPermissionPresentation(isGranted: false).guidance(
+            ScreenRecordingPermissionPresentation(
+                isGranted: false,
+                hasRequestedAccess: true
+            ).guidance(
                 restartRecommended: true
             )
         )
