@@ -117,7 +117,7 @@ final class SystemScreenCapturePicker {
                         Task { @MainActor [weak self] in
                             guard let self else { return }
                             do {
-                                finish(
+                                self.finish(
                                     .success(
                                         try SystemScreenCaptureSelection(
                                             contentFilter: filter.value
@@ -125,7 +125,7 @@ final class SystemScreenCapturePicker {
                                     )
                                 )
                             } catch {
-                                finish(.failure(error))
+                                self.finish(.failure(error))
                             }
                         }
                     }
