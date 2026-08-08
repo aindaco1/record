@@ -17,6 +17,8 @@ All notable changes to Record are documented here. Record follows
 - Resolve custom-region displays without guessing on ambiguous multi-display
   layouts, and let the borderless selection overlay become key before assigning
   its first responder so it reliably receives drag and Escape events.
+- Restore the newest valid screen recording after relaunch so **Open Last Video
+  in Gifski** remains available even when the newest session is audio-only.
 
 ## [1.1.0] - 2026-08-07
 

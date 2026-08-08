@@ -37,112 +37,88 @@ struct RegionSelectionGeometry {
     }
 }
 
-struct RegionDisplayCandidate: Equatable, Sendable {
+struct RegionSelection: Equatable, Sendable {
     let displayID: UInt32
-    let bounds: CaptureRect
+    let rect: CaptureRect
+    let pointPixelScale: Double
 }
 
-enum RegionDisplayResolver {
-    static func displayID(
-        selectedDisplayID: UInt32?,
-        contentRect: CaptureRect,
-        candidates: [RegionDisplayCandidate]
-    ) -> UInt32? {
-        if let selectedDisplayID,
-            candidates.contains(where: { $0.displayID == selectedDisplayID })
-        {
-            return selectedDisplayID
-        }
-
-        let tolerance = 1.0
-        let geometryMatches = candidates.filter {
-            approximatelyEqual($0.bounds.x, contentRect.x, tolerance: tolerance)
-                && approximatelyEqual($0.bounds.y, contentRect.y, tolerance: tolerance)
-                && approximatelyEqual($0.bounds.width, contentRect.width, tolerance: tolerance)
-                && approximatelyEqual($0.bounds.height, contentRect.height, tolerance: tolerance)
-        }
-        if geometryMatches.count == 1 {
-            return geometryMatches[0].displayID
-        }
-
-        let sizeMatches = candidates.filter {
-            approximatelyEqual($0.bounds.width, contentRect.width, tolerance: tolerance)
-                && approximatelyEqual($0.bounds.height, contentRect.height, tolerance: tolerance)
-        }
-        if sizeMatches.count == 1 {
-            return sizeMatches[0].displayID
-        }
-
-        // A single physical display is unambiguous even when a beta OS returns
-        // incomplete picker metadata or a different global coordinate origin.
-        return candidates.count == 1 ? candidates[0].displayID : nil
-    }
-
-    private static func approximatelyEqual(
-        _ lhs: Double,
-        _ rhs: Double,
-        tolerance: Double
-    ) -> Bool {
-        abs(lhs - rhs) <= tolerance
-    }
-}
-
-/// A short-lived, noncapturing overlay used after the system picker selects a
-/// display. It emits only display-local geometry and never takes a screenshot.
+/// Short-lived, noncapturing overlays on the connected displays. The display
+/// where the user drags becomes the source; Record emits only display-local
+/// geometry and never takes a screenshot during selection.
 @MainActor
 final class RegionSelectionController {
-    private var continuation: CheckedContinuation<CaptureRect, any Error>?
-    private var panel: NSPanel?
+    private struct Display {
+        let id: UInt32
+        let screen: NSScreen
+        let pointPixelScale: Double
+    }
 
-    func selectRegion(
-        for selection: SystemScreenCaptureSelection
-    ) async throws -> CaptureRect {
+    private var continuation: CheckedContinuation<RegionSelection, any Error>?
+    private var panels: [NSPanel] = []
+
+    func selectRegion() async throws -> RegionSelection {
         guard continuation == nil else { throw RegionSelectionError.alreadyPresenting }
-        guard selection.plan.style == .display,
-            let screen = Self.screen(for: selection)
-        else {
+        let displays = Self.displays()
+        guard !displays.isEmpty else {
             throw RegionSelectionError.displayUnavailable
         }
 
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 self.continuation = continuation
-                let view = RegionSelectionView(frame: .init(origin: .zero, size: screen.frame.size))
-                view.onComplete = { [weak self, weak view] result in
-                    guard let self, let view else { return }
-                    do {
-                        let rect = try result.get()
-                        let captureRect = try RegionSelectionGeometry.captureRect(
-                            from: rect,
-                            viewSize: view.bounds.size,
-                            contentSize: CGSize(
-                                width: selection.plan.contentRect.width,
-                                height: selection.plan.contentRect.height
+                var overlays: [(panel: RegionSelectionPanel, view: RegionSelectionView)] = []
+                for display in displays {
+                    let view = RegionSelectionView(
+                        frame: .init(origin: .zero, size: display.screen.frame.size)
+                    )
+                    view.onComplete = { [weak self, weak view] result in
+                        guard let self, let view else { return }
+                        do {
+                            let rect = try result.get()
+                            let captureRect = try RegionSelectionGeometry.captureRect(
+                                from: rect,
+                                viewSize: view.bounds.size,
+                                contentSize: view.bounds.size
                             )
-                        )
-                        self.finish(.success(captureRect))
-                    } catch {
-                        self.finish(.failure(error))
+                            self.finish(
+                                .success(
+                                    .init(
+                                        displayID: display.id,
+                                        rect: captureRect,
+                                        pointPixelScale: display.pointPixelScale
+                                    )
+                                )
+                            )
+                        } catch {
+                            self.finish(.failure(error))
+                        }
                     }
+
+                    let panel = RegionSelectionPanel(
+                        contentRect: display.screen.frame,
+                        styleMask: [.borderless],
+                        backing: .buffered,
+                        defer: false,
+                        screen: display.screen
+                    )
+                    panel.configureForRegionSelection()
+                    panel.contentView = view
+                    overlays.append((panel, view))
                 }
 
-                let panel = RegionSelectionPanel(
-                    contentRect: screen.frame,
-                    styleMask: [.borderless],
-                    backing: .buffered,
-                    defer: false,
-                    screen: screen
-                )
-                panel.level = .screenSaver
-                panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-                panel.backgroundColor = .clear
-                panel.isOpaque = false
-                panel.hasShadow = false
-                panel.contentView = view
-                self.panel = panel
+                self.panels = overlays.map(\.panel)
                 NSApp.activate(ignoringOtherApps: true)
-                panel.makeKeyAndOrderFront(nil)
-                panel.makeFirstResponder(view)
+                for overlay in overlays {
+                    overlay.panel.orderFrontRegardless()
+                }
+
+                let mouseLocation = NSEvent.mouseLocation
+                let preferred =
+                    overlays.first { $0.panel.frame.contains(mouseLocation) }
+                    ?? overlays.first
+                preferred?.panel.makeKey()
+                preferred?.panel.makeFirstResponder(preferred?.view)
             }
         } onCancel: {
             Task { @MainActor [weak self] in
@@ -151,59 +127,70 @@ final class RegionSelectionController {
         }
     }
 
-    private func finish(_ result: Result<CaptureRect, any Error>) {
+    private func finish(_ result: Result<RegionSelection, any Error>) {
         guard let continuation else { return }
         self.continuation = nil
-        panel?.orderOut(nil)
-        panel = nil
+        for panel in panels {
+            panel.orderOut(nil)
+        }
+        panels.removeAll()
         continuation.resume(with: result)
     }
 
-    private static func screen(
-        for selection: SystemScreenCaptureSelection
-    ) -> NSScreen? {
-        let candidates: [(screen: NSScreen, descriptor: RegionDisplayCandidate)] =
-            NSScreen.screens.compactMap { screen in
-                guard let number = screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber
-                else { return nil }
-                let displayID = number.uint32Value
-                let bounds = CGDisplayBounds(displayID)
-                return (
-                    screen,
-                    .init(
-                        displayID: displayID,
-                        bounds: .init(
-                            x: bounds.origin.x,
-                            y: bounds.origin.y,
-                            width: bounds.width,
-                            height: bounds.height
-                        )
-                    )
-                )
+    private static func displays() -> [Display] {
+        NSScreen.screens.compactMap { screen in
+            guard let number = screen.deviceDescription[.init("NSScreenNumber")] as? NSNumber
+            else { return nil }
+            let displayID = number.uint32Value
+            let pointPixelScale = screen.backingScaleFactor
+            guard displayID > 0, pointPixelScale.isFinite, pointPixelScale > 0 else {
+                return nil
             }
-        guard
-            let displayID = RegionDisplayResolver.displayID(
-                selectedDisplayID: selection.selectedDisplayID,
-                contentRect: selection.plan.contentRect,
-                candidates: candidates.map(\.descriptor)
+            return .init(
+                id: displayID,
+                screen: screen,
+                pointPixelScale: pointPixelScale
             )
-        else { return nil }
-        return candidates.first { $0.descriptor.displayID == displayID }?.screen
+        }
     }
 }
 
 @MainActor
 final class RegionSelectionPanel: NSPanel {
     override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+
+    func configureForRegionSelection() {
+        level = .screenSaver
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        backgroundColor = .clear
+        isOpaque = false
+        hasShadow = false
+        ignoresMouseEvents = false
+        isMovable = false
+        isMovableByWindowBackground = false
+
+        // Status-item apps normally deactivate as soon as their menu closes,
+        // and NSPanel hides on deactivation by default. Region selection must
+        // stay visible and interactive during that expected transition.
+        hidesOnDeactivate = false
+    }
 }
 
 @MainActor
-private final class RegionSelectionView: NSView {
+final class RegionSelectionView: NSView {
     var onComplete: ((Result<CGRect, any Error>) -> Void)?
     private var anchor: CGPoint?
     private var selection: CGRect?
 
     override var acceptsFirstResponder: Bool { true }
+
+    // Transparent views default to allowing mouse-down events to move their
+    // window. This overlay is intentionally transparent, so it must explicitly
+    // retain the complete down/drag/up sequence used to draw a region.
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(0.28).setFill()

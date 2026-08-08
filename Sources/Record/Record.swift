@@ -458,13 +458,14 @@ final class AppController {
             )
             return (try selection.configuration(privacy: privacy), selection)
         case .region:
-            let display = try await systemScreenCapturePicker.select(
-                mode: .displayForRegion,
-                privacy: privacy
+            let region = try await regionSelectionController.selectRegion()
+            return (
+                try VideoCaptureProfile.regionConfiguration(
+                    selection: region,
+                    privacy: privacy
+                ),
+                nil
             )
-            let rect = try await regionSelectionController.selectRegion(for: display)
-            let selection = try display.selecting(region: rect)
-            return (try selection.configuration(privacy: privacy), selection)
         }
     }
 
@@ -1176,11 +1177,13 @@ final class AppController {
         recentRecordingRefreshTask?.cancel()
         let roots = recentRecordingRoots
         recentRecordingRefreshTask = Task { [weak self] in
-            let directory = await Task.detached(priority: .utility) {
-                RecentRecordingLocator.mostRecent(under: roots)
+            let snapshot = await Task.detached(priority: .utility) {
+                RecentRecordingLocator.snapshot(under: roots)
             }.value
             guard !Task.isCancelled else { return }
-            self?.setLastFinishedRecordingDirectory(directory)
+            self?.setLastFinishedRecordingDirectory(snapshot.recordingDirectory)
+            self?.lastFinishedVideoURL = snapshot.videoURL
+            self?.refreshGifskiMenu()
             self?.recentRecordingRefreshTask = nil
         }
     }

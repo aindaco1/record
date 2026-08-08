@@ -5,7 +5,6 @@ import RecordCore
 
 enum SystemScreenCapturePickerMode: Sendable {
     case source
-    case displayForRegion
 }
 
 enum SystemScreenCapturePickerError: Error, Equatable {
@@ -18,16 +17,60 @@ enum SystemScreenCapturePickerError: Error, Equatable {
 /// queue. `SCContentFilter` is opaque selection state supplied by the system;
 /// Record transfers it once to the main actor before inspecting or retaining
 /// it for capture.
-private struct SendableContentFilter: @unchecked Sendable {
+struct SendableContentFilter: @unchecked Sendable {
     let value: SCContentFilter
+}
+
+/// ScreenCaptureKit invokes its Objective-C observer on ReplayKit's XPC queue.
+/// Keep that entry point on a deliberately non-actor-isolated proxy; placing
+/// the conformance on the main-actor owner can make Swift's generated `@objc`
+/// thunk assert before a `nonisolated` method body is reached.
+final class SystemScreenCapturePickerObserverProxy: NSObject,
+    SCContentSharingPickerObserver, @unchecked Sendable
+{
+    private let onCancel: @Sendable () -> Void
+    private let onFailure: @Sendable () -> Void
+    private let onSelection: @Sendable (SendableContentFilter) -> Void
+
+    init(
+        onCancel: @escaping @Sendable () -> Void,
+        onFailure: @escaping @Sendable () -> Void,
+        onSelection: @escaping @Sendable (SendableContentFilter) -> Void
+    ) {
+        self.onCancel = onCancel
+        self.onFailure = onFailure
+        self.onSelection = onSelection
+    }
+
+    func contentSharingPicker(
+        _: SCContentSharingPicker,
+        didCancelFor stream: SCStream?
+    ) {
+        guard stream == nil else { return }
+        onCancel()
+    }
+
+    func contentSharingPicker(
+        _: SCContentSharingPicker,
+        didUpdateWith filter: SCContentFilter,
+        for stream: SCStream?
+    ) {
+        guard stream == nil else { return }
+        onSelection(.init(value: filter))
+    }
+
+    func contentSharingPickerStartDidFailWithError(_: any Error) {
+        onFailure()
+    }
 }
 
 /// One-shot bridge around Apple's shared picker. The observer is installed
 /// only while a request is pending, and the opaque filter stays in memory for
 /// the active recording rather than being serialized.
 @MainActor
-final class SystemScreenCapturePicker: NSObject, SCContentSharingPickerObserver {
+final class SystemScreenCapturePicker {
     private var continuation: CheckedContinuation<SystemScreenCaptureSelection, any Error>?
+    private var observer: SystemScreenCapturePickerObserverProxy?
 
     func select(
         mode: SystemScreenCapturePickerMode,
@@ -45,7 +88,6 @@ final class SystemScreenCapturePicker: NSObject, SCContentSharingPickerObserver 
                 configuration.allowedPickerModes =
                     switch mode {
                     case .source: [.singleDisplay, .singleApplication, .singleWindow]
-                    case .displayForRegion: [.singleDisplay]
                     }
                 configuration.allowsChangingSelectedContent = false
                 configuration.excludedWindowIDs = []
@@ -60,7 +102,36 @@ final class SystemScreenCapturePicker: NSObject, SCContentSharingPickerObserver 
                 configuration.excludedBundleIDs = excludedBundleIdentifiers.sorted()
                 picker.configuration = configuration
                 picker.maximumStreamCount = 1
-                picker.add(self)
+                let observer = SystemScreenCapturePickerObserverProxy(
+                    onCancel: { [weak self] in
+                        Task { @MainActor [weak self] in
+                            self?.finish(.failure(SystemScreenCapturePickerError.cancelled))
+                        }
+                    },
+                    onFailure: { [weak self] in
+                        Task { @MainActor [weak self] in
+                            self?.finish(.failure(SystemScreenCapturePickerError.failedToPresent))
+                        }
+                    },
+                    onSelection: { [weak self] filter in
+                        Task { @MainActor [weak self] in
+                            guard let self else { return }
+                            do {
+                                finish(
+                                    .success(
+                                        try SystemScreenCaptureSelection(
+                                            contentFilter: filter.value
+                                        )
+                                    )
+                                )
+                            } catch {
+                                finish(.failure(error))
+                            }
+                        }
+                    }
+                )
+                self.observer = observer
+                picker.add(observer)
                 picker.isActive = true
                 picker.present()
             }
@@ -71,50 +142,16 @@ final class SystemScreenCapturePicker: NSObject, SCContentSharingPickerObserver 
         }
     }
 
-    nonisolated func contentSharingPicker(
-        _: SCContentSharingPicker,
-        didCancelFor stream: SCStream?
-    ) {
-        guard stream == nil else { return }
-        Task { @MainActor [weak self] in
-            self?.finish(.failure(SystemScreenCapturePickerError.cancelled))
-        }
-    }
-
-    nonisolated func contentSharingPicker(
-        _: SCContentSharingPicker,
-        didUpdateWith filter: SCContentFilter,
-        for stream: SCStream?
-    ) {
-        guard stream == nil else { return }
-        let filter = SendableContentFilter(value: filter)
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            do {
-                finish(
-                    .success(
-                        try SystemScreenCaptureSelection(contentFilter: filter.value)
-                    )
-                )
-            } catch {
-                finish(.failure(error))
-            }
-        }
-    }
-
-    nonisolated func contentSharingPickerStartDidFailWithError(_: any Error) {
-        Task { @MainActor [weak self] in
-            self?.finish(.failure(SystemScreenCapturePickerError.failedToPresent))
-        }
-    }
-
     private func finish(
         _ result: Result<SystemScreenCaptureSelection, any Error>
     ) {
         guard let continuation else { return }
         self.continuation = nil
         let picker = SCContentSharingPicker.shared
-        picker.remove(self)
+        if let observer {
+            picker.remove(observer)
+        }
+        observer = nil
         picker.isActive = false
         picker.configuration = nil
         continuation.resume(with: result)

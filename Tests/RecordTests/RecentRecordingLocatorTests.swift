@@ -96,6 +96,77 @@ final class RecentRecordingLocatorTests: XCTestCase {
         )
     }
 
+    func testRestoresLatestVideoIndependentlyOfLatestRecording() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.container) }
+
+        let videoSession = try makeSession(
+            named: "video",
+            under: fixture.privateRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 20),
+            tracks: [.init(kind: .screen, filename: "recording.mov")]
+        )
+        let video = videoSession.appendingPathComponent("recording.mov")
+        try Data("video".utf8).write(to: video)
+        let audioSession = try makeSession(
+            named: "audio",
+            under: fixture.exportRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 30)
+        )
+
+        XCTAssertEqual(
+            RecentRecordingLocator.snapshot(
+                under: [fixture.privateRoot, fixture.exportRoot]
+            ),
+            .init(recordingDirectory: audioSession, videoURL: video)
+        )
+    }
+
+    func testRejectsMissingEmptyAndSymlinkedVideos() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.container) }
+
+        _ = try makeSession(
+            named: "missing",
+            under: fixture.exportRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 20),
+            tracks: [.init(kind: .screen, filename: "recording.mov")]
+        )
+        let empty = try makeSession(
+            named: "empty",
+            under: fixture.exportRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 30),
+            tracks: [.init(kind: .screen, filename: "recording.mov")]
+        )
+        XCTAssertTrue(
+            FileManager.default.createFile(
+                atPath: empty.appendingPathComponent("recording.mov").path,
+                contents: Data()
+            )
+        )
+        let linked = try makeSession(
+            named: "linked",
+            under: fixture.exportRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 40),
+            tracks: [.init(kind: .screen, filename: "recording.mov")]
+        )
+        let outside = fixture.container.appendingPathComponent("outside.mov")
+        try Data("outside".utf8).write(to: outside)
+        try FileManager.default.createSymbolicLink(
+            at: linked.appendingPathComponent("recording.mov"),
+            withDestinationURL: outside
+        )
+
+        let snapshot = RecentRecordingLocator.snapshot(under: [fixture.exportRoot])
+        XCTAssertEqual(snapshot.recordingDirectory, linked)
+        XCTAssertNil(snapshot.videoURL)
+    }
+
     private func makeFixture() throws -> (
         container: URL,
         privateRoot: URL,
@@ -122,7 +193,10 @@ final class RecentRecordingLocatorTests: XCTestCase {
         named name: String,
         under root: URL,
         state: SessionManifest.State,
-        endedAt: Date?
+        endedAt: Date?,
+        tracks: [SessionManifest.Track] = [
+            .init(kind: .microphone, filename: "mic.caf")
+        ]
     ) throws -> URL {
         let directory = root.appendingPathComponent(name, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -130,7 +204,7 @@ final class RecentRecordingLocatorTests: XCTestCase {
             state: state,
             startedAt: Date(timeIntervalSince1970: 10),
             endedAt: endedAt,
-            tracks: [.init(kind: .microphone, filename: "mic.caf")]
+            tracks: tracks
         ).write(to: directory)
         return directory
     }

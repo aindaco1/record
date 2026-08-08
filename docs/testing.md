@@ -142,6 +142,9 @@ use sensitive clipboard content in a development test.
 With Gifski installed, record and stop a short synthetic video, then choose
 **Plugins → Open Last Video in Gifski**. Confirm Gifski receives the existing
 MOV and Record neither downloads a helper nor creates another media copy.
+Quit and relaunch Record, then repeat the handoff without making another screen
+recording. It must remain available even if an audio-only session finished in
+between, and it must ignore missing, empty, or symlinked MOV files.
 
 Also exercise these negative paths before a release candidate:
 

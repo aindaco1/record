@@ -5,20 +5,39 @@ import RecordCore
 /// The session manifest remains the source of truth, and only direct,
 /// non-symlink children of explicitly approved roots are considered.
 enum RecentRecordingLocator {
-    struct Candidate: Equatable {
+    struct Snapshot: Equatable, Sendable {
+        let recordingDirectory: URL?
+        let videoURL: URL?
+    }
+
+    private struct Candidate: Equatable {
         let directory: URL
         let finishedAt: Date
+        let videoURL: URL?
+    }
+
+    static func snapshot(
+        under roots: [URL],
+        fileManager: FileManager = .default
+    ) -> Snapshot {
+        let allCandidates = roots.flatMap {
+            candidates(under: $0, fileManager: fileManager)
+        }
+        let mostRecentRecording = allCandidates.max(by: isOlder)
+        let mostRecentVideo = allCandidates
+            .filter { $0.videoURL != nil }
+            .max(by: isOlder)
+        return Snapshot(
+            recordingDirectory: mostRecentRecording?.directory,
+            videoURL: mostRecentVideo?.videoURL
+        )
     }
 
     static func mostRecent(
         under roots: [URL],
         fileManager: FileManager = .default
     ) -> URL? {
-        roots.compactMap { root in
-            candidates(under: root, fileManager: fileManager).max(by: isOlder)
-        }
-        .max(by: isOlder)?
-        .directory
+        snapshot(under: roots, fileManager: fileManager).recordingDirectory
     }
 
     static func isFinishedSession(
@@ -78,8 +97,41 @@ enum RecentRecordingLocator {
 
         return Candidate(
             directory: directory,
-            finishedAt: manifest.endedAt ?? manifest.startedAt
+            finishedAt: manifest.endedAt ?? manifest.startedAt,
+            videoURL: validatedVideoURL(
+                in: directory,
+                manifest: manifest,
+                fileManager: fileManager
+            )
         )
+    }
+
+    private static func validatedVideoURL(
+        in directory: URL,
+        manifest: SessionManifest,
+        fileManager: FileManager
+    ) -> URL? {
+        let screenTracks = manifest.tracks.filter { $0.kind == .screen }
+        guard screenTracks.count == 1 else { return nil }
+
+        let videoURL = directory.appendingPathComponent(
+            screenTracks[0].filename,
+            isDirectory: false
+        ).standardizedFileURL
+        let keys: Set<URLResourceKey> = [
+            .fileSizeKey,
+            .isRegularFileKey,
+            .isSymbolicLinkKey,
+        ]
+        guard videoURL.deletingLastPathComponent() == directory,
+            videoURL.pathExtension.lowercased() == "mov",
+            fileManager.fileExists(atPath: videoURL.path),
+            let values = try? videoURL.resourceValues(forKeys: keys),
+            values.isRegularFile == true,
+            values.isSymbolicLink != true,
+            (values.fileSize ?? 0) > 0
+        else { return nil }
+        return videoURL
     }
 
     private static func isOlder(_ lhs: Candidate, _ rhs: Candidate) -> Bool {
