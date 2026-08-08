@@ -15,8 +15,9 @@ regressions run on every pull request.
   gaps, and clock regression
 - hardware-required HEVC/AAC writer settings, collision-safe independent video
   and audio paths, and empty-segment finalization without publishing invalid media
-- display-profile and picker-derived 4K/even-dimension bounds, memory-only
-  source-mode persistence, region coordinate conversion, video-session orchestration,
+- display-profile and picker-derived 4K/even-dimension bounds, off-main picker
+  callback marshalling, memory-only source-mode persistence, region coordinate
+  conversion, video-session orchestration,
   bounded fresh-stream startup retries, classified failure manifests,
   idempotent stops, atomic whole-session exports, and contained source cleanup
 - model identifier validation, local-only failure behavior, pinned SHA-256
@@ -141,6 +142,9 @@ use sensitive clipboard content in a development test.
 With Gifski installed, record and stop a short synthetic video, then choose
 **Plugins → Open Last Video in Gifski**. Confirm Gifski receives the existing
 MOV and Record neither downloads a helper nor creates another media copy.
+Quit and relaunch Record, then repeat the handoff without making another screen
+recording. It must remain available even if an audio-only session finished in
+between, and it must ignore missing, empty, or symlinked MOV files.
 
 Also exercise these negative paths before a release candidate:
 

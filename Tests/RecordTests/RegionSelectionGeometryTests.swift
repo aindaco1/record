@@ -39,4 +39,32 @@ final class RegionSelectionGeometryTests: XCTestCase {
             )
         )
     }
+
+    @MainActor
+    func testBorderlessSelectionPanelCanBecomeKey() {
+        let panel = RegionSelectionPanel(
+            contentRect: .init(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        panel.configureForRegionSelection()
+
+        XCTAssertTrue(panel.canBecomeKey)
+        XCTAssertTrue(panel.canBecomeMain)
+        XCTAssertFalse(panel.hidesOnDeactivate)
+        XCTAssertFalse(panel.ignoresMouseEvents)
+        XCTAssertFalse(panel.isMovableByWindowBackground)
+    }
+
+    @MainActor
+    func testTransparentSelectionViewOwnsTheInitialMouseDrag() {
+        let view = RegionSelectionView(
+            frame: .init(x: 0, y: 0, width: 100, height: 100)
+        )
+
+        XCTAssertFalse(view.mouseDownCanMoveWindow)
+        XCTAssertTrue(view.acceptsFirstMouse(for: nil))
+        XCTAssertTrue(view.hitTest(.init(x: 50, y: 50)) === view)
+    }
 }

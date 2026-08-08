@@ -49,6 +49,41 @@ enum VideoCaptureProfile {
         return configuration
     }
 
+    static func regionConfiguration(
+        selection: RegionSelection,
+        privacy: CapturePrivacyConfiguration
+    ) throws -> CaptureConfiguration {
+        guard selection.displayID > 0,
+            selection.pointPixelScale.isFinite,
+            selection.pointPixelScale > 0
+        else {
+            throw ProfileError.displayUnavailable
+        }
+        guard
+            let size = CaptureOutputSize.boundedForCapture(
+                pixelWidth: Int(
+                    (selection.rect.width * selection.pointPixelScale).rounded(.up)
+                ),
+                pixelHeight: Int(
+                    (selection.rect.height * selection.pointPixelScale).rounded(.up)
+                )
+            )
+        else {
+            throw ProfileError.displayUnavailable
+        }
+        let configuration = CaptureConfiguration(
+            source: .region(displayID: selection.displayID, rect: selection.rect),
+            outputSize: size,
+            frameRate: .fps30,
+            showCursor: true,
+            highlightClicks: false,
+            audio: .init(includeSystemAudio: true, includeMicrophone: true),
+            privacy: privacy
+        )
+        try configuration.validate()
+        return configuration
+    }
+
     /// Preserve the display aspect ratio while fitting the hardware writer's
     /// 4K bound. Even dimensions avoid chroma-subsampling padding and copies.
     static func boundedEvenSize(width: Int, height: Int) -> CaptureOutputSize {

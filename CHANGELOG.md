@@ -6,6 +6,20 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-08-07
+
+### Fixed
+
+- Marshal ScreenCaptureKit picker selection, cancellation, and presentation
+  failure callbacks from ReplayKit's XPC queue onto the main actor. This
+  prevents Swift 6 isolation traps after choosing a display, application, or
+  window and allows the custom-region overlay to open after choosing a display.
+- Resolve custom-region displays without guessing on ambiguous multi-display
+  layouts, and let the borderless selection overlay become key before assigning
+  its first responder so it reliably receives drag and Escape events.
+- Restore the newest valid screen recording after relaunch so **Open Last Video
+  in Gifski** remains available even when the newest session is audio-only.
+
 ## [1.1.0] - 2026-08-07
 
 ### Added
@@ -145,7 +159,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/aindaco1/record/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/aindaco1/record/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/aindaco1/record/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/aindaco1/record/compare/v1.0.1...v1.0.2
