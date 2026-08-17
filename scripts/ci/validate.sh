@@ -19,6 +19,7 @@ esac
 ./scripts/ci/test-local-only-guard.sh
 ./scripts/ci/test-model-installer.sh
 ./scripts/ci/test-local-signing.sh
+./scripts/ci/test-dmg-layout.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AppUpdateController.swift \

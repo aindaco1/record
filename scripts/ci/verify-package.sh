@@ -2,7 +2,9 @@
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$repo_root/scripts/release/dmg-layout.sh"
 artifacts_root="$repo_root/.build/release-artifacts"
+dmg_path="$artifacts_root/Record.dmg"
 
 cd "$repo_root"
 ./scripts/release/package.sh
@@ -21,11 +23,15 @@ fi
 
 mount_point="$(mktemp -d /tmp/record-dmg.XXXXXX)"
 cleanup() {
-    hdiutil detach "$mount_point" -quiet 2>/dev/null || true
+    /usr/bin/hdiutil detach "$mount_point" -quiet 2>/dev/null || true
     rmdir "$mount_point" 2>/dev/null || true
 }
 trap cleanup EXIT
 
-hdiutil attach Record.dmg -nobrowse -readonly -mountpoint "$mount_point" -quiet
-test -d "$mount_point/Record.app"
-test -x "$mount_point/Record.app/Contents/MacOS/record"
+/usr/bin/hdiutil verify "$dmg_path"
+/usr/bin/hdiutil attach "$dmg_path" -nobrowse -readonly -noautoopen \
+    -mountpoint "$mount_point" -quiet
+validate_record_dmg_layout "$mount_point"
+mounted_app="$mount_point/$RECORD_DMG_APP_NAME"
+"$repo_root/scripts/ci/check-app-bundle.sh" "$mounted_app"
+/usr/bin/codesign --verify --deep --strict "$mounted_app"
