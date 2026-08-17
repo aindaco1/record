@@ -17,9 +17,13 @@ sessions are exported to a user-approved folder, with Desktop as the default.
 
 ## Install
 
-Download `Record.dmg` from the [latest GitHub release](https://github.com/aindaco1/record/releases/latest),
-open it, and copy Record to Applications. Releases are Developer ID signed,
-notarized, and accompanied by SHA-256 checksums and build provenance.
+[Download Record for Apple Silicon](https://github.com/aindaco1/record/releases/latest/download/Record.dmg),
+open the notarized DMG, and drag **Record** onto its Applications shortcut. If
+EasyDMG is already configured as the Mac's default DMG handler, opening the
+same single-app image can automate that copy. No additional installer is
+required. Releases are Developer ID signed, notarized, and accompanied by
+SHA-256 checksums and build provenance on the
+[GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
 Record has no Dock icon. Open it from the ring in the menu bar.
 

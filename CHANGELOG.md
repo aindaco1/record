@@ -6,6 +6,20 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-17
+
+### Changed
+
+- Added a standard Applications shortcut to the notarized DMG for a clear
+  drag-to-install flow and compatibility with cautious single-app DMG handlers.
+- Added one shared, fail-closed DMG layout contract used before image creation,
+  during local package checks, and after signing, notarization, and stapling.
+  Final release validation now checks image integrity, the exact mounted layout,
+  the app bundle contract, signatures, entitlements, TCC identity, notarization
+  tickets, and Gatekeeper acceptance before publication.
+- Added a direct Apple Silicon DMG link while retaining the full release page
+  for checksums, release notes, build metadata, and provenance.
+
 ## [1.1.1] - 2026-08-07
 
 ### Fixed
@@ -159,7 +173,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/aindaco1/record/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/aindaco1/record/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/aindaco1/record/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/aindaco1/record/compare/v1.0.2...v1.0.3

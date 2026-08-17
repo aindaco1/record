@@ -41,9 +41,13 @@ the checked-out commit, builds arm64, signs Sparkle's nested helpers inside-out
 and then Record with hardened runtime and audited entitlements. It rejects any
 change to the bundle identifier, Apple signing team, or Developer ID designated
 requirement recorded in `Configuration/TCCIdentity.plist`, notarizes and staples
-the app and DMG, and publishes provenance. It generates `appcast.xml`
-from the final notarized ZIP and signs both the update archive and feed with the
-protected Sparkle key.
+the app and DMG, and publishes provenance. The DMG contains exactly one real
+`Record.app` plus an `Applications` symbolic link to `/Applications`. After
+notarization, `scripts/release/verify-dmg.sh` mounts the final image read-only
+and rechecks that shared layout contract, bundle structure, signatures,
+entitlements, stable TCC identity, stapled tickets, and Gatekeeper acceptance.
+Only then does the workflow generate `appcast.xml` from the final notarized ZIP
+and sign both the update archive and feed with the protected Sparkle key.
 
 `SHA256SUMS` covers the ZIP, DMG, signed appcast, resolved dependency lock, and
 build metadata.
@@ -54,8 +58,10 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
 
 1. Verify the GitHub artifact attestation.
 2. Run `shasum -a 256 -c SHA256SUMS` beside all downloaded artifacts.
-3. Validate the stapled DMG with `xcrun stapler validate` and Gatekeeper with
-   `spctl --assess --type open --context context:primary-signature`.
+3. Run `scripts/release/verify-dmg.sh` on the absolute path to the downloaded
+   `Record.dmg`. It verifies image integrity, the exact app-plus-Applications
+   layout, app and DMG signatures, entitlements, TCC identity, stapled tickets,
+   and Gatekeeper acceptance.
 4. Install on a clean macOS 15+ Apple Silicon account and verify the first-run
    permission flow, local-only boundary, recording, recovery, and uninstall.
 5. Install the previous release, choose **Check for Updates…**, and verify the

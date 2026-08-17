@@ -43,6 +43,9 @@ regressions run on every pull request.
 - update menu wiring plus package checks for the Sparkle framework, feed
   configuration, signature requirements, XPC Mach services, and main-app
   network-entitlement denial
+- exact DMG layout enforcement for one real `Record.app` plus an Applications
+  shortcut to `/Applications`, including rejection of missing, redirected,
+  extra, directory, and symlinked entries
 - local-only source/entitlement guards and FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
 - the complete suite under ThreadSanitizer and AddressSanitizer
@@ -222,6 +225,17 @@ session. Move or revoke the selected folder, relaunch, and confirm Record resets
 the saved grant without changing or deleting unexported private session media.
 
 ## Update checks
+
+Before release, download the final notarized `Record.dmg` rather than testing a
+locally ad hoc-signed image. Run `scripts/release/verify-dmg.sh` with its
+absolute path, open the image in Finder, and confirm it contains exactly
+**Record** plus the **Applications** shortcut. Drag Record onto the shortcut,
+eject the image, launch `/Applications/Record.app`, and confirm Gatekeeper
+accepts it. If EasyDMG is already installed and configured as the default DMG
+handler, repeat with the same image and confirm it copies only Record into
+Applications; EasyDMG is optional and is not part of Record's release toolchain.
+
+Then continue with the signed update checks below.
 
 Update cryptography and packaging are automated by
 `scripts/release/generate-appcast.sh` and the release gate. After publishing a

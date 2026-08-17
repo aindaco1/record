@@ -123,13 +123,12 @@ jobs:
           trap 'rm -f "$NOTARY_KEY_PATH"' EXIT
           printf '%s' "$APPLE_API_KEY_P8_BASE64" | base64 --decode > "$NOTARY_KEY_PATH"
           ./scripts/release/package.sh
-          dmg=.build/release-artifacts/Record.dmg
+          dmg="$GITHUB_WORKSPACE/.build/release-artifacts/Record.dmg"
           codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$dmg"
           xcrun notarytool submit "$dmg" --key "$NOTARY_KEY_PATH" \
             --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID" --wait
           xcrun stapler staple "$dmg"
-          xcrun stapler validate "$dmg"
-          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
+          ./scripts/release/verify-dmg.sh "$dmg"
 
       - name: Generate signed update feed
         env:
