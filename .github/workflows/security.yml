@@ -25,6 +25,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Select stable Xcode
+        run: ./scripts/ci/select-stable-xcode.sh
+
       - name: Resolve locked dependencies
         run: |
           swift package resolve
