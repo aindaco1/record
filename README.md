@@ -149,7 +149,7 @@ boundaries.
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
 - [Quill migration record](docs/migration/quill-triage.md)
-- [Current GitHub issue triage](docs/project/issue-triage-1.0.3.md)
+- [Current GitHub issue triage](docs/project/issue-triage-1.1.3.md)
 - [Support](SUPPORT.md)
 
 ## Provenance and license

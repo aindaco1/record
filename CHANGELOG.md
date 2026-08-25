@@ -6,6 +6,24 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-08-24
+
+### Changed
+
+- Updated FluidAudio from 0.15.5 to 0.15.6 for the latest offline Parakeet and
+  speaker-diarization maintenance while retaining Record's fail-closed offline
+  policy and verified local-model import.
+- Updated the pinned CodeQL action from 4.37.6 to 4.37.7 and its CodeQL bundle
+  from 2.26.2 to 2.26.3.
+
+### Security
+
+- Updated Sparkle from 2.9.5 to 2.9.6 for upstream installer hardening,
+  including safer archive movement and rejection of package installs after
+  signing validation fails. Record still permits only explicit manual update
+  checks through Sparkle's sandboxed services; the main app retains no network
+  entitlement.
+
 ## [1.1.2] - 2026-08-17
 
 ### Changed
@@ -173,7 +191,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/aindaco1/record/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/aindaco1/record/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/aindaco1/record/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/aindaco1/record/compare/v1.0.3...v1.1.0

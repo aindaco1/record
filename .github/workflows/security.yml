@@ -30,9 +30,9 @@ jobs:
           swift package resolve
           git diff --exit-code -- Package.resolved
 
-      # github/codeql-action v4.37.6, pinned to a verified commit.
+      # github/codeql-action v4.37.7, pinned to a verified commit.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3
+        uses: github/codeql-action/init@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
         with:
           languages: swift
           build-mode: manual
@@ -43,6 +43,6 @@ jobs:
           --disable-automatic-resolution
 
       - name: Analyze
-        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3
+        uses: github/codeql-action/analyze@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd
         with:
           category: /language:swift
