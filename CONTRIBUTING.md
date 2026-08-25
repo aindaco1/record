@@ -1,6 +1,8 @@
 # Contributing
 
-Record currently targets macOS 15+ on Apple Silicon with Swift 6.
+Record currently targets macOS 15+ on Apple Silicon with Swift 6 and requires
+Xcode 26 or newer for development. Authoritative hosted builds select the
+pinned stable Xcode with `scripts/ci/select-stable-xcode.sh`.
 
 ## Before opening a change
 

@@ -14,6 +14,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         public var executable: String?
         public var language: String
         public var suppressSpeakerEcho: Bool
+        public var refineWithAppleIntelligence: Bool
 
         public init(
             enabled: Bool = true,
@@ -21,7 +22,8 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             model: String? = "parakeet-tdt-0.6b-v3-coreml",
             executable: String? = nil,
             language: String = "auto",
-            suppressSpeakerEcho: Bool = true
+            suppressSpeakerEcho: Bool = true,
+            refineWithAppleIntelligence: Bool = false
         ) {
             self.enabled = enabled
             self.engine = engine
@@ -29,6 +31,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             self.executable = executable
             self.language = language
             self.suppressSpeakerEcho = suppressSpeakerEcho
+            self.refineWithAppleIntelligence = refineWithAppleIntelligence
         }
 
         public init(from decoder: Decoder) throws {
@@ -45,6 +48,9 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
                 .lowercased()
             suppressSpeakerEcho =
                 try container.decodeIfPresent(Bool.self, forKey: .suppressSpeakerEcho) ?? true
+            refineWithAppleIntelligence =
+                try container.decodeIfPresent(Bool.self, forKey: .refineWithAppleIntelligence)
+                ?? false
         }
 
         private enum CodingKeys: String, CodingKey {
@@ -54,6 +60,7 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
             case executable
             case language
             case suppressSpeakerEcho = "suppress_speaker_echo"
+            case refineWithAppleIntelligence = "refine_with_apple_intelligence"
         }
     }
 

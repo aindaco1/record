@@ -15,7 +15,18 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertNil(configuration.transcription.executable)
         XCTAssertEqual(configuration.transcription.language, "auto")
         XCTAssertTrue(configuration.transcription.suppressSpeakerEcho)
+        XCTAssertFalse(configuration.transcription.refineWithAppleIntelligence)
         XCTAssertTrue(configuration.micVoiceProcessing)
+    }
+
+    func testTranscriptRefinementCanBeEnabledExplicitly() throws {
+        let data = Data(
+            #"{"transcription":{"refine_with_apple_intelligence":true}}"#.utf8
+        )
+
+        let configuration = try AppConfiguration.decode(data)
+
+        XCTAssertTrue(configuration.transcription.refineWithAppleIntelligence)
     }
 
     func testMacWhisperRequiresAnExplicitModel() {

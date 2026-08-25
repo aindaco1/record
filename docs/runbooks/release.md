@@ -37,7 +37,8 @@ SSH tag verification is pinned to `.github/allowed_signers`; changing that
 trust root requires the same security review as changing release credentials.
 
 The release workflow revalidates the tag and source, requires the tag to identify
-the checked-out commit, builds arm64, signs Sparkle's nested helpers inside-out
+the checked-out commit, selects the repository-pinned Xcode 26.3 toolchain,
+builds arm64, signs Sparkle's nested helpers inside-out
 and then Record with hardened runtime and audited entitlements. It rejects any
 change to the bundle identifier, Apple signing team, or Developer ID designated
 requirement recorded in `Configuration/TCCIdentity.plist`, notarizes and staples

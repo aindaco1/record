@@ -130,4 +130,47 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(TranscriptionCoordinator.claimCompletionHook(in: directory))
         XCTAssertFalse(TranscriptionCoordinator.claimCompletionHook(in: directory))
     }
+
+    func testRefinementPassUsesValidatedAdviceWithoutChangingSegmentMetadata() async {
+        let source = TranscriptDocument(
+            engine: "test",
+            model: "local",
+            createdAt: "2026-08-25T00:00:00Z",
+            segments: [
+                .init(
+                    speaker: "me",
+                    startMilliseconds: 100,
+                    endMilliseconds: 900,
+                    text: "um I I agree"
+                )
+            ]
+        )
+
+        let pass = await TranscriptionCoordinator.refinementPass(
+            source: source,
+            language: "en",
+            adviser: RemoveEveryCandidateAdviser()
+        )
+
+        XCTAssertEqual(pass.outcome, .usedOnDeviceModel)
+        XCTAssertEqual(pass.result.segments.count, 1)
+        XCTAssertEqual(pass.result.segments[0].text, "I agree")
+        XCTAssertEqual(pass.result.segments[0].speaker, "me")
+        XCTAssertEqual(pass.result.segments[0].startMilliseconds, 100)
+        XCTAssertEqual(pass.result.segments[0].endMilliseconds, 900)
+    }
+}
+
+private struct RemoveEveryCandidateAdviser: TranscriptRefinementAdvising {
+    func advise(
+        candidates: [TranscriptRefinementCandidate],
+        language _: String
+    ) async -> TranscriptRefinementAdvice {
+        TranscriptRefinementAdvice(
+            decisions: candidates.map {
+                TranscriptRefinementDecision(candidateID: $0.id, action: .remove)
+            },
+            outcome: .usedOnDeviceModel
+        )
+    }
 }

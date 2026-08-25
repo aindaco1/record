@@ -42,10 +42,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Report toolchain
-        run: |
-          swift --version
-          xcodebuild -version
+      - name: Select stable Xcode
+        run: ./scripts/ci/select-stable-xcode.sh
 
       # This script is also the supported local validation entry point.
       - name: Validate
@@ -96,6 +94,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Select stable Xcode
+        run: ./scripts/ci/select-stable-xcode.sh
       - name: Run ThreadSanitizer and AddressSanitizer
         run: ./scripts/ci/sanitizers.sh
 

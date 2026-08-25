@@ -34,6 +34,9 @@ jobs:
           persist-credentials: false
           ref: ${{ env.RELEASE_TAG }}
 
+      - name: Select stable Xcode
+        run: ./scripts/ci/select-stable-xcode.sh
+
       - name: Define ephemeral signing paths
         run: |
           {

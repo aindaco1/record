@@ -31,6 +31,7 @@ enum TranscriptionPreferences {
     private static let parakeetModelKey = "transcription.parakeet.model"
     private static let macWhisperModelKey = "transcription.macwhisper.model"
     private static let languageKey = "transcription.language"
+    private static let refinementKey = "transcription.refineWithAppleIntelligence"
 
     static func effectiveSelection(
         configuration: AppConfiguration.Transcription,
@@ -82,5 +83,22 @@ enum TranscriptionPreferences {
                 defaults.set(defaultMacWhisperModel, forKey: macWhisperModelKey)
             }
         }
+    }
+
+    static func refinementEnabled(
+        configuration: AppConfiguration.Transcription,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        guard defaults.object(forKey: refinementKey) != nil else {
+            return configuration.refineWithAppleIntelligence
+        }
+        return defaults.bool(forKey: refinementKey)
+    }
+
+    static func setRefinementEnabled(
+        _ enabled: Bool,
+        defaults: UserDefaults = .standard
+    ) {
+        defaults.set(enabled, forKey: refinementKey)
     }
 }
