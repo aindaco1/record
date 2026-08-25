@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.7.0"),
-        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.5"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.6"),
     ],
     targets: [
         .target(name: "RecordCore"),
