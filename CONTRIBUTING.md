@@ -46,9 +46,23 @@ gate:
 The watchdog starts the existing Podman machine at login and checks it every
 five minutes. It deliberately runs through launchd with an abandoned process
 group so the VM and `gvproxy` survive the one-shot start command. The local
-gate uses the official `/opt/podman` client when present and asks the watchdog
-to recover an unreachable machine; it never resets machines or prunes images,
-containers, or volumes.
+gate and watchdog use the active `podman` on `PATH`, then the Homebrew and
+package-installer locations as fallbacks, so one installation owns both the VM
+and its helper processes. Set `RECORD_PODMAN_CLI` to an absolute executable
+path only when an explicit override is required. Recovery never resets
+machines or prunes images, containers, or volumes.
+
+The installer defaults to `podman-machine-default` with Libkrun. To dedicate a
+separate AppleHV machine to the gate, initialize it first, then install the
+watchdog with matching settings:
+
+```sh
+CONTAINERS_MACHINE_PROVIDER=applehv podman machine init record-release-gate
+RECORD_PODMAN_MACHINE_NAME=record-release-gate \
+  RECORD_PODMAN_MACHINE_PROVIDER=applehv \
+  ./scripts/setup/install-podman-watchdog.sh
+podman system connection default record-release-gate
+```
 
 Hardware capture changes must also complete the manual capture matrix in
 `docs/testing.md`. Never put recordings, transcripts, credentials, signing

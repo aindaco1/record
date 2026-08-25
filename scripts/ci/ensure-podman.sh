@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ -x /opt/podman/bin/podman ]]; then
-    podman_cli="/opt/podman/bin/podman"
-else
-    podman_cli="$(command -v podman 2>/dev/null || true)"
-fi
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+source "$repo_root/scripts/lib/podman-cli.sh"
+podman_cli="$(resolve_podman_cli || true)"
 
 if [[ -z "$podman_cli" ]]; then
     echo "Podman is required for pinned container linting" >&2

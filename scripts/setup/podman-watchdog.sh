@@ -1,16 +1,13 @@
 #!/bin/bash
 set -u
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/podman-cli.sh
+source "$script_dir/podman-cli.sh"
+
 machine_name="${RECORD_PODMAN_MACHINE_NAME:-podman-machine-default}"
 machine_provider="${RECORD_PODMAN_MACHINE_PROVIDER:-libkrun}"
-
-if [[ -x /opt/podman/bin/podman ]]; then
-    podman_cli="/opt/podman/bin/podman"
-elif [[ -x /opt/homebrew/bin/podman ]]; then
-    podman_cli="/opt/homebrew/bin/podman"
-else
-    podman_cli="$(command -v podman 2>/dev/null || true)"
-fi
+podman_cli="$(resolve_podman_cli || true)"
 
 export CONTAINERS_MACHINE_PROVIDER="$machine_provider"
 
@@ -24,7 +21,7 @@ if [[ -z "$podman_cli" || ! -x "$podman_cli" ]]; then
 fi
 
 for attempt in 1 2 3; do
-    if "$podman_cli" info >/dev/null 2>&1; then
+    if "$podman_cli" --connection "$machine_name" info >/dev/null 2>&1; then
         exit 0
     fi
     if [[ "$attempt" -lt 3 ]]; then
@@ -49,7 +46,7 @@ if ! "$podman_cli" machine start "$machine_name"; then
 fi
 
 for attempt in 1 2 3 4 5 6; do
-    if "$podman_cli" info >/dev/null 2>&1; then
+    if "$podman_cli" --connection "$machine_name" info >/dev/null 2>&1; then
         log "Podman machine is healthy"
         exit 0
     fi

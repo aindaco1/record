@@ -10,8 +10,11 @@ support_dir="$user_home/Library/Application Support/RecordDevelopment"
 logs_dir="$user_home/Library/Logs/RecordDevelopment"
 launch_agents_dir="$user_home/Library/LaunchAgents"
 watchdog_path="$support_dir/podman-watchdog.sh"
+podman_cli_helper_path="$support_dir/podman-cli.sh"
 launch_agent_path="$launch_agents_dir/com.aindaco.record.podman-machine.plist"
 launch_agent_label="com.aindaco.record.podman-machine"
+machine_name="${RECORD_PODMAN_MACHINE_NAME:-podman-machine-default}"
+machine_provider="${RECORD_PODMAN_MACHINE_PROVIDER:-libkrun}"
 temporary_dir="$(/usr/bin/mktemp -d "${TMPDIR%/}/record-podman.XXXXXX")"
 temporary_plist="$temporary_dir/$launch_agent_label.plist"
 
@@ -22,6 +25,8 @@ trap cleanup EXIT
 
 /bin/mkdir -p "$support_dir" "$logs_dir" "$launch_agents_dir"
 /usr/bin/install -m 700 "$script_dir/podman-watchdog.sh" "$watchdog_path"
+/usr/bin/install -m 700 "$script_dir/../lib/podman-cli.sh" \
+    "$podman_cli_helper_path"
 
 /usr/bin/plutil -create xml1 "$temporary_plist"
 /usr/bin/plutil -insert Label -string "$launch_agent_label" "$temporary_plist"
@@ -32,6 +37,11 @@ trap cleanup EXIT
 /usr/bin/plutil -insert ThrottleInterval -integer 30 "$temporary_plist"
 /usr/bin/plutil -insert AbandonProcessGroup -bool true "$temporary_plist"
 /usr/bin/plutil -insert ProcessType -string Background "$temporary_plist"
+/usr/bin/plutil -insert EnvironmentVariables -dictionary "$temporary_plist"
+/usr/bin/plutil -insert EnvironmentVariables.RECORD_PODMAN_MACHINE_NAME \
+    -string "$machine_name" "$temporary_plist"
+/usr/bin/plutil -insert EnvironmentVariables.RECORD_PODMAN_MACHINE_PROVIDER \
+    -string "$machine_provider" "$temporary_plist"
 /usr/bin/plutil -insert StandardOutPath -string \
     "$logs_dir/podman-watchdog.log" "$temporary_plist"
 /usr/bin/plutil -insert StandardErrorPath -string \
