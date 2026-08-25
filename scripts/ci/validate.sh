@@ -20,6 +20,7 @@ esac
 ./scripts/ci/test-model-installer.sh
 ./scripts/ci/test-local-signing.sh
 ./scripts/ci/test-dmg-layout.sh
+./scripts/ci/test-podman-cli.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AppUpdateController.swift \
