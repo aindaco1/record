@@ -5,6 +5,10 @@ import XCTest
 final class MenuBarControllerTests: XCTestCase {
     func testMenuUsesStableActionLabels() {
         XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcript model")
+        XCTAssertEqual(
+            MenuBarController.transcriptRefinementMenuTitle,
+            "Improve Transcript Readability"
+        )
         XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Select export folder…")
         XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
         XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
@@ -63,6 +67,29 @@ final class MenuBarControllerTests: XCTestCase {
             parakeetModelAvailable: true
         )
         XCTAssertTrue(menu.isMacWhisperMenuItemVisible)
+    }
+
+    func testTranscriptRefinementShowsSelectionButDisablesUnavailableCapability() {
+        let menu = MenuBarController()
+
+        XCTAssertTrue(menu.canDispatchTranscriptRefinementAction)
+
+        menu.updateTranscriptRefinement(
+            enabled: true,
+            available: false,
+            detail: "Unavailable"
+        )
+
+        XCTAssertTrue(menu.isTranscriptRefinementSelected)
+        XCTAssertFalse(menu.isTranscriptRefinementEnabled)
+
+        menu.updateTranscriptRefinement(
+            enabled: false,
+            available: true,
+            detail: "Available"
+        )
+        XCTAssertFalse(menu.isTranscriptRefinementSelected)
+        XCTAssertTrue(menu.isTranscriptRefinementEnabled)
     }
 
     func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {

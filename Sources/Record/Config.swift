@@ -46,6 +46,10 @@ enum Config {
         current.transcription.suppressSpeakerEcho
     }
 
+    static func refineTranscriptWithAppleIntelligence() -> Bool {
+        TranscriptionPreferences.refinementEnabled(configuration: current.transcription)
+    }
+
     static func transcriptionSelection() -> TranscriptionSelection {
         TranscriptionPreferences.effectiveSelection(configuration: current.transcription)
     }

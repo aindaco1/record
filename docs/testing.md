@@ -34,6 +34,9 @@ regressions run on every pull request.
   at-most-once completion-hook claims, and path traversal rejection
 - microphone route-recovery state transitions plus conservative transcript echo
   suppression that retains backchannels, unrelated overlap, and a raw sidecar
+- bounded readability-candidate planning, conservative Foundation Models advice
+  validation, whole-token application, explicit cross-speaker overlap, source
+  hashing, raw preservation policy, and fallback outcomes
 - manifest-derived recent-recording discovery plus symlink and nesting rejection
 - failed-transcription retry menu state and no-op behavior without a failed job
 - deterministic folder collision handling
@@ -212,6 +215,20 @@ and confirm pending transcription resumes. Modify one byte in a disposable
 download and confirm Record rejects it without changing an existing installed
 model. The MacWhisper menu choice must be absent when either MacWhisper, its
 bundled `mw`, or Record's user-script bridge is missing.
+
+On an eligible macOS 26+ test Mac, enable Apple Intelligence and choose
+**Transcript model → Improve Transcript Readability**. Record synthetic speech
+with filled pauses, an immediate repeated word, and a short interval where the
+microphone and system speakers overlap. Confirm the final JSON and Markdown
+retain speaker labels and timestamps, label overlapping segments, and contain
+no unconstrained rewrites. If any token is removed, confirm
+`transcript.raw.json` contains the complete pre-refinement transcript. In all
+enabled cases, inspect `transcript.refinement.json` for the v1 policy, source
+hash, capability outcome, and content-free decisions; it must not duplicate
+transcript text. Disable Apple Intelligence or test an unsupported language and
+confirm the menu becomes unavailable while ordinary transcription continues.
+Turn the option off and confirm the next session produces the ordinary
+transcript without a refinement report.
 
 ## Export folder access
 

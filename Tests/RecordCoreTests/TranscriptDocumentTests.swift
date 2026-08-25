@@ -33,4 +33,30 @@ final class TranscriptDocumentTests: XCTestCase {
         XCTAssertTrue(markdown.contains("**[1:02:03] me:** A local transcript."))
         XCTAssertEqual(decoded, document)
     }
+
+    func testOverlapMetadataIsOptionalAndRenderedExplicitly() throws {
+        let legacy = Data(
+            #"{"engine":"fixture","model":"local","created_at":"now","segments":[{"speaker":"me","start_ms":0,"end_ms":1000,"text":"Legacy"}]}"#
+                .utf8
+        )
+        let decoded = try JSONDecoder().decode(TranscriptDocument.self, from: legacy)
+        XCTAssertNil(decoded.segments.first?.overlapGroup)
+
+        let document = TranscriptDocument(
+            engine: "fixture",
+            model: "local",
+            createdAt: "now",
+            segments: [
+                .init(
+                    speaker: "them",
+                    startMilliseconds: 500,
+                    endMilliseconds: 1_500,
+                    text: "An interruption.",
+                    overlapGroup: "overlap-0001"
+                )
+            ]
+        )
+
+        XCTAssertTrue(document.rendered(title: "Session").contains("them (overlapping):"))
+    }
 }

@@ -6,6 +6,26 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Added
+
+- Added opt-in Apple Intelligence transcript readability refinement on
+  supported macOS 26+ Macs. The on-device model can advise only on bounded
+  filled-pause and immediate-repeat candidates; deterministic policy preserves
+  timestamps and speaker labels and marks simultaneous speakers explicitly.
+- Added reversible `transcript.raw.json` preservation for changed output plus a
+  content-free, source-hashed `transcript.refinement.json` decision report.
+
+### Changed
+
+- Pinned authoritative CI and release jobs to Xcode 26.3 while retaining the
+  macOS 15 deployment target and the advisory Xcode 27 compatibility lane.
+
+### Security
+
+- Kept Foundation Models processing on-device, added no network entitlement or
+  model download path, escaped transcript context as untrusted data, and
+  revalidated every generated decision before applying it.
+
 ## [1.1.3] - 2026-08-24
 
 ### Changed

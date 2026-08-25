@@ -9,6 +9,7 @@ import RecordCore
 final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
     static let transcriptionModelMenuTitle = "Transcript model"
+    static let transcriptRefinementMenuTitle = "Improve Transcript Readability"
     static let openTempSessionMenuTitle = "Open temp session"
     static let openLastRecordingMenuTitle = "Open last recording"
     static let exportFolderMenuTitle = "Select export folder…"
@@ -35,6 +36,7 @@ final class MenuBarController {
     private let transcriptionEngineItem: NSMenuItem
     private let parakeetEngineItem: NSMenuItem
     private let macWhisperEngineItem: NSMenuItem
+    private let transcriptRefinementItem: NSMenuItem
     private let parakeetModelSetupItem: NSMenuItem
     private let retryTranscriptionItem: NSMenuItem
     private let openLastRecordingItem: NSMenuItem
@@ -45,6 +47,12 @@ final class MenuBarController {
     private var captureHealthNote: String?
 
     var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
+    var isTranscriptRefinementSelected: Bool { transcriptRefinementItem.state == .on }
+    var isTranscriptRefinementEnabled: Bool { transcriptRefinementItem.isEnabled }
+    var canDispatchTranscriptRefinementAction: Bool {
+        transcriptRefinementItem.target === self
+            && transcriptRefinementItem.action == #selector(toggleTranscriptRefinementClicked)
+    }
     var isRetryTranscriptionMenuItemVisible: Bool { !retryTranscriptionItem.isHidden }
     var isOpenLastRecordingEnabled: Bool { openLastRecordingItem.isEnabled }
     var isPauseResumeVisible: Bool { !pauseResumeItem.isHidden }
@@ -68,6 +76,7 @@ final class MenuBarController {
     var onEditRecordingNameTemplate: (() -> Void)?
     var onOpenLastVideoInGifski: (() -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
+    var onToggleTranscriptRefinement: (() -> Void)?
     var onSetUpParakeetModel: (() -> Void)?
     var onRetryTranscription: (() -> Void)?
     var onOpenFolder: (() -> Void)?
@@ -201,6 +210,13 @@ final class MenuBarController {
             TranscriptionEngineOption.macwhisper.rawValue
         transcriptionMenu.addItem(macWhisperEngineItem)
         transcriptionMenu.addItem(.separator())
+        transcriptRefinementItem = NSMenuItem(
+            title: Self.transcriptRefinementMenuTitle,
+            action: #selector(toggleTranscriptRefinementClicked),
+            keyEquivalent: ""
+        )
+        transcriptionMenu.addItem(transcriptRefinementItem)
+        transcriptionMenu.addItem(.separator())
         parakeetModelSetupItem = NSMenuItem(
             title: "Set Up Parakeet Model…",
             action: #selector(setUpParakeetModelClicked),
@@ -281,6 +297,7 @@ final class MenuBarController {
             gifskiItem,
             parakeetEngineItem,
             macWhisperEngineItem,
+            transcriptRefinementItem,
             parakeetModelSetupItem,
             retryTranscriptionItem,
             openFolder,
@@ -472,6 +489,12 @@ final class MenuBarController {
             "Download from FluidInference and import a verified local Parakeet model"
     }
 
+    func updateTranscriptRefinement(enabled: Bool, available: Bool, detail: String) {
+        transcriptRefinementItem.state = enabled ? .on : .off
+        transcriptRefinementItem.isEnabled = available
+        transcriptRefinementItem.toolTip = detail
+    }
+
     /// Show the default or approved destination for finished exports. An
     /// ellipsis communicates that selecting the item opens a folder picker.
     func updateExportDirectory(_ url: URL) {
@@ -646,6 +669,9 @@ final class MenuBarController {
         onSelectTranscriptionEngine?(engine)
     }
     @objc private func setUpParakeetModelClicked() { onSetUpParakeetModel?() }
+    @objc private func toggleTranscriptRefinementClicked() {
+        onToggleTranscriptRefinement?()
+    }
     @objc private func retryTranscriptionClicked() { onRetryTranscription?() }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func openLastRecordingClicked() { onOpenLastRecording?() }

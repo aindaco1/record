@@ -19,6 +19,11 @@ struct TranscriptionRetryState: Equatable, Sendable {
     }
 }
 
+struct TranscriptRefinementPass: Equatable, Sendable {
+    let result: TranscriptRefinementResult
+    let outcome: TranscriptRefinementAdviserOutcome
+}
+
 /// Post-recording pipeline: a serial queue of session folders to transcribe.
 /// mic.caf → "me", system.caf → "them"; each track's segments are shifted by
 /// its start offset, merged by timestamp, and written as transcript.json
@@ -40,11 +45,15 @@ actor TranscriptionCoordinator {
     private var retryState = TranscriptionRetryState()
     private var statusHandler: (@Sendable (Status) -> Void)?
     private let notificationHandler: @Sendable (RecordNotification) -> Void
+    private let refinementAdviser: any TranscriptRefinementAdvising
 
     init(
-        notificationHandler: @escaping @Sendable (RecordNotification) -> Void = { _ in }
+        notificationHandler: @escaping @Sendable (RecordNotification) -> Void = { _ in },
+        refinementAdviser: any TranscriptRefinementAdvising =
+            OnDeviceTranscriptRefinementAdviser()
     ) {
         self.notificationHandler = notificationHandler
+        self.refinementAdviser = refinementAdviser
     }
 
     func setStatusHandler(_ handler: @escaping @Sendable (Status) -> Void) {
@@ -294,30 +303,81 @@ actor TranscriptionCoordinator {
                 suppressedMicrophoneSegments: []
             )
         let rawTranscriptURL = dir.appendingPathComponent("transcript.raw.json")
+        let refinementReportURL = dir.appendingPathComponent("transcript.refinement.json")
         try? FileManager.default.removeItem(at: rawTranscriptURL)
-        if !suppression.suppressedMicrophoneSegments.isEmpty {
-            try rawTranscript.writeJSON(to: rawTranscriptURL)
+        try? FileManager.default.removeItem(at: refinementReportURL)
+
+        var finalSegments = suppression.segments
+        var refinementChanged = false
+        if Config.refineTranscriptWithAppleIntelligence() {
+            let sourceTranscript = TranscriptDocument(
+                engine: rawTranscript.engine,
+                model: rawTranscript.model,
+                createdAt: rawTranscript.createdAt,
+                segments: suppression.segments
+            )
+            let refinementPass = await Self.refinementPass(
+                source: sourceTranscript,
+                language: Config.transcriptionLanguage(),
+                adviser: refinementAdviser
+            )
+            let report = try TranscriptRefinementReport(
+                source: rawTranscript,
+                adviserOutcome: refinementPass.outcome,
+                result: refinementPass.result
+            )
+            try report.write(to: dir)
+            finalSegments = refinementPass.result.segments
+            refinementChanged = refinementPass.result.changed
             log(
                 dir,
-                "speaker echo suppression removed "
-                    + "\(suppression.suppressedMicrophoneSegments.count) mic segment(s); "
-                    + "unsuppressed segments are in transcript.raw.json"
+                "transcript refinement \(refinementPass.outcome.rawValue); removed "
+                    + "\(refinementPass.result.removals.count) candidate(s), marked "
+                    + "\(refinementPass.result.overlaps.count) overlap group(s)"
             )
+        }
+
+        if !suppression.suppressedMicrophoneSegments.isEmpty || refinementChanged {
+            try rawTranscript.writeJSON(to: rawTranscriptURL)
+            if !suppression.suppressedMicrophoneSegments.isEmpty {
+                log(
+                    dir,
+                    "speaker echo suppression removed "
+                        + "\(suppression.suppressedMicrophoneSegments.count) mic segment(s); "
+                        + "unsuppressed segments are in transcript.raw.json"
+                )
+            }
         }
         let transcript = TranscriptDocument(
             engine: rawTranscript.engine,
             model: rawTranscript.model,
             createdAt: rawTranscript.createdAt,
-            segments: suppression.segments
+            segments: finalSegments
         )
         try transcript.write(to: dir, title: dir.lastPathComponent)
-        log(dir, "done — \(suppression.segments.count) segments")
+        log(dir, "done — \(finalSegments.count) segments")
     }
 
     static func validateTrackResults(attempted: Int, succeeded: Int) throws {
         guard attempted == 0 || succeeded > 0 else {
             throw PipelineError.allTracksFailed(attempted)
         }
+    }
+
+    static func refinementPass(
+        source: TranscriptDocument,
+        language: String,
+        adviser: any TranscriptRefinementAdvising
+    ) async -> TranscriptRefinementPass {
+        let plan = TranscriptRefiner.plan(for: source.segments)
+        let advice = await adviser.advise(
+            candidates: plan.candidates,
+            language: language
+        )
+        return TranscriptRefinementPass(
+            result: TranscriptRefiner.apply(advice.decisions, to: plan),
+            outcome: advice.outcome
+        )
     }
 
     private func preparedEngine() async throws -> TranscriptionEngine {

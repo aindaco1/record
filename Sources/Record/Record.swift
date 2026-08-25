@@ -207,6 +207,9 @@ final class AppController {
         menuBar.onSelectTranscriptionEngine = { [weak self] in
             self?.selectTranscriptionEngine($0)
         }
+        menuBar.onToggleTranscriptRefinement = { [weak self] in
+            self?.toggleTranscriptRefinement()
+        }
         menuBar.onSetUpParakeetModel = { [weak self] in
             self?.presentParakeetModelSetup()
         }
@@ -1016,6 +1019,13 @@ final class AppController {
         }
     }
 
+    private func toggleTranscriptRefinement() {
+        TranscriptionPreferences.setRefinementEnabled(
+            !Config.refineTranscriptWithAppleIntelligence()
+        )
+        refreshTranscriptionEngineMenu()
+    }
+
     private func refreshTranscriptionEngineMenu() {
         if MacWhisperExecutable.installedApplicationCLI() != nil {
             try? MacWhisperExecutable.installBundledApplicationScriptIfNeeded()
@@ -1037,6 +1047,14 @@ final class AppController {
             engine,
             macWhisperAvailable: macWhisperAvailable,
             parakeetModelAvailable: ParakeetModelInstaller.isInstalled(parakeetModel)
+        )
+        let refinementCapability = OnDeviceTranscriptRefinementAdviser.currentCapability(
+            language: Config.transcriptionLanguage()
+        )
+        menuBar.updateTranscriptRefinement(
+            enabled: Config.refineTranscriptWithAppleIntelligence(),
+            available: refinementCapability.canEnable,
+            detail: refinementCapability.detail
         )
     }
 

@@ -63,6 +63,36 @@ final class TranscriptionPreferencesTests: XCTestCase {
         XCTAssertEqual(selection.engine, .parakeet)
     }
 
+    func testRefinementUsesConfigurationAsItsBaseline() throws {
+        let defaults = try makeDefaults()
+        let configuration = AppConfiguration.Transcription(
+            refineWithAppleIntelligence: true
+        )
+
+        XCTAssertTrue(
+            TranscriptionPreferences.refinementEnabled(
+                configuration: configuration,
+                defaults: defaults
+            )
+        )
+    }
+
+    func testRefinementPreferenceOverridesConfiguration() throws {
+        let defaults = try makeDefaults()
+        let configuration = AppConfiguration.Transcription(
+            refineWithAppleIntelligence: true
+        )
+
+        TranscriptionPreferences.setRefinementEnabled(false, defaults: defaults)
+
+        XCTAssertFalse(
+            TranscriptionPreferences.refinementEnabled(
+                configuration: configuration,
+                defaults: defaults
+            )
+        )
+    }
+
     private func makeDefaults() throws -> UserDefaults {
         let suite = "com.aindaco.record.transcription-tests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

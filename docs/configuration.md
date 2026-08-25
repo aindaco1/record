@@ -13,7 +13,8 @@ to Record's sandbox home:
     "engine": "parakeet",
     "model": "parakeet-tdt-0.6b-v3-coreml",
     "language": "auto",
-    "suppress_speaker_echo": true
+    "suppress_speaker_echo": true,
+    "refine_with_apple_intelligence": false
   },
   "mic_voice_processing": true,
   "completion_hook": {
@@ -39,6 +40,18 @@ second, transcript-only safeguard: aligned high-confidence microphone copies
 of system speech are omitted from `transcript.json` and `transcript.md`, while
 `transcript.raw.json` retains the unsuppressed local result. Neither option
 modifies `mic.caf` or `system.caf`.
+
+`refine_with_apple_intelligence` is an opt-in baseline for the same menu toggle
+and defaults to `false`. On macOS 26+, Record checks the local Foundation Models
+capability, selected language, device eligibility, Apple Intelligence setting,
+and model readiness before enabling it. The model can advise only whether
+preselected filled pauses and immediate repetitions should be kept or removed;
+deterministic RecordCore policy applies the result and marks cross-speaker time
+overlap. Model unavailability or generation failure leaves transcript wording
+unchanged. When refinement changes the transcript, `transcript.raw.json`
+preserves the complete pre-refinement local result. The content-free
+`transcript.refinement.json` report stores the policy version, source SHA-256,
+candidate decisions, removals, overlap indices, and capability outcome.
 
 Completion hooks run only after successful local transcription. Record invokes
 the absolute executable directly, never through a shell. The literal
