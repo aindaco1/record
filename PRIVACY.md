@@ -27,6 +27,12 @@ Record does not download transcription models. If the user explicitly selects
 MacWhisper, audio is passed locally to the separately installed MacWhisper app;
 MacWhisper's own privacy policy and settings then apply.
 
+If the user enables **Improve Transcript Readability**, bounded transcript
+snippets are processed by Apple's on-device Foundation Models framework. They
+do not leave the Mac, and Record does not send them to an Apple or third-party
+network service. Record preserves the pre-refinement local transcript whenever
+the readable output changes.
+
 ## Retention and deletion
 
 Record keeps files until the user deletes them. After a completed session is

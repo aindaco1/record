@@ -91,6 +91,18 @@ interrupted media, restores playable partials, quarantines invalid partials
 without deleting them, and opens only Record's temporary recovery folder from
 the notification.
 
+On macOS 26 or newer, an eligible Mac with Apple Intelligence enabled can opt
+in to **Transcript model → Improve Transcript Readability**. Apple's on-device
+Foundation Models framework advises Record only on bounded filled-pause and
+immediate-repeat candidates; Record validates every decision, preserves timing
+and source-speaker labels, and marks simultaneous cross-speaker segments as
+overlapping. It never asks the model to rewrite a transcript or identify a
+person. If the on-device model is unavailable or generation fails, the ordinary
+local transcript still completes. A changed transcript retains the complete
+pre-refinement result in `transcript.raw.json`, and
+`transcript.refinement.json` records the content-free policy decisions and a
+source hash.
+
 ## Built-in plugins
 
 The Plugins menu contains small, capability-specific features rather than an
@@ -133,6 +145,9 @@ swift test
 Podman for pinned workflow and shell linting, runs the test and sanitizer
 suites, assembles the arm64 app, audits its entitlements, and verifies the ZIP
 and DMG structures.
+
+Development requires Xcode 26 or newer. Hosted CI and releases select Xcode
+26.3 explicitly; the macOS 15 deployment target remains unchanged.
 
 The project uses Swift 6, AppKit, ScreenCaptureKit, AVFoundation,
 VideoToolbox/AVAssetWriter, ServiceManagement, and Sparkle 2. See

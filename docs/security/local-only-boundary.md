@@ -34,6 +34,11 @@ Its only in-app network operation is an explicit signed software-update check.
    only Record's public GitHub release feed after **Check for Updates…** and
    installs only a Developer ID signed, Apple-notarized release whose Sparkle
    signatures match the public key embedded in Record.
+9. Optional readability refinement uses only Apple's on-device
+   `SystemLanguageModel`. Record submits bounded, escaped classification records
+   and accepts only revalidated keep/remove decisions. It adds no networking
+   API or entitlement, never downloads a model, and preserves the raw local
+   transcript whenever output changes.
 
 FluidAudio currently contains download-capable APIs even though Record calls
 only its local existence and loading APIs. This is why the sandbox boundary is

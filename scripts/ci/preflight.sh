@@ -49,8 +49,8 @@ then
     echo "Record requires Swift 6 or newer; found $swift_first_line" >&2
     exit 1
 fi
-if [[ ! "$xcode_major" =~ ^[0-9]+$ || "$xcode_major" -lt 16 ]]; then
-    echo "Record requires Xcode 16 or newer; found $xcode_first_line" >&2
+if [[ ! "$xcode_major" =~ ^[0-9]+$ || "$xcode_major" -lt 26 ]]; then
+    echo "Record requires Xcode 26 or newer; found $xcode_first_line" >&2
     exit 1
 fi
 

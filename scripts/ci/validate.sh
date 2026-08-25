@@ -34,6 +34,7 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/UI/MenuBarController.swift \
     Sources/Record/RecordingNamePreferences.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
+    Sources/Record/Transcription/FoundationModelTranscriptAdviser.swift \
     Sources/Record/Transcription/TranscriptionCoordinator.swift \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
     Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoRecordingSession.swift \

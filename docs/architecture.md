@@ -16,6 +16,7 @@ flowchart LR
     Encode --> Segments["Finalized media segments"]
     Segments --> Session["Atomic session manifest"]
     Session --> Transcript["Local transcription"]
+    Transcript --> Refine["Optional on-device refinement"]
     Session --> Export["Validated atomic export"]
     Session --> Plugins["Built-in capability services"]
 ```
@@ -54,6 +55,17 @@ Each current session is a directory containing an atomically updated
 transcripts, and bounded diagnostic logs. Source media remains immutable.
 Future trimming, speed changes, masks, camera placement, and annotations must
 be stored as non-destructive edit operations rather than rewriting that source.
+
+Optional transcript refinement follows the same rule. `RecordCore` plans a
+bounded set of filled-pause and immediate-repeat candidates, detects
+cross-speaker time overlap, validates advisory decisions, and applies only
+whole-token removals. The app adapter uses Apple's Foundation Models framework
+on supported Macs but cannot rewrite text, timing, or speaker labels. Any
+change preserves the complete pre-refinement transcript in
+`transcript.raw.json`; `transcript.refinement.json` binds a content-free audit
+record to that source with SHA-256. `transcript.json` remains the atomic
+completion marker. Speaker diarization and identity inference are outside this
+pass.
 
 The current screen-capture segment is deliberately split into
 `recording.mov`, `system.caf`, and `mic.caf`. The movie contains video only;
