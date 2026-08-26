@@ -39,6 +39,10 @@ umbrella issues until a real use case justifies the complexity.
 - Optional cursor-click visualization and per-source audio controls.
 - Optional first-party Whisper/translation if MacWhisper stops meeting the need.
 - An opt-in local browser speaker-metadata bridge.
+- Content-free, end-to-end local speech progress through one engine-independent
+  contract, with deterministic long-file, two-track, and failure tests; exact
+  speaker-count constraints only when a real offline-diarization consumer and
+  representative fixtures justify them.
 - A lightweight manifest-derived recording history and configurable global
   shortcuts with conflict reporting and an explicit off state.
 - Localization and VoiceOver-focused accessibility review.
