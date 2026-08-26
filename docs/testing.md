@@ -53,6 +53,9 @@ regressions run on every pull request.
 - local-only source/entitlement guards and FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
 - the complete suite under ThreadSanitizer and AddressSanitizer
+- exact-commit CI app handoff checks covering successful CI and CodeQL evidence,
+  GitHub-hosted provenance policy, source/build-script hashes, unsigned bundle
+  verification, bounded archive extraction, and escaping-link rejection
 - Swift formatting for new modular code
 - an advisory Xcode 27 / Swift 6.4 compatibility build while GitHub's runner
   remains in public preview; stable Xcode remains authoritative for releases

@@ -6,6 +6,21 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Changed
+
+- Reused the provenance-attested, package-tested unsigned app from the exact
+  successful `main` CI commit during signed-tag releases. Release still stamps,
+  signs, notarizes, packages, reads back, Sparkle-signs, checksums, attests, and
+  publishes the same arm64 app contract while avoiding duplicate dependency
+  resolution, tests, and production compilation.
+
+### Security
+
+- Required exact successful CI and CodeQL push runs, GitHub-hosted artifact
+  provenance, bounded traversal-safe extraction, internal symlink containment,
+  source and executable hashes, Xcode 26.3 identity, and an unsigned handoff
+  before any protected release signing material is imported.
+
 ## [1.2.1] - 2026-08-26
 
 ### Added
@@ -228,7 +243,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/aindaco1/record/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/aindaco1/record/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/aindaco1/record/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/aindaco1/record/compare/v1.1.1...v1.1.2

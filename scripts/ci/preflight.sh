@@ -18,6 +18,7 @@ required_commands=(
     lipo
     plutil
     podman
+    python3
     rg
     shasum
     swift

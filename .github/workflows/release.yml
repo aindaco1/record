@@ -11,6 +11,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: write
   id-token: write
   attestations: write
@@ -56,17 +57,30 @@ jobs:
           git config gpg.ssh.allowedSignersFile \
             "$GITHUB_WORKSPACE/.github/allowed_signers"
           ./scripts/release/validate-tag.sh "$RELEASE_TAG"
+          printf 'RELEASE_COMMIT=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
-      - name: Validate source
-        run: ./scripts/ci/validate.sh
+      - name: Validate source contract
+        run: ./scripts/ci/release-source-gate.sh
 
-      - name: Build app
+      - name: Restore exact successful CI app and security evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/release/restore-ci-app.sh \
+            "$GITHUB_REPOSITORY" "$RELEASE_COMMIT" \
+            "$GITHUB_WORKSPACE/.build/release-artifacts/Record.app"
+
+      - name: Stamp release version
         env:
           RECORD_VERSION: ${{ env.RELEASE_TAG }}
           RECORD_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           export RECORD_VERSION="${RECORD_VERSION#v}"
-          ./scripts/release/build-app.sh
+          ./scripts/release/stamp-app.sh \
+            "$GITHUB_WORKSPACE/.build/release-artifacts/Record.app" \
+            "$RECORD_VERSION" "$RECORD_BUILD_NUMBER"
+          ./scripts/ci/check-app-bundle.sh \
+            "$GITHUB_WORKSPACE/.build/release-artifacts/Record.app"
 
       - name: Import signing identity
         env:
