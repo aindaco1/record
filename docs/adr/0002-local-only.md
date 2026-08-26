@@ -1,6 +1,6 @@
 # ADR 0002: Enforce a local-only data boundary
 
-- Status: accepted
+- Status: accepted; update cadence amended by ADR 0011
 - Date: 2026-08-06
 
 ## Decision
@@ -13,10 +13,11 @@ Transcription engines load assets already present on disk. Models may be
 bundled with a release or imported through an explicit local-file workflow;
 the recording application does not fetch them.
 
-Record may check for software updates only after an explicit user command.
-ADR 0004 confines that request to Sparkle's sandboxed downloader service and
-requires a signed GitHub release feed and signed archive. No recording content,
-transcript, identifier, or diagnostic is part of the request.
+Record may check for software updates once at launch or after an explicit user
+command. ADRs 0004 and 0011 confine those requests to Sparkle's sandboxed
+downloader service and require a signed GitHub release feed and signed archive.
+No recording content, transcript, identifier, local path, or diagnostic is part
+of a request.
 
 ## Consequences
 
@@ -24,7 +25,8 @@ transcript, identifier, or diagnostic is part of the request.
 - The stale NewKap Giphy configuration is not migrated.
 - Remote wallpaper URLs from the old desktop-icons plugin are not supported.
 - Network dependencies in core product targets require a new ADR and explicit
-  user approval; Sparkle is the reviewed update-only exception in ADR 0004.
+  user approval; Sparkle is the reviewed update-only exception in ADRs 0004
+  and 0011.
 - Signed app artifacts enable App Sandbox but intentionally omit client and
   server network entitlements. CI verifies the embedded signing policy.
 - CI may access package and tool registries; CI never processes user media.

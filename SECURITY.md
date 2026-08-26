@@ -23,9 +23,10 @@ arbitrary code execution, permissions, signing, plugins, or recording data.
   closed rather than silently downloading.
 - Signed app artifacts use App Sandbox without incoming or outgoing network
   entitlements; CI checks both source calls and embedded entitlements.
-- Explicit update checks use only Sparkle's sandboxed downloader service. Both
-  the appcast and archive require Ed25519 signatures, and the archive also
-  requires Developer ID signing and Apple notarization.
+- A silent update check at launch and the explicit manual fallback use only
+  Sparkle's sandboxed downloader service. Both the appcast and archive require
+  Ed25519 signatures, and the archive also requires Developer ID signing and
+  Apple notarization. Automatic installation and system profiling are disabled.
 - FluidAudio is forced into offline mode before model preparation, and a test
   requires its network surface to fail with `networkDisabled`.
 - Third-party extensions do not execute inside the capture process.

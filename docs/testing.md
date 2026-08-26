@@ -43,9 +43,10 @@ regressions run on every pull request.
 - plugin activation rollback, reverse restoration, and idempotence
 - native login-item state mapping and fail-closed approval handling
 - stable Developer ID bundle/team/designated-requirement checks for TCC grants
-- update menu wiring plus package checks for the Sparkle framework, feed
-  configuration, signature requirements, XPC Mach services, and main-app
-  network-entitlement denial
+- deterministic launch-update policy, manual update menu wiring, plus package
+  checks for the Sparkle framework, automatic-check and no-auto-install flags,
+  disabled system profiling, feed configuration, signature requirements, XPC
+  Mach services, and main-app network-entitlement denial
 - exact DMG layout enforcement for one real `Record.app` plus an Applications
   shortcut to `/Applications`, including rejection of missing, redirected,
   extra, directory, and symlinked entries
@@ -256,9 +257,11 @@ Then continue with the signed update checks below.
 
 Update cryptography and packaging are automated by
 `scripts/release/generate-appcast.sh` and the release gate. After publishing a
-release, install the prior notarized version on a clean test account, choose
-**Check for Updates…**, and verify the new version, release notes, download,
-replacement, and relaunch. Confirm a same-version check reports no update.
+release, install the prior notarized version on a clean test account and launch
+it. Verify that the automatic check presents the new version and release notes,
+then approve the download, replacement, and relaunch. Relaunch the current
+version and confirm the launch check is silent. Use **Check for Updates…** as a
+separate manual fallback and confirm it reports no update.
 
 Before updating, grant all three Record privacy services and capture a short
 screen and audio-only session. After updating 1.0.2 to 1.0.3, confirm the

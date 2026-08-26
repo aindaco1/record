@@ -76,6 +76,7 @@ then
 fi
 
 for key in \
+    SUEnableAutomaticChecks \
     SUEnableDownloaderService \
     SUEnableInstallerLauncherService \
     SURequireSignedFeed \
@@ -84,7 +85,11 @@ do
     assert_plist_value "$key" true
 done
 
-for key in SUAllowsAutomaticUpdates SUEnableAutomaticChecks; do
+for key in \
+    SUAllowsAutomaticUpdates \
+    SUAutomaticallyUpdate \
+    SUEnableSystemProfiling
+do
     assert_plist_value "$key" false
 done
 assert_plist_value LSUIElement true

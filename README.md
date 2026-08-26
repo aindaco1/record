@@ -44,8 +44,10 @@ preferences, temporary recovery sessions, and installed transcription model.
 - **Open last recording** reveals the newest finished session from private or
   approved export storage. Record derives this from `session.json` and keeps no
   separate activity database.
-- **Check for Updates…** checks the signed GitHub release feed only when
-  selected and can install a newer notarized build.
+- Record silently checks its signed GitHub release feed once at launch. When a
+  newer version is available, Sparkle presents its standard update prompt;
+  download and installation remain user approved.
+- **Check for Updates…** retains the same signed flow as a manual fallback.
 - **Open at Login** uses the macOS Login Items service and is off by default.
 
 Each exported session contains an atomic `session.json` manifest. Screen
@@ -122,9 +124,10 @@ diagnostics, or identifiers. It has no accounts, analytics, cloud
 transcription, or recording network client. The sandboxed main app has no
 incoming or outgoing network entitlement.
 
-The explicit update command is the narrow exception: Sparkle's sandboxed
-downloader service contacts the public GitHub release feed and accepts only an
-Ed25519-signed update archive. Enabling MacWhisper extends the local trust
+The launch update check and explicit update command are the narrow exception:
+Sparkle's sandboxed downloader service contacts the public GitHub release feed
+and accepts only an Ed25519-signed update archive. Automatic installation and
+system profiling are disabled. Enabling MacWhisper extends the local trust
 boundary to the separately installed MacWhisper app.
 
 See [Security](SECURITY.md) and the [local-only boundary](docs/security/local-only-boundary.md)

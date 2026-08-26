@@ -6,6 +6,21 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-26
+
+### Added
+
+- Added one silent, signed Sparkle feed check whenever Record opens. A newer
+  release uses Sparkle's standard prompt, while downloading and installation
+  remain user approved and **Check for Updates…** remains a manual fallback.
+
+### Security
+
+- Kept update networking inside Sparkle's sandboxed services, disabled
+  automatic installation and system profiling, and retained the main app's
+  no-network entitlements. Update requests include no recording, transcript,
+  clipboard, session, diagnostic, model, local-path, or account data.
+
 ## [1.2.0] - 2026-08-25
 
 ### Added
