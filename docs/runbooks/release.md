@@ -25,8 +25,8 @@ cleanup; the temporary keychain is deleted even after failure.
    future source-picker, camera, pause/resume, and editor rows not applicable.
 3. Add `docs/releases/MAJOR.MINOR.PATCH.md` and finalize `CHANGELOG.md`.
 4. Merge the candidate to `main` and wait for all hosted checks.
-5. Create and push a signed annotated `vMAJOR.MINOR.PATCH` tag on that exact
-   `main` commit.
+5. Within seven days of the successful `main` CI run, create and push a signed
+   annotated `vMAJOR.MINOR.PATCH` tag on that exact commit.
 6. Approve the protected `release` environment after confirming the candidate
    commit and tag.
 
@@ -36,19 +36,26 @@ version after fixing the candidate; do not reuse or move the released tag.
 SSH tag verification is pinned to `.github/allowed_signers`; changing that
 trust root requires the same security review as changing release credentials.
 
-The release workflow revalidates the tag and source, requires the tag to identify
-the checked-out commit, selects the repository-pinned Xcode 26.3 toolchain,
-builds arm64, signs Sparkle's nested helpers inside-out
-and then Record with hardened runtime and audited entitlements. It rejects any
-change to the bundle identifier, Apple signing team, or Developer ID designated
-requirement recorded in `Configuration/TCCIdentity.plist`, notarizes and staples
-the app and DMG, and publishes provenance. The DMG contains exactly one real
-`Record.app` plus an `Applications` symbolic link to `/Applications`. After
-notarization, `scripts/release/verify-dmg.sh` mounts the final image read-only
-and rechecks that shared layout contract, bundle structure, signatures,
-entitlements, stable TCC identity, stapled tickets, and Gatekeeper acceptance.
-Only then does the workflow generate `appcast.xml` from the final notarized ZIP
-and sign both the update archive and feed with the protected Sparkle key.
+The release workflow revalidates the tag and fast shared source contract and
+requires successful `CI` and `CodeQL` push runs for that exact `main` commit. It
+verifies GitHub-hosted provenance and bounded extraction for the CI-assembled,
+package-tested unsigned arm64 app, matches its executable, dependency lock,
+Xcode 26.3 version, source plist, and release-script hashes, then stamps only the
+release version and build number. This is the same plist operation used by a
+fresh local assembly; the app code is the exact production binary already
+exercised by CI. See ADR 0012.
+
+Release then signs Sparkle's nested helpers inside-out and Record with hardened
+runtime and audited entitlements. It rejects any change to the bundle
+identifier, Apple signing team, or Developer ID designated requirement recorded
+in `Configuration/TCCIdentity.plist`, notarizes and staples the app and DMG, and
+publishes provenance. The DMG contains exactly one real `Record.app` plus an
+`Applications` symbolic link to `/Applications`. After notarization,
+`scripts/release/verify-dmg.sh` mounts the final image read-only and rechecks
+that shared layout contract, bundle structure, signatures, entitlements, stable
+TCC identity, stapled tickets, and Gatekeeper acceptance. Only then does the
+workflow generate `appcast.xml` from the final notarized ZIP and sign both the
+update archive and feed with the protected Sparkle key.
 
 `SHA256SUMS` covers the ZIP, DMG, signed appcast, resolved dependency lock, and
 build metadata.

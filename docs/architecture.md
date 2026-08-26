@@ -134,4 +134,7 @@ display path plus independent audio tracks and recovery states.
 UI, CLI, shortcuts, and plugins issue the same typed commands. The session
 manifest is the sole canonical session state. CI invokes repository scripts
 that developers can run locally; workflow YAML does not duplicate build or
-packaging commands.
+packaging commands. Release accepts full build/test/package evidence only from
+the exact successful `main` commit, then reuses the provenance-attested unsigned
+app that CI already exercised instead of compiling the same production binary
+twice.

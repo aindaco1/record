@@ -20,8 +20,11 @@ mkdir -p \
     "$app_path/Contents/Frameworks"
 
 cd "$repo_root"
-swift build -c release --arch arm64
-binary_path="$(swift build -c release --arch arm64 --show-bin-path)/record"
+swift build -c release --arch arm64 --disable-automatic-resolution
+binary_path="$(
+    swift build -c release --arch arm64 --disable-automatic-resolution \
+        --show-bin-path
+)/record"
 binary_root="$(dirname "$binary_path")"
 sparkle_framework="$binary_root/Sparkle.framework"
 if [[ ! -d "$sparkle_framework" ]]; then
@@ -53,10 +56,7 @@ install -m 0644 .build/checkouts/Sparkle/LICENSE \
 # app after assembly.
 codesign --remove-signature "$app_path/Contents/MacOS/record"
 
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $version" \
-    "$app_path/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build_number" \
-    "$app_path/Contents/Info.plist"
+"$repo_root/scripts/release/stamp-app.sh" "$app_path" "$version" "$build_number"
 
 # Cloud-synced workspaces can attach Finder/resource-fork metadata that makes
 # an otherwise valid bundle fail strict code-sign verification.

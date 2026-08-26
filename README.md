@@ -152,6 +152,14 @@ and DMG structures.
 Development requires Xcode 26 or newer. Hosted CI and releases select Xcode
 26.3 explicitly; the macOS 15 deployment target remains unchanged.
 
+For each exact `main` commit, CI retains the unsigned arm64 app that already
+passed the full package gate as a short-lived, provenance-attested internal
+artifact. A signed-tag release requires successful CI and CodeQL for that same
+commit, verifies and stamps the app, and still performs the complete Developer
+ID signing, notarization, packaging, Sparkle-signing, and readback sequence. The
+handoff removes duplicate release compilation without changing the shipped app
+contract; see [ADR 0012](docs/adr/0012-verified-ci-app-reuse.md).
+
 The project uses Swift 6, AppKit, ScreenCaptureKit, AVFoundation,
 VideoToolbox/AVAssetWriter, ServiceManagement, and Sparkle 2. See
 [Contributing](CONTRIBUTING.md) before changing dependencies or privacy
