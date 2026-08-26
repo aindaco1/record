@@ -1,6 +1,6 @@
 # Privacy policy
 
-Effective: August 7, 2026
+Effective: August 26, 2026
 
 Record is local-first software. It does not create an account, collect
 analytics, upload recordings, upload transcripts, sell data, or send crash
@@ -17,11 +17,13 @@ only when an enabled recording-name template explicitly contains the
 
 ## Network access
 
-The main Record app has no network entitlement. When the user chooses **Check
-for Updates…**, Sparkle's sandboxed downloader contacts Record's public GitHub
-release feed. That request includes ordinary network connection metadata but
-does not contain recording content, transcripts, clipboard content, session
-metadata, or a Record account identifier. Automatic update checks are disabled.
+The main Record app has no network entitlement. At each launch, Sparkle's
+sandboxed downloader silently checks Record's public GitHub release feed. The
+same signed check remains available through **Check for Updates…**. A check
+includes ordinary network connection metadata but does not contain recording
+content, transcripts, clipboard content, session metadata, diagnostics, local
+paths, or a Record account identifier. Automatic installation and Sparkle
+system profiling are disabled.
 
 Record does not download transcription models. If the user explicitly selects
 MacWhisper, audio is passed locally to the separately installed MacWhisper app;

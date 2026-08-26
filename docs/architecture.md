@@ -43,10 +43,13 @@ preserve those boundaries rather than moving mutable state into the menu layer.
 
 ## Application services
 
-Sparkle's standard updater owns the manual GitHub release check. Its downloader
-and installer run in the framework's sandboxed XPC services; the main Record
-process retains no network entitlement. `SMAppService.mainApp` owns optional
-login registration, so Record does not install a custom LaunchAgent.
+Sparkle's standard updater owns one silent signed GitHub feed check at launch
+and the manual fallback. `RecordCore` holds the deterministic launch-check
+policy; the app adapter alone calls Sparkle. Its downloader and installer run
+in the framework's sandboxed XPC services, while the main Record process retains
+no network entitlement. Automatic installation and system profiling remain
+disabled. `SMAppService.mainApp` owns optional login registration, so Record
+does not install a custom LaunchAgent.
 
 ## Session format
 

@@ -33,8 +33,12 @@
     <key>SUPublicEDKey</key>
     <string>SmB+aHRo7wfeJAr21p/IlXiDylp6ObIt/uorKzAZfFU=</string>
     <key>SUEnableAutomaticChecks</key>
-    <false/>
+    <true/>
     <key>SUAllowsAutomaticUpdates</key>
+    <false/>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUEnableSystemProfiling</key>
     <false/>
     <key>SUEnableInstallerLauncherService</key>
     <true/>

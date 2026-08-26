@@ -65,8 +65,9 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
    and Gatekeeper acceptance.
 4. Install on a clean macOS 15+ Apple Silicon account and verify the first-run
    permission flow, local-only boundary, recording, recovery, and uninstall.
-5. Install the previous release, choose **Check for Updates…**, and verify the
-   signed feed downloads, replaces, and relaunches the new notarized version.
+5. Install and launch the previous release, verify its automatic signed-feed
+   prompt downloads, replaces, and relaunches the new notarized version, then
+   exercise **Check for Updates…** separately as the manual fallback.
 6. Confirm the previous version's microphone, screen/system-audio, and
    system-audio-only grants remain enabled and neither recording path repeats
    an approved prompt. Compare both apps with `scripts/ci/check-tcc-identity.sh`.

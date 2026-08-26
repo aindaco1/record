@@ -3,7 +3,8 @@
 Record treats recordings, transcripts, clipboard-derived names, plugin state,
 diagnostics, and file metadata as private local data. The product has no
 accounts, telemetry, cloud transcription, upload, or model download path.
-Its only in-app network operation is an explicit signed software-update check.
+Its only in-app network operation is a signed software-update check at launch
+or after the explicit manual command.
 
 ## Defense in depth
 
@@ -12,8 +13,9 @@ Its only in-app network operation is an explicit signed software-update check.
    execution. The guard has its own positive and negative fixture tests.
 2. The distributed main app is sandboxed and intentionally omits both outgoing
    and incoming network entitlements. Sparkle's separately sandboxed downloader
-   and installer XPC services are the narrow exception for an explicit update
-   request; the appcast and archive both require Ed25519 signatures.
+   and installer XPC services are the narrow exception for the launch and
+   manual update requests; the appcast and archive both require Ed25519
+   signatures.
 3. Record enables FluidAudio's offline mode at every executable entry point
    and immediately before model preparation. A test calls FluidAudio's public
    download surface and requires its typed `networkDisabled` failure.
@@ -30,9 +32,10 @@ Its only in-app network operation is an explicit signed software-update check.
    arguments without evaluation. This deliberately runs outside Record's
    sandbox because MacWhisper's CLI requires its local Unix socket. It does not
    persist history and never runs as an automatic fallback.
-8. Automatic and background update checks are disabled. The updater contacts
-   only Record's public GitHub release feed after **Check for Updates…** and
-   installs only a Developer ID signed, Apple-notarized release whose Sparkle
+8. The updater makes one silent background check against Record's public GitHub
+   release feed at launch; **Check for Updates…** remains a manual fallback.
+   Automatic installation and Sparkle system profiling are disabled. Sparkle
+   accepts only a Developer ID signed, Apple-notarized release whose update
    signatures match the public key embedded in Record.
 9. Optional readability refinement uses only Apple's on-device
    `SystemLanguageModel`. Record submits bounded, escaped classification records
@@ -68,9 +71,10 @@ direct session root.
 - CI and release hosts use the network to fetch reviewed source dependencies,
   actions, signing/notarization services, and publish artifacts. They never
   receive user recordings or application diagnostics.
-- An explicit update check discloses the ordinary connection metadata of a
-  request to GitHub but never includes recording data, transcript text,
-  clipboard content, session metadata, or a Record account identifier.
+- A launch or explicit update check discloses the ordinary connection metadata
+  of a request to GitHub but never includes recording data, transcript text,
+  clipboard content, session metadata, diagnostics, local paths, or a Record
+  account identifier.
 - The developer-only Parakeet setup script downloads one immutable model
   revision outside the app sandbox. The model is installed into Record's local
   container; the shipping app neither contains nor calls the downloader.

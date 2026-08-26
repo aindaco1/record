@@ -1,6 +1,6 @@
-# ADR 0004: Signed manual updates and native login registration
+# ADR 0004: Signed updates and native login registration
 
-- Status: accepted
+- Status: accepted; update cadence superseded by ADR 0011
 - Date: 2026-08-07
 
 ## Context
@@ -11,15 +11,16 @@ login item without a persistent helper or hand-written LaunchAgent.
 
 ## Decision
 
-Record uses Sparkle 2's standard updater in manual-check mode. The main app has
-no network entitlement. Sparkle's sandboxed downloader and installer XPC
-services perform the narrowly scoped fetch and installation. The appcast and
-update archive require Ed25519 signatures; release artifacts also require
-Developer ID signing and Apple notarization.
+Record uses Sparkle 2's standard updater. The main app has no network
+entitlement. Sparkle's sandboxed downloader and installer XPC services perform
+the narrowly scoped fetch and installation. The appcast and update archive
+require Ed25519 signatures; release artifacts also require Developer ID signing
+and Apple notarization.
 
 The feed URL is the immutable `appcast.xml` asset on the latest GitHub release.
-Automatic and background checks are disabled. Record initiates network access
-only when the user chooses **Check for Updates…**.
+This ADR originally limited checks to **Check for Updates…**. ADR 0011
+supersedes that cadence with one background check at launch while retaining the
+same signed feed, sandboxed service boundary, and manual fallback.
 
 Record uses `SMAppService.mainApp` for **Open at Login**. The option is disabled
 by default, exposes macOS's requires-approval state, and never installs a
