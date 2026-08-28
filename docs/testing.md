@@ -27,8 +27,8 @@ regressions run on every pull request.
   one-time transfer of the successful audio-only permission tap into capture
 - session state transitions and atomic manifest round trips
 - immutable pause/resume segment naming, manifest events, idempotent rotation,
-  stop/rotation serialization, passthrough codec preservation, CAF packet
-  remuxing, and paused-time exclusion
+  stop/rotation serialization, passthrough codec preservation, private CAF
+  packet remuxing, atomic 24-bit PCM WAV finalization, and paused-time exclusion
 - interrupted-session recovery, playable-partial promotion, byte-preserving
   corrupt quarantine, content-free recovery summaries, live-process protection,
   at-most-once completion-hook claims, and path traversal rejection
@@ -100,8 +100,8 @@ Use synthetic or non-sensitive content for development recordings:
 5. Stop recording and wait for **saving recording…** to return to idle. Confirm
    a template-named session directory appears on Desktop containing
    `session.json`, video-only `recording.mov`, and independently playable
-   `mic.caf` and `system.caf`. Open the MOV in QuickTime and confirm the main
-   display has the expected aspect ratio; the mic file should contain your
+   24-bit PCM `mic.wav` and `system.wav`. Open the MOV in QuickTime and confirm
+   the main display has the expected aspect ratio; the mic file should contain your
    voice and the system file the played clip. Confirm the finalized private
    working directory no longer appears in **Open temp session**.
 6. Revoke **System Audio Recording Only**, then choose **Start audio-only
@@ -111,9 +111,9 @@ Use synthetic or non-sensitive content for development recordings:
    audio-only recording without creating a failed session first.
 7. Inspect the audio-only session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
-   finalized schema-v1 manifest, both named tracks, valid nonempty CAF files,
-   readable durations, and nonnegative synchronization offsets.
-8. Listen to `mic.caf` and `system.caf`. The microphone track should contain
+   finalized schema-v1 manifest, both named tracks, valid nonempty 24-bit PCM
+   WAV files, readable durations, and nonnegative synchronization offsets.
+8. Listen to `mic.wav` and `system.wav`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
    Repeat once without headphones while the test clip plays through speakers.
@@ -163,8 +163,8 @@ Also exercise these negative paths before a release candidate:
 - revoke System Audio Recording access in System Settings and verify the error
   identifies the relevant permission;
 - switch the default microphone during a recording; the menu should briefly
-  report reconnection, the same `mic.caf` should continue, and its duration
-  should include the silent route gap;
+  report reconnection, and the finalized `mic.wav` duration should include the
+  silent route gap;
 - record silence and an unplugged/reconnected external microphone; route
   retries must remain bounded and stopping must not leave an input tap alive;
 - interrupt a recording with sleep/wake, then with Quit Record, and inspect the
@@ -203,12 +203,12 @@ Stop a short audio-only recording and confirm `transcript.json` and
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
 **Transcript model → MacWhisper (Small)** in the Record menu and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
-be reported in `transcribe.log` without deleting either CAF file, and a job
+be reported in `transcribe.log` without deleting either WAV file, and a job
 where every available track fails must not create a successful transcript.
 After a failure, choose **Transcript model → Retry Failed Transcription**
 and confirm the action disappears while the job runs and a successful retry
 creates the canonical transcript without changing either source file.
-Screen and audio-only sessions use the same independent CAF inputs for local
+Screen and audio-only sessions use the same independent WAV inputs for local
 transcription; selecting an engine affects whichever finalized session is
 queued next.
 
@@ -302,7 +302,8 @@ Mac, release candidates must demonstrate:
 - less than 50 ms A/V drift over one hour
 - bounded memory across a one-hour recording
 - no unbounded capture queue growth
-- finalization in about two seconds when no transform is requested
+- bounded-memory WAV finalization whose measured throughput remains faster than
+  real time for representative short and long recordings
 
 Performance captures contain only generated test patterns and synthetic audio.
 They are never uploaded automatically.

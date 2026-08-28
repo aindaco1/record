@@ -70,11 +70,11 @@ record to that source with SHA-256. `transcript.json` remains the atomic
 completion marker. Speaker diarization and identity inference are outside this
 pass.
 
-The current screen-capture segment is deliberately split into
-`recording.mov`, `system.caf`, and `mic.caf`. The movie contains video only;
-each audio source remains independently playable and addressable in the
-manifest. All writers share the same capture-clock anchor, and the manifest
-stores each track's start offset for downstream transcription and editing.
+The finalized session is deliberately split into video-only `recording.mov`,
+24-bit PCM `system.wav`, and 24-bit PCM `mic.wav`. Each audio source remains
+independently playable and addressable in the manifest. All writers share the
+same capture-clock anchor, and the manifest stores each track's start offset
+for downstream transcription and editing.
 Audio callbacks copy into fixed-capacity queues; conversion, encoding, and
 filesystem writes stay off those callbacks. Content-free `capture_health`
 events in the manifest record missing callbacks, digital silence, route
@@ -84,15 +84,17 @@ into the same file, with silence representing the route gap so elapsed time
 does not collapse. A post-restart callback watchdog ignores the engine's own
 settling notification and falls back once to raw input when VoiceProcessingIO
 cannot remain live on the new route.
-Each screen-recording interval first closes into immutable
-`segment-NNNN.mov`, `segment-NNNN-system.caf`, and `segment-NNNN-mic.caf`
-working files. Pause finalizes the active interval; resume creates fresh
-writers and a fresh ScreenCaptureKit stream from the same in-memory selection.
-The atomic manifest journals start, pause, resume, and stop events before a
-transition can expose new media. Finalization concatenates compatible HEVC
-segments with AVFoundation passthrough and retimes existing AAC packets into
-the canonical CAF files without decoding or re-encoding. Raw segments remain
-until the complete exported directory validates.
+Capture remains crash-resilient by writing AAC/CAF audio privately. Each
+screen-recording interval first closes into immutable `segment-NNNN.mov`,
+`segment-NNNN-system.caf`, and `segment-NNNN-mic.caf` working files. Pause
+finalizes the active interval; resume creates fresh writers and a fresh
+ScreenCaptureKit stream from the same in-memory selection. The atomic manifest
+journals start, pause, resume, and stop events before a transition can expose
+new media. Finalization concatenates compatible HEVC segments with AVFoundation
+passthrough, retimes existing AAC packets into private assembled CAF files, and
+then uses one shared adapter to decode each completed audio source into an
+atomic 24-bit PCM WAV at its captured sample rate and channel layout. Raw CAF
+sources and segments remain until the complete exported directory validates.
 During capture this directory lives in private crash-recovery storage. A clean
 stop promotes the complete directory through an atomic copy/rename into the
 approved export root, then removes only the validated finalized private child.
@@ -124,6 +126,8 @@ stateDiagram-v2
   finalization, and memory pressure with signposts.
 - Never re-encode merely to pause, resume, recover, or concatenate compatible
   segments.
+- Perform the requested PCM WAV conversion only after capture has stopped and
+  outside capture callbacks.
 
 Long-duration and 4K60 acceptance gates remain roadmap criteria for source and
 frame-rate controls. Current release gates exercise the implemented 30 fps main

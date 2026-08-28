@@ -157,6 +157,7 @@ final class AppController {
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
     private var ticker: Timer?
+    private var audioStopTask: Task<Void, Never>?
     private var videoStartTask: Task<Void, Never>?
     private var videoRotationTask: Task<Void, Never>?
     private var videoStopTask: Task<Void, Never>?
@@ -501,30 +502,49 @@ final class AppController {
     }
 
     private func stopAudioSession(_ session: RecordingSession) {
+        guard audioStopTask == nil else { return }
+        let endedAt = Date()
+        ticker?.invalidate()
+        ticker = nil
+        menuBar.updateSavingRecording()
+        audioStopTask = Task { [weak self, session] in
+            let result: Result<Void, Error>
+            do {
+                result = .success(try await session.stop(endedAt: endedAt))
+            } catch {
+                result = .failure(error)
+            }
+            self?.finishAudioStop(result, session: session, endedAt: endedAt)
+        }
+    }
+
+    private func finishAudioStop(
+        _ result: Result<Void, Error>,
+        session: RecordingSession,
+        endedAt: Date
+    ) {
+        audioStopTask = nil
         let finalized: Bool
-        do {
-            try session.stop()
+        switch result {
+        case .success:
             finalized = true
-        } catch {
+        case .failure(let error):
             finalized = false
             FileHandle.standardError.write(
-                Data(
-                    "recording finalization failed: \(error)\n".utf8
-                ))
+                Data("recording finalization failed: \(error)\n".utf8)
+            )
             postNotification(
                 title: "Audio recording needs recovery",
                 body: "The audio is safe. Click to open the recording folder.",
                 directory: session.dir
             )
         }
-        let elapsed = Self.format(Date().timeIntervalSince(session.startedAt))
+        let elapsed = Self.format(endedAt.timeIntervalSince(session.startedAt))
         FileHandle.standardError.write(
             Data(
                 "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
             ))
         activeRecording = nil
-        ticker?.invalidate()
-        ticker = nil
         menuBar.update(recording: false, elapsed: nil)
 
         if finalized {

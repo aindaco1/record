@@ -1,17 +1,31 @@
 import Foundation
 import RecordCore
 
+protocol SessionAudioRecording: AnyObject {
+    var firstBufferAt: Date? { get }
+    func start(writingTo url: URL) throws
+    func stop()
+}
+
+extension MicRecorder: SessionAudioRecording {}
+extension SystemAudioRecorder: SessionAudioRecording {}
+
 /// One local recording session. A manifest is written before capture starts,
 /// then atomically finalized after both audio tracks stop.
 @MainActor
 final class RecordingSession {
+    enum SessionError: Error {
+        case missingFinalizedAudio(SessionManifest.TrackKind)
+    }
+
     let id: UUID
     let dir: URL
     let startedAt: Date
 
     private let health: CaptureHealthLedger
-    private let mic: MicRecorder
-    private let system: SystemAudioRecorder
+    private let mic: any SessionAudioRecording
+    private let system: any SessionAudioRecording
+    private let audioFinalizer: any SessionAudioFinalizing
     private var manifest: SessionManifest
 
     init(
@@ -19,17 +33,23 @@ final class RecordingSession {
         startedAt: Date = Date(),
         id: UUID = UUID(),
         preparedSystemAudioTap: PreparedSystemAudioTap? = nil,
+        mic: (any SessionAudioRecording)? = nil,
+        system: (any SessionAudioRecording)? = nil,
+        audioFinalizer: any SessionAudioFinalizing = PCM24WaveAudioFinalizer(),
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) throws {
         self.id = id
         self.startedAt = startedAt
         let health = CaptureHealthLedger(onEvent: onHealth)
         self.health = health
-        mic = MicRecorder(startedAt: startedAt) { health.record($0) }
-        system = SystemAudioRecorder(
-            startedAt: startedAt,
-            preparedTap: preparedSystemAudioTap
-        ) { health.record($0) }
+        self.mic = mic ?? MicRecorder(startedAt: startedAt) { health.record($0) }
+        self.system =
+            system
+            ?? SystemAudioRecorder(
+                startedAt: startedAt,
+                preparedTap: preparedSystemAudioTap
+            ) { health.record($0) }
+        self.audioFinalizer = audioFinalizer
         dir = try SessionFolderAllocator.createDirectory(
             under: root,
             startedAt: startedAt
@@ -64,23 +84,41 @@ final class RecordingSession {
     }
 
     /// Stop both tracks and atomically transition `session.json` to finalized.
-    func stop(endedAt: Date = Date()) throws {
+    func stop(endedAt: Date = Date()) async throws {
+        let micStart = mic.firstBufferAt ?? startedAt
+        let systemStart = system.firstBufferAt ?? startedAt
         mic.stop()
         system.stop()
 
-        let micStart = mic.firstBufferAt ?? startedAt
-        let systemStart = system.firstBufferAt ?? startedAt
+        let sources: [SessionAudioArtifact] = [
+            .init(kind: .microphone, url: dir.appendingPathComponent("mic.caf")),
+            .init(kind: .systemAudio, url: dir.appendingPathComponent("system.caf")),
+        ]
+        let finalizer = audioFinalizer
+        let finalizedAudio = try await Task.detached(priority: .utility) {
+            try finalizer.finalize(sources)
+        }.value
+        guard
+            let micOutput = finalizedAudio.first(where: { $0.kind == .microphone }),
+            let systemOutput = finalizedAudio.first(where: { $0.kind == .systemAudio })
+        else {
+            throw SessionError.missingFinalizedAudio(
+                finalizedAudio.contains(where: { $0.kind == .microphone })
+                    ? .systemAudio : .microphone
+            )
+        }
+
         let earliest = min(micStart, systemStart)
         let tracks: [SessionManifest.Track] = [
             .init(
                 kind: .microphone,
-                filename: "mic.caf",
+                filename: micOutput.url.lastPathComponent,
                 speaker: "me",
                 startOffsetMilliseconds: Int(micStart.timeIntervalSince(earliest) * 1_000)
             ),
             .init(
                 kind: .systemAudio,
-                filename: "system.caf",
+                filename: systemOutput.url.lastPathComponent,
                 speaker: "them",
                 startOffsetMilliseconds: Int(systemStart.timeIntervalSince(earliest) * 1_000)
             ),

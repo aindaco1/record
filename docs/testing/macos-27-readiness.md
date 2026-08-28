@@ -62,7 +62,7 @@ TCC state without recording window titles, device names, transcripts, or media.
   assignments and does not repeat granted prompts.
 - Capture the main display, one picker display, one application, one independent
   window, and a custom region. Confirm the video-only MOV plus independent
-  system and microphone CAF files finalize and export.
+  24-bit PCM system and microphone WAV files finalize and export.
 - Exercise repeated pause/resume and force-quit during pause and segment
   rotation. Relaunch and confirm immutable segment recovery is idempotent.
 - Switch among built-in, USB, and Bluetooth microphone routes when available;

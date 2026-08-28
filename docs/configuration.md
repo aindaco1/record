@@ -39,7 +39,8 @@ route cannot produce live processed samples. `suppress_speaker_echo` is a
 second, transcript-only safeguard: aligned high-confidence microphone copies
 of system speech are omitted from `transcript.json` and `transcript.md`, while
 `transcript.raw.json` retains the unsuppressed local result. Neither option
-modifies `mic.caf` or `system.caf`.
+modifies the finalized `mic.wav` or `system.wav` tracks or their private CAF
+recovery sources.
 
 `refine_with_apple_intelligence` is an opt-in baseline for the same menu toggle
 and defaults to `false`. On macOS 26+, Record checks the local Foundation Models

@@ -247,6 +247,7 @@ actor VideoRecordingSession {
 
     private let pipelineBuilder: any VideoCapturePipelineBuilding
     private let segmentCombiner: any VideoSegmentCombining
+    private let audioFinalizer: any SessionAudioFinalizing
     private let startupRetryPolicy: VideoCaptureStartupRetryPolicy
     private let eventHandler: @Sendable (ScreenCaptureEvent) -> Void
     private var manifest: SessionManifest
@@ -273,6 +274,7 @@ actor VideoRecordingSession {
         id: UUID = UUID(),
         pipelineBuilder: any VideoCapturePipelineBuilding = ScreenCaptureVideoPipelineBuilder(),
         segmentCombiner: any VideoSegmentCombining = AVVideoSegmentCombiner(),
+        audioFinalizer: any SessionAudioFinalizing = PCM24WaveAudioFinalizer(),
         startupRetryPolicy: VideoCaptureStartupRetryPolicy = .standard,
         eventHandler: @escaping @Sendable (ScreenCaptureEvent) -> Void
     ) throws {
@@ -280,6 +282,7 @@ actor VideoRecordingSession {
         self.startedAt = startedAt
         self.pipelineBuilder = pipelineBuilder
         self.segmentCombiner = segmentCombiner
+        self.audioFinalizer = audioFinalizer
         self.startupRetryPolicy = startupRetryPolicy
         self.eventHandler = eventHandler
         dir = try SessionFolderAllocator.createDirectory(under: root, startedAt: startedAt)
@@ -494,13 +497,24 @@ actor VideoRecordingSession {
 
         appendCaptureEvent(.stopped, at: endedAt, segmentIndex: completedSegments.last?.index)
         try manifest.write(to: dir)
-        let artifacts: FinalizedSegmentArtifacts
+        let combinedArtifacts: FinalizedSegmentArtifacts
         do {
-            artifacts = try await segmentCombiner.combine(completedSegments, in: dir)
+            combinedArtifacts = try await segmentCombiner.combine(completedSegments, in: dir)
         } catch {
             let failure = CaptureFailure(
                 code: .writerFailed,
                 summary: "recording segments could not be assembled"
+            )
+            try failCapture(with: failure, at: endedAt)
+            throw SessionError.captureFailed(failure)
+        }
+        let artifacts: FinalizedSegmentArtifacts
+        do {
+            artifacts = try finalizeAudio(in: combinedArtifacts)
+        } catch {
+            let failure = CaptureFailure(
+                code: .writerFailed,
+                summary: "recording audio could not be converted to WAV"
             )
             try failCapture(with: failure, at: endedAt)
             throw SessionError.captureFailed(failure)
@@ -522,6 +536,34 @@ actor VideoRecordingSession {
         )
         outcome = result
         return result
+    }
+
+    private func finalizeAudio(
+        in artifacts: FinalizedSegmentArtifacts
+    ) throws -> FinalizedSegmentArtifacts {
+        var sources: [SessionAudioArtifact] = []
+        if let systemAudio = artifacts[.systemAudio] {
+            sources.append(.init(kind: .systemAudio, url: systemAudio))
+        }
+        if let microphone = artifacts[.microphone] {
+            sources.append(.init(kind: .microphone, url: microphone))
+        }
+        let finalizedAudio = try audioFinalizer.finalize(sources)
+        var files = artifacts.files
+        for output in finalizedAudio {
+            switch output.kind {
+            case .systemAudio:
+                files[.systemAudio] = output.url
+            case .microphone:
+                files[.microphone] = output.url
+            case .screen, .camera:
+                break
+            }
+        }
+        return FinalizedSegmentArtifacts(
+            files: files,
+            startOffsetMilliseconds: artifacts.startOffsetMilliseconds
+        )
     }
 
     private func finishActiveSegment(at date: Date) async throws -> VideoCapturePipelineStopResult {

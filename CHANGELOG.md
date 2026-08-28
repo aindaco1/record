@@ -6,13 +6,24 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-08-27
+
 ### Changed
 
+- Finalized microphone and system-audio tracks are now independent uncompressed
+  24-bit PCM `mic.wav` and `system.wav` files. Record retains its AAC/CAF
+  capture sources privately until the complete exported session validates.
 - Reused the provenance-attested, package-tested unsigned app from the exact
   successful `main` CI commit during signed-tag releases. Release still stamps,
   signs, notarizes, packages, reads back, Sparkle-signs, checksums, attests, and
   publishes the same arm64 app contract while avoiding duplicate dependency
   resolution, tests, and production compilation.
+
+### Fixed
+
+- Preserved the measured microphone and system-audio start offsets when an
+  audio-only session stops, before the live recorder adapters release their
+  writer state.
 
 ### Security
 
@@ -243,7 +254,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/aindaco1/record/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/aindaco1/record/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/aindaco1/record/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/aindaco1/record/compare/v1.1.2...v1.1.3
