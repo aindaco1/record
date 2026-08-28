@@ -147,6 +147,12 @@ jobs:
           xcrun stapler staple "$dmg"
           ./scripts/release/verify-dmg.sh "$dmg"
 
+      - name: Restore locked Sparkle release tool
+        run: |
+          swift package resolve
+          git diff --exit-code -- Package.resolved
+          test -x .build/artifacts/sparkle/Sparkle/bin/generate_appcast
+
       - name: Generate signed update feed
         env:
           SPARKLE_ED25519_PRIVATE_KEY: ${{ secrets.SPARKLE_ED25519_PRIVATE_KEY }}
