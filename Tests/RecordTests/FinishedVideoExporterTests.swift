@@ -24,7 +24,7 @@ final class FinishedSessionExporterTests: XCTestCase {
         for export in [first, second] {
             XCTAssertEqual(
                 Set(try FileManager.default.contentsOfDirectory(atPath: export.directoryURL.path)),
-                ["session.json", "recording.mov", "system.caf", "mic.caf"]
+                ["session.json", "recording.mov", "system.wav", "mic.wav"]
             )
             XCTAssertEqual(
                 try Data(contentsOf: XCTUnwrap(export.videoURL)),
@@ -51,7 +51,7 @@ final class FinishedSessionExporterTests: XCTestCase {
         XCTAssertNil(exported.videoURL)
         XCTAssertEqual(
             Set(try FileManager.default.contentsOfDirectory(atPath: exported.directoryURL.path)),
-            ["session.json", "system.caf", "mic.caf"]
+            ["session.json", "system.wav", "mic.wav"]
         )
         XCTAssertEqual(try SessionManifest.read(from: exported.directoryURL).state, .finalized)
     }
@@ -60,7 +60,7 @@ final class FinishedSessionExporterTests: XCTestCase {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }
         try FileManager.default.removeItem(
-            at: fixture.source.appendingPathComponent("mic.caf")
+            at: fixture.source.appendingPathComponent("mic.wav")
         )
 
         XCTAssertThrowsError(
@@ -175,12 +175,15 @@ final class FinishedSessionExporterTests: XCTestCase {
         if includesScreen {
             try Data("video".utf8).write(to: source.appendingPathComponent("recording.mov"))
         }
-        try Data("system".utf8).write(to: source.appendingPathComponent("system.caf"))
-        try Data("microphone".utf8).write(to: source.appendingPathComponent("mic.caf"))
+        try Data("system wave".utf8).write(to: source.appendingPathComponent("system.wav"))
+        try Data("microphone wave".utf8).write(to: source.appendingPathComponent("mic.wav"))
+        // Private recovery sources are intentionally not declared or exported.
+        try Data("system caf".utf8).write(to: source.appendingPathComponent("system.caf"))
+        try Data("microphone caf".utf8).write(to: source.appendingPathComponent("mic.caf"))
         let start = Date(timeIntervalSince1970: 100)
         var tracks: [SessionManifest.Track] = [
-            .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
-            .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+            .init(kind: .systemAudio, filename: "system.wav", speaker: "them"),
+            .init(kind: .microphone, filename: "mic.wav", speaker: "me"),
         ]
         if includesScreen {
             tracks.insert(.init(kind: .screen, filename: "recording.mov"), at: 0)

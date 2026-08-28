@@ -25,7 +25,7 @@ struct TranscriptRefinementPass: Equatable, Sendable {
 }
 
 /// Post-recording pipeline: a serial queue of session folders to transcribe.
-/// mic.caf → "me", system.caf → "them"; each track's segments are shifted by
+/// mic.wav → "me", system.wav → "them"; each track's segments are shifted by
 /// its start offset, merged by timestamp, and written as transcript.json
 /// (canonical) plus transcript.md (readable). The filesystem is the queue —
 /// `resumePending()` rescans at launch, so a crash or quit mid-transcription

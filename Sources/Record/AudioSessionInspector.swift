@@ -1,4 +1,5 @@
 import ArgumentParser
+import AudioToolbox
 import AVFoundation
 import Foundation
 import RecordCore
@@ -8,6 +9,7 @@ struct AudioTrackInspection: Equatable {
     let filename: String
     let byteCount: UInt64
     let durationSeconds: Double
+    let bitDepth: UInt32
     let startOffsetMilliseconds: Int
 }
 
@@ -28,6 +30,7 @@ enum AudioSessionInspector {
         case negativeOffset(kind: SessionManifest.TrackKind, milliseconds: Int)
         case missingOrEmptyFile(String)
         case unreadableAudio(String)
+        case unexpectedAudioFormat(String)
 
         var description: String {
             switch self {
@@ -49,6 +52,8 @@ enum AudioSessionInspector {
                 return "missing or empty audio track: \(filename)"
             case .unreadableAudio(let filename):
                 return "audio track has no readable duration: \(filename)"
+            case .unexpectedAudioFormat(let filename):
+                return "audio track is not a 24-bit PCM WAV file: \(filename)"
             }
         }
     }
@@ -68,8 +73,8 @@ enum AudioSessionInspector {
         }
 
         let expectedTracks: [(SessionManifest.TrackKind, String)] = [
-            (.microphone, "mic.caf"),
-            (.systemAudio, "system.caf"),
+            (.microphone, "mic.wav"),
+            (.systemAudio, "system.wav"),
         ]
         let inspections = try expectedTracks.map { kind, expectedFilename in
             let matching = manifest.tracks.filter { $0.kind == kind }
@@ -118,12 +123,20 @@ enum AudioSessionInspector {
             guard audioFile.length > 0, sampleRate > 0 else {
                 throw InspectionError.unreadableAudio(track.filename)
             }
+            let stream = audioFile.fileFormat.streamDescription.pointee
+            guard stream.mFormatID == kAudioFormatLinearPCM,
+                stream.mBitsPerChannel == UInt32(PCM24WaveAudioFinalizer.bitDepth),
+                isWaveContainer(audioURL)
+            else {
+                throw InspectionError.unexpectedAudioFormat(track.filename)
+            }
 
             return AudioTrackInspection(
                 kind: kind,
                 filename: track.filename,
                 byteCount: byteCount,
                 durationSeconds: Double(audioFile.length) / sampleRate,
+                bitDepth: stream.mBitsPerChannel,
                 startOffsetMilliseconds: track.startOffsetMilliseconds
             )
         }
@@ -133,6 +146,17 @@ enum AudioSessionInspector {
             endedAt: endedAt,
             tracks: inspections
         )
+    }
+
+    private static func isWaveContainer(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        guard let header = try? handle.read(upToCount: 12), header.count == 12 else {
+            return false
+        }
+        let container = String(decoding: header[0..<4], as: UTF8.self)
+        let form = String(decoding: header[8..<12], as: UTF8.self)
+        return (container == "RIFF" || container == "RF64") && form == "WAVE"
     }
 }
 
@@ -153,7 +177,7 @@ struct InspectSession: ParsableCommand {
             print(
                 "✓ \(track.kind.rawValue): \(track.byteCount) bytes; "
                     + String(
-                        format: "%.3f sec; offset %d ms", track.durationSeconds,
+                        format: "%.3f sec; 24-bit PCM; offset %d ms", track.durationSeconds,
                         track.startOffsetMilliseconds)
             )
         }
@@ -162,6 +186,6 @@ struct InspectSession: ParsableCommand {
             "✓ finalized session: \(formatter.string(from: inspection.startedAt))"
                 + " → \(formatter.string(from: inspection.endedAt))"
         )
-        print("Listen to each CAF file to confirm channel separation and non-silent content.")
+        print("Listen to each WAV file to confirm channel separation and non-silent content.")
     }
 }

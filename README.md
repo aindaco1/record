@@ -34,7 +34,8 @@ preferences, temporary recovery sessions, and installed transcription model.
 ## Use
 
 - **Start screen recording** records the main display to a video-only
-  `recording.mov` and writes `mic.caf` and `system.caf` independently.
+  `recording.mov` and writes `mic.wav` and `system.wav` independently as
+  uncompressed 24-bit PCM.
 - **Start audio-only recording** writes the same two independent audio tracks
   without capturing the display.
 - **Select export folder…** changes the approved destination. Desktop is suggested on
@@ -51,10 +52,11 @@ preferences, temporary recovery sessions, and installed transcription model.
 - **Open at Login** uses the macOS Login Items service and is off by default.
 
 Each exported session contains an atomic `session.json` manifest. Screen
-sessions also contain `recording.mov`; both recording modes retain `mic.caf`
-and `system.caf`. Record validates the exported copy before deleting its
-private finalized working directory. A failed export leaves the private copy
-recoverable.
+sessions also contain `recording.mov`; both recording modes contain `mic.wav`
+and `system.wav`. Record keeps its AAC/CAF capture sources in private recovery
+storage until it has validated the complete exported session, then removes the
+private working directory. A failed conversion or export leaves those private
+sources recoverable.
 
 ## Local transcription
 

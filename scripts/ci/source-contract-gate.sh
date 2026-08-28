@@ -16,12 +16,14 @@ cd "$repo_root"
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/Record/AppUpdateController.swift \
+    Sources/Record/Audio/SessionAudioFinalizer.swift \
     Sources/Record/AudioSessionInspector.swift \
     Sources/Record/CapturePrivacyPreferences.swift \
     Sources/Record/ExportDirectoryAccess.swift Sources/Record/FluidAudioOfflinePolicy.swift \
     Sources/Record/FinishedVideoExporter.swift Sources/Record/GifskiHandoff.swift \
     Sources/Record/LaunchAtLoginController.swift \
     Sources/Record/Notify.swift Sources/Record/Record.swift \
+    Sources/Record/RecordingSession.swift \
     Sources/Record/RecordingMode.swift Sources/Record/RecordingPermission.swift \
     Sources/Record/UI/MenuBarController.swift \
     Sources/Record/RecordingNamePreferences.swift \

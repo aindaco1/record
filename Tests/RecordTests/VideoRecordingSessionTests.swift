@@ -1,3 +1,5 @@
+import AudioToolbox
+import AVFoundation
 import Foundation
 @testable import Record
 import RecordCapture
@@ -31,10 +33,64 @@ final class VideoRecordingSessionTests: XCTestCase {
             manifest.tracks,
             [
                 .init(kind: .screen, filename: "recording.mov"),
-                .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
-                .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
+                .init(kind: .systemAudio, filename: "system.wav", speaker: "them"),
+                .init(kind: .microphone, filename: "mic.wav", speaker: "me"),
             ]
         )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: session.dir.appendingPathComponent("system.caf").path
+            )
+        )
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: session.dir.appendingPathComponent("mic.caf").path
+            )
+        )
+    }
+
+    func testWaveFinalizationFailureLeavesCombinedCAFRecoveryMedia() async throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let session = try VideoRecordingSession(
+            root: fixture.root,
+            startedAt: fixture.startedAt,
+            pipelineBuilder: FakeVideoCapturePipelineBuilder(behavior: .success),
+            audioFinalizer: FailingVideoAudioFinalizer(),
+            eventHandler: { _ in }
+        )
+
+        try await session.start(configuration: fixture.configuration, at: fixture.startedAt)
+        await XCTAssertThrowsErrorAsync(
+            try await session.stop(endedAt: fixture.endedAt)
+        ) { error in
+            XCTAssertEqual(
+                error as? VideoRecordingSession.SessionError,
+                .captureFailed(
+                    .init(
+                        code: .writerFailed,
+                        summary: "recording audio could not be converted to WAV"
+                    )
+                )
+            )
+        }
+
+        let manifest = try SessionManifest.read(from: session.dir)
+        XCTAssertEqual(manifest.state, .failed)
+        for filename in ["system.caf", "mic.caf"] {
+            XCTAssertTrue(
+                FileManager.default.fileExists(
+                    atPath: session.dir.appendingPathComponent(filename).path
+                )
+            )
+        }
+        for filename in ["system.wav", "mic.wav"] {
+            XCTAssertFalse(
+                FileManager.default.fileExists(
+                    atPath: session.dir.appendingPathComponent(filename).path
+                )
+            )
+        }
     }
 
     func testStartFailureWritesFailedManifest() async throws {
@@ -337,13 +393,16 @@ private final class FakeVideoSegmentCombiner: VideoSegmentCombining, @unchecked 
         ]
         var files: [ScreenCaptureSampleKind: URL] = [:]
         for kind in ScreenCaptureSampleKind.allCases {
-            let payload = try segments.compactMap { segment -> Data? in
-                guard let url = segment.artifacts[kind] else { return nil }
-                return try Data(contentsOf: url)
-            }.reduce(into: Data()) { $0.append($1) }
-            guard !payload.isEmpty, let name = names[kind] else { continue }
+            let sources = segments.compactMap { $0.artifacts[kind] }
+            guard let first = sources.first, let name = names[kind] else { continue }
             let url = directory.appendingPathComponent(name)
-            try payload.write(to: url, options: .atomic)
+            if kind == .screen {
+                let payload = try sources.map { try Data(contentsOf: $0) }
+                    .reduce(into: Data()) { $0.append($1) }
+                try payload.write(to: url, options: .atomic)
+            } else {
+                try FileManager.default.copyItem(at: first, to: url)
+            }
             files[kind] = url
         }
         return FinalizedSegmentArtifacts(files: files)
@@ -441,7 +500,11 @@ private final class FakeVideoCapturePipeline: VideoCapturePipeline, @unchecked S
                 .microphone: "microphone",
             ]
             for (kind, url) in outputURLs.files {
-                try? Data((payloads[kind] ?? "media").utf8).write(to: url)
+                if kind == .screen {
+                    try? Data((payloads[kind] ?? "media").utf8).write(to: url)
+                } else {
+                    try? writeVideoSessionTestCAF(to: url)
+                }
             }
             let failure: CaptureFailure?
             if case .stopFailureWithMedia(let value) = behavior {
@@ -463,6 +526,42 @@ private final class FakeVideoCapturePipeline: VideoCapturePipeline, @unchecked S
             ingress: MediaIngressSnapshot()
         )
     }
+}
+
+private struct FailingVideoAudioFinalizer: SessionAudioFinalizing {
+    struct Failure: Error {}
+
+    func finalize(_: [SessionAudioArtifact]) throws -> [SessionAudioArtifact] {
+        throw Failure()
+    }
+}
+
+private func writeVideoSessionTestCAF(to url: URL) throws {
+    let format = try XCTUnwrap(
+        AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 48_000,
+            channels: 2,
+            interleaved: false
+        )
+    )
+    let settings: [String: Any] = [
+        AVFormatIDKey: kAudioFormatMPEG4AAC,
+        AVSampleRateKey: 48_000,
+        AVNumberOfChannelsKey: 2,
+        AVEncoderBitRateKey: 192_000,
+    ]
+    let file = try AVAudioFile(
+        forWriting: url,
+        settings: settings,
+        commonFormat: format.commonFormat,
+        interleaved: format.isInterleaved
+    )
+    let buffer = try XCTUnwrap(
+        AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4_800)
+    )
+    buffer.frameLength = buffer.frameCapacity
+    try file.write(from: buffer)
 }
 
 private func XCTAssertThrowsErrorAsync<T>(
