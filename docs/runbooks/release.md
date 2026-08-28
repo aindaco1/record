@@ -45,6 +45,11 @@ release version and build number. This is the same plist operation used by a
 fresh local assembly; the app code is the exact production binary already
 exercised by CI. See ADR 0012.
 
+The CI app handoff deliberately excludes release-only package tools. Before
+signed-feed generation, the release restores Sparkle's `generate_appcast`
+binary from the locked Swift package graph, rejects any `Package.resolved`
+change, and does not compile or replace the attested app.
+
 Release then signs Sparkle's nested helpers inside-out and Record with hardened
 runtime and audited entitlements. It rejects any change to the bundle
 identifier, Apple signing team, or Developer ID designated requirement recorded

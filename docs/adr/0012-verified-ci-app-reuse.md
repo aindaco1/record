@@ -40,7 +40,10 @@ restored app's external `Info.plist`, which is the same stamping operation used
 by a fresh local assembly. It then runs the existing inside-out Developer ID
 signing, entitlement and TCC-identity checks, app and DMG notarization and
 stapling, ZIP/DMG generation and readback, Sparkle signing, checksums,
-attestation, and publication steps without alteration.
+attestation, and publication steps. Before signed-feed generation, SwiftPM
+restores the release-only `generate_appcast` binary from the already locked
+package graph and fails if resolution changes `Package.resolved`. This does not
+compile or replace the attested application.
 
 The release also reruns the shared fast source contract and rejects a dirty
 checkout. Full Swift tests, the arm64 release build, sanitizer suites, package
@@ -57,5 +60,8 @@ gate; they are accepted by release only from the exact successful commit.
 - The fixed time for two Apple notarization submissions, signing, packaging,
   readback, and publication remains. Hosted improvement must be measured from
   the first successful tag run rather than inferred from the local projection.
+- The CI app handoff excludes release-only package tools. Release restores the
+  locked Sparkle tool without rebuilding the application and fails closed if
+  the expected executable is unavailable.
 - No product data, recording content, transcript, model, credential, signing
   material, or network entitlement enters the CI handoff.

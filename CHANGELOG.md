@@ -6,6 +6,11 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Restored Sparkle's release-only `generate_appcast` tool from the locked Swift
+  package graph before signed-feed generation when reusing the exact CI app.
+
 ## [1.2.2] - 2026-08-27
 
 ### Changed

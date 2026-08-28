@@ -12,12 +12,30 @@ for required_fragment in \
     'RELEASE_COMMIT=%s' \
     'Restore exact successful CI app and security evidence' \
     './scripts/release/restore-ci-app.sh' \
-    './scripts/ci/release-source-gate.sh'; do
+    './scripts/ci/release-source-gate.sh' \
+    'Restore locked Sparkle release tool' \
+    'swift package resolve' \
+    'git diff --exit-code -- Package.resolved' \
+    'test -x .build/artifacts/sparkle/Sparkle/bin/generate_appcast'; do
     if ! grep -Fq "$required_fragment" "$release_workflow"; then
         echo "release workflow is missing CI provenance control: $required_fragment" >&2
         exit 1
     fi
 done
+restore_tool_line="$(
+    grep -nF 'Restore locked Sparkle release tool' "$release_workflow" \
+        | cut -d: -f1
+)"
+generate_feed_line="$(
+    grep -nF 'Generate signed update feed' "$release_workflow" \
+        | cut -d: -f1
+)"
+if [[ ! "$restore_tool_line" =~ ^[1-9][0-9]*$ || \
+      ! "$generate_feed_line" =~ ^[1-9][0-9]*$ || \
+      "$restore_tool_line" -ge "$generate_feed_line" ]]; then
+    echo "release workflow does not restore Sparkle before feed generation" >&2
+    exit 1
+fi
 if grep -Fq 'run: ./scripts/ci/validate.sh' "$release_workflow" || \
     grep -Fq './scripts/release/build-app.sh' "$release_workflow"; then
     echo "release workflow still repeats an exact-commit build gate" >&2
