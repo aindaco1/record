@@ -517,13 +517,15 @@ private struct SessionMeta {
                 case .microphone:
                     return Track(
                         file: track.filename,
-                        speaker: track.speaker ?? "me",
+                        speaker: track.speaker
+                            ?? SessionMediaLayout.defaultSpeaker(for: .microphone)!,
                         offsetMs: track.startOffsetMilliseconds
                     )
                 case .systemAudio:
                     return Track(
                         file: track.filename,
-                        speaker: track.speaker ?? "them",
+                        speaker: track.speaker
+                            ?? SessionMediaLayout.defaultSpeaker(for: .systemAudio)!,
                         offsetMs: track.startOffsetMilliseconds
                     )
                 case .screen, .camera:
@@ -548,13 +550,25 @@ private struct SessionMeta {
             guard SessionPathPolicy.isSafeRelativeFilename(mic) else {
                 throw MetaError.unsafeTrackFilename(mic)
             }
-            tracks.append(Track(file: mic, speaker: "me", offsetMs: offsets["mic"] ?? 0))
+            tracks.append(
+                Track(
+                    file: mic,
+                    speaker: SessionMediaLayout.defaultSpeaker(for: .microphone)!,
+                    offsetMs: offsets["mic"] ?? 0
+                )
+            )
         }
         if let system = files["system"] {
             guard SessionPathPolicy.isSafeRelativeFilename(system) else {
                 throw MetaError.unsafeTrackFilename(system)
             }
-            tracks.append(Track(file: system, speaker: "them", offsetMs: offsets["system"] ?? 0))
+            tracks.append(
+                Track(
+                    file: system,
+                    speaker: SessionMediaLayout.defaultSpeaker(for: .systemAudio)!,
+                    offsetMs: offsets["system"] ?? 0
+                )
+            )
         }
         return SessionMeta(tracks: tracks)
     }

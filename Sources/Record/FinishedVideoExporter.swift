@@ -97,7 +97,7 @@ enum FinishedSessionExporter {
 
         for filename in ["session.json"] + manifest.tracks.map(\.filename) {
             let file = sourceDirectory.appendingPathComponent(filename, isDirectory: false)
-            guard isNonemptyRegularFile(file) else {
+            guard LocalFilePolicy.isNonemptyRegularFile(file) else {
                 throw ExportError.invalidSource
             }
         }
@@ -137,17 +137,6 @@ enum FinishedSessionExporter {
         return url.isFileURL
             && fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory)
             && isDirectory.boolValue
-    }
-
-    private static func isNonemptyRegularFile(_ url: URL) -> Bool {
-        guard
-            let values = try? url.resourceValues(
-                forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey]
-            )
-        else { return false }
-        return values.isRegularFile == true
-            && values.isSymbolicLink != true
-            && (values.fileSize ?? 0) > 0
     }
 
     private static func isSymbolicLink(_ url: URL) -> Bool {

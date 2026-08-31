@@ -146,10 +146,18 @@ public struct SegmentOutputSet: Equatable, Sendable {
         let directory = screenURL.deletingLastPathComponent()
         var finalURLs: [ScreenCaptureSampleKind: URL] = [.screen: screenURL]
         if includesSystemAudio {
-            finalURLs[.systemAudio] = directory.appendingPathComponent("system.caf")
+            finalURLs[.systemAudio] = SessionMediaLayout.url(
+                for: .systemAudio,
+                stage: .capture,
+                in: directory
+            )!
         }
         if includesMicrophone {
-            finalURLs[.microphone] = directory.appendingPathComponent("mic.caf")
+            finalURLs[.microphone] = SessionMediaLayout.url(
+                for: .microphone,
+                stage: .capture,
+                in: directory
+            )!
         }
         try self.init(
             finalURLs: finalURLs,

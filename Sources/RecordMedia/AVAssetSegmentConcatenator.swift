@@ -2,6 +2,7 @@
 import CoreMedia
 import Foundation
 import RecordCapture
+import RecordCore
 
 public struct CaptureSegmentArtifactSet: Equatable, Sendable {
     public let index: Int
@@ -71,7 +72,7 @@ public struct AVAssetSegmentConcatenator: Sendable {
             )
         }
 
-        let loaded = try await load(segments, fileManager: fileManager)
+        let loaded = try await load(segments)
         let earliestStarts = earliestTrackStarts(in: loaded, kinds: expectedKinds)
         for kind in ScreenCaptureSampleKind.allCases where expectedKinds.contains(kind) {
             guard let destination = output[kind] else {
@@ -113,8 +114,7 @@ public struct AVAssetSegmentConcatenator: Sendable {
     }
 
     private func load(
-        _ segments: [CaptureSegmentArtifactSet],
-        fileManager: FileManager
+        _ segments: [CaptureSegmentArtifactSet]
     ) async throws -> [LoadedSegment] {
         var timelineStart = CMTime.zero
         var result: [LoadedSegment] = []
@@ -123,7 +123,7 @@ public struct AVAssetSegmentConcatenator: Sendable {
             var segmentDuration = CMTime.zero
             for kind in ScreenCaptureSampleKind.allCases {
                 guard let url = segment.artifacts[kind] else { continue }
-                guard Self.isNonemptyRegularFile(url, fileManager: fileManager) else {
+                guard LocalFilePolicy.isNonemptyRegularFile(url) else {
                     throw ConcatenationError.invalidMedia(kind)
                 }
                 let asset = AVURLAsset(url: url)
@@ -376,7 +376,7 @@ public struct AVAssetSegmentConcatenator: Sendable {
     ) throws {
         for kind in ScreenCaptureSampleKind.allCases {
             guard let source = artifacts[kind], let destination = output[kind] else { continue }
-            guard Self.isNonemptyRegularFile(source, fileManager: fileManager) else {
+            guard LocalFilePolicy.isNonemptyRegularFile(source) else {
                 throw ConcatenationError.invalidMedia(kind)
             }
             try fileManager.copyItem(at: source, to: destination.partialURL)
@@ -463,17 +463,4 @@ public struct AVAssetSegmentConcatenator: Sendable {
         return shifted
     }
 
-    private static func isNonemptyRegularFile(
-        _ url: URL,
-        fileManager: FileManager
-    ) -> Bool {
-        guard url.isFileURL,
-            let values = try? url.resourceValues(
-                forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
-            )
-        else { return false }
-        return values.isRegularFile == true
-            && values.isSymbolicLink != true
-            && (values.fileSize ?? 0) > 0
-    }
 }

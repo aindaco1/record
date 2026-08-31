@@ -142,3 +142,10 @@ packaging commands. Release accepts full build/test/package evidence only from
 the exact successful `main` commit, then reuses the provenance-attested unsigned
 app that CI already exercised instead of compiling the same production binary
 twice.
+
+`RecordCore` also owns the canonical capture/finalized media layout and the
+shared real-file metadata policy. Capture, media, recovery, inspection,
+transcription, export, and handoff adapters add only their format- or
+capability-specific checks. The AppKit menu applies one complete presentation
+value for each recording phase so a transition cannot inherit stale command
+availability from a previous phase.

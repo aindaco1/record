@@ -143,13 +143,21 @@ struct AVVideoSegmentCombiner: VideoSegmentCombining {
             throw AVAssetSegmentConcatenator.ConcatenationError.noSegments
         }
         var finalURLs: [ScreenCaptureSampleKind: URL] = [
-            .screen: directory.appendingPathComponent("recording.mov")
+            .screen: SessionMediaLayout.url(for: .screen, stage: .finalized, in: directory)!
         ]
         if first.artifacts[.systemAudio] != nil {
-            finalURLs[.systemAudio] = directory.appendingPathComponent("system.caf")
+            finalURLs[.systemAudio] = SessionMediaLayout.url(
+                for: .systemAudio,
+                stage: .capture,
+                in: directory
+            )!
         }
         if first.artifacts[.microphone] != nil {
-            finalURLs[.microphone] = directory.appendingPathComponent("mic.caf")
+            finalURLs[.microphone] = SessionMediaLayout.url(
+                for: .microphone,
+                stage: .capture,
+                in: directory
+            )!
         }
         return try await AVAssetSegmentConcatenator().concatenate(
             segments,
@@ -757,11 +765,9 @@ actor VideoRecordingSession {
         try manifest.write(to: dir)
     }
 
-    private static let expectedTracks: [SessionManifest.Track] = [
-        .init(kind: .screen, filename: "recording.mov"),
-        .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
-        .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
-    ]
+    private static let expectedTracks = ScreenCaptureSampleKind.allCases.compactMap {
+        SessionMediaLayout.track(for: $0.manifestTrackKind, stage: .capture)
+    }
 
     private static func manifestTracks(
         from artifacts: FinalizedSegmentArtifacts?
@@ -769,23 +775,11 @@ actor VideoRecordingSession {
         guard let artifacts else { return expectedTracks }
         return ScreenCaptureSampleKind.allCases.compactMap { kind in
             guard let url = artifacts[kind] else { return nil }
-            let manifestKind: SessionManifest.TrackKind
-            let speaker: String?
-            switch kind {
-            case .screen:
-                manifestKind = .screen
-                speaker = nil
-            case .systemAudio:
-                manifestKind = .systemAudio
-                speaker = "them"
-            case .microphone:
-                manifestKind = .microphone
-                speaker = "me"
-            }
+            let manifestKind = kind.manifestTrackKind
             return SessionManifest.Track(
                 kind: manifestKind,
                 filename: url.lastPathComponent,
-                speaker: speaker,
+                speaker: SessionMediaLayout.defaultSpeaker(for: manifestKind),
                 startOffsetMilliseconds: artifacts.startOffsetMilliseconds[kind] ?? 0
             )
         }

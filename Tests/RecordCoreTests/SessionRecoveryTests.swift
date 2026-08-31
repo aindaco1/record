@@ -48,6 +48,29 @@ final class SessionRecoveryTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: session.path))
     }
 
+    func testSymlinkedDeclaredTrackDoesNotCountAsPreservedMedia() throws {
+        let root = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let outside = root.appendingPathComponent("outside.caf")
+        try Data([1, 2, 3]).write(to: outside)
+        let session = root.appendingPathComponent("session", isDirectory: true)
+        try FileManager.default.createDirectory(at: session, withIntermediateDirectories: true)
+        try SessionManifest(
+            startedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            tracks: [.init(kind: .microphone, filename: "mic.caf")]
+        ).write(to: session)
+        try FileManager.default.createSymbolicLink(
+            at: session.appendingPathComponent("mic.caf"),
+            withDestinationURL: outside
+        )
+
+        let report = SessionRecovery.recover(in: root)
+
+        XCTAssertEqual(report.failed.map(\.lastPathComponent), ["session"])
+        XCTAssertTrue(report.interrupted.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: outside), Data([1, 2, 3]))
+    }
+
     func testCompletedPauseSegmentMakesAnInterruptedSessionRecoverable() throws {
         let root = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

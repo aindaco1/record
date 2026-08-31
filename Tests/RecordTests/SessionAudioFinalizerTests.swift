@@ -6,6 +6,13 @@ import RecordCore
 import XCTest
 
 final class SessionAudioFinalizerTests: XCTestCase {
+    func testCanonicalOutputLayoutRemainsAudioOnly() {
+        XCTAssertEqual(PCM24WaveAudioFinalizer.outputFilename(for: .microphone), "mic.wav")
+        XCTAssertEqual(PCM24WaveAudioFinalizer.outputFilename(for: .systemAudio), "system.wav")
+        XCTAssertNil(PCM24WaveAudioFinalizer.outputFilename(for: .screen))
+        XCTAssertNil(PCM24WaveAudioFinalizer.outputFilename(for: .camera))
+    }
+
     func testFinalizesIndependentCAFTracksAs24BitPCMWaveFiles() throws {
         let directory = try makeDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

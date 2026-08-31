@@ -24,7 +24,8 @@ enum RecentRecordingLocator {
             candidates(under: $0, fileManager: fileManager)
         }
         let mostRecentRecording = allCandidates.max(by: isOlder)
-        let mostRecentVideo = allCandidates
+        let mostRecentVideo =
+            allCandidates
             .filter { $0.videoURL != nil }
             .max(by: isOlder)
         return Snapshot(
@@ -118,18 +119,10 @@ enum RecentRecordingLocator {
             screenTracks[0].filename,
             isDirectory: false
         ).standardizedFileURL
-        let keys: Set<URLResourceKey> = [
-            .fileSizeKey,
-            .isRegularFileKey,
-            .isSymbolicLinkKey,
-        ]
         guard videoURL.deletingLastPathComponent() == directory,
             videoURL.pathExtension.lowercased() == "mov",
             fileManager.fileExists(atPath: videoURL.path),
-            let values = try? videoURL.resourceValues(forKeys: keys),
-            values.isRegularFile == true,
-            values.isSymbolicLink != true,
-            (values.fileSize ?? 0) > 0
+            LocalFilePolicy.isNonemptyRegularFile(videoURL)
         else { return nil }
         return videoURL
     }

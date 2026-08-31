@@ -7,6 +7,17 @@ public enum ScreenCaptureSampleKind: String, CaseIterable, Hashable, Sendable {
     case screen
     case systemAudio
     case microphone
+
+    public var manifestTrackKind: SessionManifest.TrackKind {
+        switch self {
+        case .screen:
+            return .screen
+        case .systemAudio:
+            return .systemAudio
+        case .microphone:
+            return .microphone
+        }
+    }
 }
 
 public struct ScreenCaptureTimestamp: Equatable, Sendable {

@@ -104,9 +104,8 @@ public enum SessionRecovery {
                     + (manifest.captureSegments ?? []).flatMap(\.tracks)
                 let hasPreservedMedia = recoverableTracks.contains { track in
                     let mediaURL = directory.appendingPathComponent(track.filename)
-                    guard let attributes = try? fileManager.attributesOfItem(atPath: mediaURL.path),
-                        let size = attributes[.size] as? NSNumber,
-                        size.int64Value > 0
+                    guard let byteCount = LocalFilePolicy.regularFileSize(at: mediaURL),
+                        byteCount > 0
                     else { return false }
                     guard let inspectMedia else { return true }
                     do {
@@ -168,12 +167,8 @@ public enum SessionRecovery {
                 includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
                 options: []
             ).filter { url in
-                guard partialTarget(for: url) != nil,
-                    let values = try? url.resourceValues(
-                        forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
-                    )
-                else { return false }
-                return values.isRegularFile == true && values.isSymbolicLink != true
+                partialTarget(for: url) != nil
+                    && LocalFilePolicy.regularFileSize(at: url) != nil
             }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
         } catch {

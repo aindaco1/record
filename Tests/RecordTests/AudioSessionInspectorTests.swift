@@ -67,6 +67,27 @@ final class AudioSessionInspectorTests: XCTestCase {
         }
     }
 
+    func testInspectRejectsSymlinkedMediaFile() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.directory) }
+        let system = fixture.directory.appendingPathComponent("system.wav")
+        let outside = fixture.directory.deletingLastPathComponent().appendingPathComponent(
+            "record-inspector-outside-\(UUID().uuidString).wav"
+        )
+        defer { try? FileManager.default.removeItem(at: outside) }
+        try FileManager.default.moveItem(at: system, to: outside)
+        try FileManager.default.createSymbolicLink(at: system, withDestinationURL: outside)
+
+        XCTAssertThrowsError(
+            try AudioSessionInspector.inspect(sessionDirectory: fixture.directory)
+        ) { error in
+            XCTAssertEqual(
+                String(describing: error),
+                "missing or empty audio track: system.wav"
+            )
+        }
+    }
+
     func testInspectRejectsWaveWithWrongPCMDepth() throws {
         let fixture = try makeFixture(bitDepth: 16)
         defer { try? FileManager.default.removeItem(at: fixture.directory) }

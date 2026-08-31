@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import RecordCore
 
 enum GifskiHandoff {
     static let bundleIdentifier = "com.sindresorhus.Gifski"
@@ -21,7 +22,7 @@ enum GifskiHandoff {
         guard videoURL.isFileURL,
             videoURL.pathExtension.lowercased() == "mov",
             fileManager.fileExists(atPath: videoURL.path),
-            ((try? videoURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) > 0
+            LocalFilePolicy.isNonemptyRegularFile(videoURL)
         else {
             throw HandoffError.invalidVideo
         }

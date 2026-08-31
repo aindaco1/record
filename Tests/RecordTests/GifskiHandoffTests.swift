@@ -22,5 +22,14 @@ final class GifskiHandoffTests: XCTestCase {
         XCTAssertThrowsError(
             try GifskiHandoff.validate(videoURL: root.appendingPathComponent("recording.mp4"))
         )
+
+        let empty = root.appendingPathComponent("empty.mov")
+        XCTAssertTrue(FileManager.default.createFile(atPath: empty.path, contents: Data()))
+        XCTAssertThrowsError(try GifskiHandoff.validate(videoURL: empty))
+
+        let link = root.appendingPathComponent("linked.mov")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: movie)
+        XCTAssertThrowsError(try GifskiHandoff.validate(videoURL: link))
+        XCTAssertThrowsError(try GifskiHandoff.validate(videoURL: root))
     }
 }

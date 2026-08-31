@@ -37,5 +37,11 @@ final class SessionMediaInspectorTests: XCTestCase {
         XCTAssertEqual(try SessionMediaInspector.inspect(valid), .playable)
         XCTAssertEqual(try SessionMediaInspector.inspect(empty), .empty)
         XCTAssertEqual(try SessionMediaInspector.inspect(corrupt), .corrupt)
+
+        let link = directory.appendingPathComponent("linked.caf")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: valid)
+        XCTAssertThrowsError(try SessionMediaInspector.inspect(link)) { error in
+            XCTAssertEqual(error as? SessionMediaInspector.InspectionError, .unsafeFile)
+        }
     }
 }
