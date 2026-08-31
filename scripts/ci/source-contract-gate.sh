@@ -25,7 +25,9 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/Notify.swift Sources/Record/Record.swift \
     Sources/Record/RecordingSession.swift \
     Sources/Record/RecordingMode.swift Sources/Record/RecordingPermission.swift \
+    Sources/Record/SessionMediaInspector.swift \
     Sources/Record/UI/MenuBarController.swift \
+    Sources/Record/UI/RecordingMenuPresentation.swift \
     Sources/Record/RecordingNamePreferences.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
     Sources/Record/Transcription/FoundationModelTranscriptAdviser.swift \

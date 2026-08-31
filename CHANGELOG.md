@@ -6,10 +6,31 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-08-31
+
+### Changed
+
+- Updated the commit-pinned CodeQL action from 4.37.7 to 4.37.9 and its
+  default CodeQL bundle from 2.26.3 to 2.26.4.
+- Centralized canonical session-media filenames, anonymous speaker defaults,
+  local-file metadata checks, capture-kind mapping, and recording-menu
+  presentation so audio-only, screen, recovery, export, transcription, and UI
+  paths consume the same contracts.
+
 ### Fixed
 
 - Restored Sparkle's release-only `generate_appcast` tool from the locked Swift
   package graph before signed-feed generation when reusing the exact CI app.
+- Kept every conflicting recording configuration command disabled while Record
+  is requesting permission, preparing capture, pausing, resuming, stopping, or
+  saving, without relying on state left over from the previous menu phase.
+
+### Security
+
+- Reject symbolic links, directories, empty files, and non-file URLs through
+  one shared local-artifact policy before audio inspection, Gifski handoff,
+  recent-video restoration, session export, media concatenation, or interrupted
+  session recovery can treat them as preserved recording media.
 
 ## [1.2.2] - 2026-08-27
 

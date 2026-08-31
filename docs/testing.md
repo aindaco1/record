@@ -38,6 +38,12 @@ regressions run on every pull request.
   validation, whole-token application, explicit cross-speaker overlap, source
   hashing, raw preservation policy, and fallback outcomes
 - manifest-derived recent-recording discovery plus symlink and nesting rejection
+- one canonical capture/finalized media layout, real-file metadata policy, and
+  capture-kind mapping shared across recording, recovery, inspection,
+  transcription, export, and local handoff
+- complete recording-menu presentation values for idle, permission, prepare,
+  record, pause/resume, stop, and save phases, including locked conflicting
+  configuration commands
 - failed-transcription retry menu state and no-op behavior without a failed job
 - deterministic folder collision handling
 - plugin activation rollback, reverse restoration, and idempotence
@@ -86,6 +92,8 @@ Use synthetic or non-sensitive content for development recordings:
 2. Choose **Start screen recording**. Record should request microphone access
    first when needed, followed by **Screen & System Audio Recording**. It must
    not request **System Audio Recording Only** or open System Settings itself.
+   While permission or source selection is in progress, recording mode, source,
+   export-folder, and capture-privacy configuration must remain disabled.
    If you choose Open System Settings and enable Record, Privacy & Security
    should terminate the old process; Record should reopen and resume the Start
    command once. On first use, also approve Desktop in the export-folder picker.
@@ -98,6 +106,8 @@ Use synthetic or non-sensitive content for development recordings:
    not advance, and the menu must disable conflicting actions during each
    rotation. Stop once while paused in a second disposable recording.
 5. Stop recording and wait for **saving recording…** to return to idle. Confirm
+   recording mode, source, export-folder, and capture-privacy configuration stay
+   disabled until idle returns. Then confirm
    a template-named session directory appears on Desktop containing
    `session.json`, video-only `recording.mov`, and independently playable
    24-bit PCM `mic.wav` and `system.wav`. Open the MOV in QuickTime and confirm

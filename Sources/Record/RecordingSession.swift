@@ -59,9 +59,9 @@ final class RecordingSession {
             ownerProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
             startedAt: startedAt,
             tracks: [
-                .init(kind: .microphone, filename: "mic.caf", speaker: "me"),
-                .init(kind: .systemAudio, filename: "system.caf", speaker: "them"),
-            ]
+                SessionMediaLayout.track(for: .microphone, stage: .capture),
+                SessionMediaLayout.track(for: .systemAudio, stage: .capture),
+            ].compactMap { $0 }
         )
         try manifest.write(to: dir)
         health.setPersistence { [weak self] events in
@@ -74,9 +74,21 @@ final class RecordingSession {
     /// Start both tracks. If microphone capture fails after the system tap is
     /// live, tear down the tap so a half-session never continues silently.
     func start() throws {
-        try system.start(writingTo: dir.appendingPathComponent("system.caf"))
+        try system.start(
+            writingTo: SessionMediaLayout.url(
+                for: .systemAudio,
+                stage: .capture,
+                in: dir
+            )!
+        )
         do {
-            try mic.start(writingTo: dir.appendingPathComponent("mic.caf"))
+            try mic.start(
+                writingTo: SessionMediaLayout.url(
+                    for: .microphone,
+                    stage: .capture,
+                    in: dir
+                )!
+            )
         } catch {
             system.stop()
             throw error
@@ -91,8 +103,14 @@ final class RecordingSession {
         system.stop()
 
         let sources: [SessionAudioArtifact] = [
-            .init(kind: .microphone, url: dir.appendingPathComponent("mic.caf")),
-            .init(kind: .systemAudio, url: dir.appendingPathComponent("system.caf")),
+            .init(
+                kind: .microphone,
+                url: SessionMediaLayout.url(for: .microphone, stage: .capture, in: dir)!
+            ),
+            .init(
+                kind: .systemAudio,
+                url: SessionMediaLayout.url(for: .systemAudio, stage: .capture, in: dir)!
+            ),
         ]
         let finalizer = audioFinalizer
         let finalizedAudio = try await Task.detached(priority: .utility) {
@@ -113,13 +131,13 @@ final class RecordingSession {
             .init(
                 kind: .microphone,
                 filename: micOutput.url.lastPathComponent,
-                speaker: "me",
+                speaker: SessionMediaLayout.defaultSpeaker(for: .microphone),
                 startOffsetMilliseconds: Int(micStart.timeIntervalSince(earliest) * 1_000)
             ),
             .init(
                 kind: .systemAudio,
                 filename: systemOutput.url.lastPathComponent,
-                speaker: "them",
+                speaker: SessionMediaLayout.defaultSpeaker(for: .systemAudio),
                 startOffsetMilliseconds: Int(systemStart.timeIntervalSince(earliest) * 1_000)
             ),
         ]

@@ -58,6 +58,11 @@ storage until it has validated the complete exported session, then removes the
 private working directory. A failed conversion or export leaves those private
 sources recoverable.
 
+Record accepts only real, non-symlink local media files at recovery, inspection,
+export, recent-video, and Gifski handoff boundaries. Session filenames and
+speaker defaults come from one shared local contract rather than separate UI,
+capture, and transcription copies.
+
 ## Local transcription
 
 Parakeet v3 is the default transcription engine. Record never downloads a

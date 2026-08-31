@@ -494,7 +494,10 @@ final class AppController {
         case .video(let session):
             if videoStartTask != nil || videoRotationTask != nil {
                 pendingVideoStop = true
-                menuBar.updateStoppingRecording()
+                menuBar.updateStoppingScreenRecording(
+                    captureStarted: videoStartTask == nil,
+                    indicatorActive: videoStartTask == nil && !videoPaused
+                )
             } else {
                 stopVideoSession(session)
             }
@@ -566,9 +569,13 @@ final class AppController {
 
     private func stopVideoSession(_ session: VideoRecordingSession) {
         guard videoStopTask == nil else { return }
+        let indicatorActive = !videoPaused
         _ = videoElapsedClock.stop(at: Date())
         videoPaused = false
-        menuBar.updateStoppingRecording()
+        menuBar.updateStoppingScreenRecording(
+            captureStarted: true,
+            indicatorActive: indicatorActive
+        )
         ticker?.invalidate()
         ticker = nil
         videoStopTask = Task { [weak self, session] in

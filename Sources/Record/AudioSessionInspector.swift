@@ -72,11 +72,9 @@ enum AudioSessionInspector {
             throw InspectionError.missingEndTimestamp
         }
 
-        let expectedTracks: [(SessionManifest.TrackKind, String)] = [
-            (.microphone, "mic.wav"),
-            (.systemAudio, "system.wav"),
-        ]
-        let inspections = try expectedTracks.map { kind, expectedFilename in
+        let expectedTracks: [SessionManifest.TrackKind] = [.microphone, .systemAudio]
+        let inspections = try expectedTracks.map { kind in
+            let expectedFilename = SessionMediaLayout.filename(for: kind, stage: .finalized)!
             let matching = manifest.tracks.filter { $0.kind == kind }
             guard let track = matching.first else {
                 throw InspectionError.missingTrack(kind)
@@ -105,12 +103,8 @@ enum AudioSessionInspector {
             }
 
             let audioURL = sessionDirectory.appendingPathComponent(track.filename)
-            guard FileManager.default.fileExists(atPath: audioURL.path) else {
-                throw InspectionError.missingOrEmptyFile(track.filename)
-            }
-            let attributes = try FileManager.default.attributesOfItem(atPath: audioURL.path)
-            let byteCount = (attributes[.size] as? NSNumber)?.uint64Value ?? 0
-            guard byteCount > 0 else {
+            guard let byteCount = LocalFilePolicy.regularFileSize(at: audioURL), byteCount > 0
+            else {
                 throw InspectionError.missingOrEmptyFile(track.filename)
             }
             let audioFile: AVAudioFile

@@ -322,98 +322,47 @@ final class MenuBarController {
     /// shows a pulsing white Record ring while recording; the elapsed counter
     /// lives in the menu's state label. Call once a second while recording.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
-        if recording {
-            let health = captureHealthNote.map { " · \($0)" } ?? ""
-            stateLabel.title = "● \(mode.displayName) recording · \(elapsed ?? "0:00")\(health)"
-        } else {
-            captureHealthNote = nil
-            stateLabel.title = "idle"
-        }
-        toggleItem.title = recording ? "Stop recording" : "Start screen recording"
-        toggleItem.isEnabled = true
-        audioOnlyItem.isEnabled = !recording
-        pauseResumeItem.isHidden = !recording || mode != .screen
-        pauseResumeItem.isEnabled = recording && mode == .screen
-        pauseResumeItem.title = "Pause screen recording"
-        screenSourceItem.isEnabled = !recording
-        exportFolderItem.isEnabled = !recording
-        setCapturePrivacyItemsEnabled(!recording)
-        setRecordingIndicatorActive(recording)
+        apply(
+            recording
+                ? .recording(
+                    mode: mode,
+                    elapsed: elapsed ?? "0:00",
+                    healthNote: captureHealthNote
+                )
+                : .idle
+        )
     }
 
     func updateRequestingPermissions(for mode: RecordingMode) {
-        captureHealthNote = nil
-        stateLabel.title = "waiting for \(mode.displayName) recording permissions…"
-        toggleItem.isEnabled = false
-        pauseResumeItem.isHidden = true
-        pauseResumeItem.isEnabled = false
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
-        setRecordingIndicatorActive(false)
+        apply(.requestingPermissions(for: mode))
     }
 
     func updatePreparingScreenRecording() {
-        captureHealthNote = nil
-        stateLabel.title = "preparing screen recording…"
-        toggleItem.title = "Preparing screen recording…"
-        toggleItem.isEnabled = false
-        pauseResumeItem.isHidden = true
-        pauseResumeItem.isEnabled = false
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
-        setRecordingIndicatorActive(false)
+        apply(.preparingScreenRecording)
     }
 
-    func updateStoppingRecording() {
-        stateLabel.title = "stopping recording…"
-        toggleItem.title = "Stopping recording…"
-        toggleItem.isEnabled = false
-        pauseResumeItem.isEnabled = false
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
+    func updateStoppingScreenRecording(
+        captureStarted: Bool,
+        indicatorActive: Bool
+    ) {
+        apply(
+            .stoppingScreenRecording(
+                captureStarted: captureStarted,
+                indicatorActive: indicatorActive
+            )
+        )
     }
 
     func updateSavingRecording() {
-        stateLabel.title = "saving recording…"
-        toggleItem.title = "Saving recording…"
-        toggleItem.isEnabled = false
-        pauseResumeItem.isHidden = true
-        pauseResumeItem.isEnabled = false
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        exportFolderItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
-        setRecordingIndicatorActive(false)
+        apply(.savingRecording)
     }
 
     func updatePausedScreenRecording(elapsed: String) {
-        stateLabel.title = "paused screen recording · \(elapsed)"
-        toggleItem.title = "Stop recording"
-        toggleItem.isEnabled = true
-        pauseResumeItem.title = "Resume screen recording"
-        pauseResumeItem.isHidden = false
-        pauseResumeItem.isEnabled = true
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        exportFolderItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
-        setRecordingIndicatorActive(false)
+        apply(.pausedScreenRecording(elapsed: elapsed))
     }
 
     func updateRotatingScreenRecording(resuming: Bool) {
-        stateLabel.title = resuming ? "resuming screen recording…" : "pausing screen recording…"
-        toggleItem.isEnabled = false
-        pauseResumeItem.title =
-            resuming ? "Resuming screen recording…" : "Pausing screen recording…"
-        pauseResumeItem.isHidden = false
-        pauseResumeItem.isEnabled = false
-        audioOnlyItem.isEnabled = false
-        screenSourceItem.isEnabled = false
-        exportFolderItem.isEnabled = false
-        setCapturePrivacyItemsEnabled(false)
+        apply(.rotatingScreenRecording(resuming: resuming))
     }
 
     func updateCaptureHealth(_ event: CaptureHealthEvent) {
@@ -620,6 +569,23 @@ final class MenuBarController {
         hideNotificationsItem.isEnabled = enabled
         hideMenuBarItem.isEnabled = enabled
         hideDesktopItemsItem.isEnabled = enabled
+    }
+
+    private func apply(_ presentation: RecordingMenuPresentation) {
+        if presentation.clearsCaptureHealth {
+            captureHealthNote = nil
+        }
+        stateLabel.title = presentation.stateTitle
+        toggleItem.title = presentation.toggleTitle
+        toggleItem.isEnabled = presentation.toggleEnabled
+        pauseResumeItem.title = presentation.pauseResumeTitle
+        pauseResumeItem.isHidden = !presentation.pauseResumeVisible
+        pauseResumeItem.isEnabled = presentation.pauseResumeEnabled
+        audioOnlyItem.isEnabled = presentation.audioOnlyEnabled
+        screenSourceItem.isEnabled = presentation.screenSourceEnabled
+        exportFolderItem.isEnabled = presentation.exportFolderEnabled
+        setCapturePrivacyItemsEnabled(presentation.capturePrivacyEnabled)
+        setRecordingIndicatorActive(presentation.recordingIndicatorActive)
     }
 
     private func setRecordingIndicatorActive(_ active: Bool) {

@@ -114,14 +114,8 @@ struct PCM24WaveAudioFinalizer: SessionAudioFinalizing {
     }
 
     static func outputFilename(for kind: SessionManifest.TrackKind) -> String? {
-        switch kind {
-        case .microphone:
-            return "mic.wav"
-        case .systemAudio:
-            return "system.wav"
-        case .screen, .camera:
-            return nil
-        }
+        guard kind == .microphone || kind == .systemAudio else { return nil }
+        return SessionMediaLayout.filename(for: kind, stage: .finalized)
     }
 
     private static func writeWave(from sourceURL: URL, to destinationURL: URL) throws {
@@ -195,13 +189,8 @@ struct PCM24WaveAudioFinalizer: SessionAudioFinalizing {
 
     private static func isNonemptyRegularCAF(_ url: URL) -> Bool {
         guard url.isFileURL,
-            url.pathExtension.lowercased() == "caf",
-            let values = try? url.resourceValues(
-                forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey]
-            )
+            url.pathExtension.lowercased() == "caf"
         else { return false }
-        return values.isRegularFile == true
-            && values.isSymbolicLink != true
-            && (values.fileSize ?? 0) > 0
+        return LocalFilePolicy.isNonemptyRegularFile(url)
     }
 }
