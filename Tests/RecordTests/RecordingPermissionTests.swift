@@ -121,7 +121,7 @@ final class RecordingPermissionTests: XCTestCase {
         XCTAssertEqual(result, .waitingForRestart(.screenAndSystemAudio))
     }
 
-    func testScreenshotRequestsOnlyScreenPermission() {
+    func testDirectScreenshotRequestsOnlyScreenPermission() {
         var events: [String] = []
         let microphone = FakeMicrophonePermissionProvider(
             state: .notDetermined,
@@ -142,7 +142,7 @@ final class RecordingPermissionTests: XCTestCase {
             systemAudio: systemAudio
         )
 
-        XCTAssertEqual(controller.prepareForScreenshot(), .ready)
+        XCTAssertEqual(controller.prepareForDirectScreenshot(), .ready)
         XCTAssertFalse(controller.isScreenCaptureGranted)
         XCTAssertEqual(events, ["screen"])
         XCTAssertEqual(microphone.requestCount, 0)

@@ -212,9 +212,10 @@ final class RecordingPermissionController {
         }
     }
 
-    /// Screenshots need only Screen Recording access. In particular, this
-    /// path must never prompt for microphone or system-audio-only access.
-    func prepareForScreenshot() -> RecordingPermissionPreparation {
+    /// Direct full-display and area screenshots need only Screen Recording
+    /// access. Apple-picker window/application screenshots do not call this
+    /// path and inherit the picker's selection-scoped authorization instead.
+    func prepareForDirectScreenshot() -> RecordingPermissionPreparation {
         if screen.isGranted { return .ready }
         return screen.requestAccess()
             ? .ready

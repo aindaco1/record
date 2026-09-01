@@ -4,6 +4,11 @@ import RecordCore
 /// A value-only filter plan that keeps ScreenCaptureKit policy deterministic
 /// and testable without constructing framework-owned window objects.
 public struct ScreenCaptureFilterPlan: Equatable, Sendable {
+    public enum OwnApplicationPolicy: Equatable, Sendable {
+        case exclude
+        case include
+    }
+
     public struct Window: Equatable, Sendable {
         public let id: UInt32
         public let ownerBundleIdentifier: String?
@@ -28,22 +33,17 @@ public struct ScreenCaptureFilterPlan: Equatable, Sendable {
     public init(
         privacy: CapturePrivacyConfiguration,
         ownBundleIdentifier: String?,
+        ownApplicationPolicy: OwnApplicationPolicy = .exclude,
         availableApplicationBundleIdentifiers: Set<String>,
         windows: [Window]
     ) {
         includeMenuBar = !privacy.hideMenuBar
 
-        var excluded = Set<String>()
-        if let ownBundleIdentifier {
-            excluded.insert(ownBundleIdentifier)
-        }
-        if privacy.hideNotifications {
-            excluded.formUnion(
-                Self.notificationCenterBundleIdentifiers.intersection(
-                    availableApplicationBundleIdentifiers
-                )
-            )
-        }
+        var excluded = Self.privacyApplicationExclusions(
+            privacy: privacy,
+            ownBundleIdentifier: ownBundleIdentifier,
+            ownApplicationPolicy: ownApplicationPolicy
+        )
 
         var exceptedWindows = Set<UInt32>()
         if privacy.hideDesktopItems,
@@ -62,6 +62,21 @@ public struct ScreenCaptureFilterPlan: Equatable, Sendable {
 
         excludedApplicationBundleIdentifiers = excluded
         exceptedWindowIDs = exceptedWindows
+    }
+
+    public static func privacyApplicationExclusions(
+        privacy: CapturePrivacyConfiguration,
+        ownBundleIdentifier: String?,
+        ownApplicationPolicy: OwnApplicationPolicy
+    ) -> Set<String> {
+        var excluded = Set<String>()
+        if ownApplicationPolicy == .exclude, let ownBundleIdentifier {
+            excluded.insert(ownBundleIdentifier)
+        }
+        if privacy.hideNotifications {
+            excluded.formUnion(notificationCenterBundleIdentifiers)
+        }
+        return excluded
     }
 
     /// Finder's desktop surface lives below normal windows. Excluding that

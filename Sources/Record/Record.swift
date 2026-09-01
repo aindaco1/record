@@ -355,6 +355,15 @@ final class AppController {
         guard let exportDirectoryLease else { return }
         let exportDirectory = exportDirectoryLease.url
 
+        // Apple's private picker authorizes its explicit window/application
+        // selection for the capture session. Avoid asking for broad display
+        // access before presenting that privacy-preserving path.
+        guard kind.requiresDirectScreenCaptureAccess else {
+            pendingScreenshotPermission = nil
+            beginScreenshotCapture(kind, exportDirectoryLease: exportDirectoryLease)
+            return
+        }
+
         // macOS may terminate the process when Screen Recording access changes.
         // Never let that privacy handoff interrupt an audio-only recording;
         // once permission already exists, screenshots remain available during
@@ -374,7 +383,7 @@ final class AppController {
             return
         }
 
-        let preparation = recordingPermission.prepareForScreenshot()
+        let preparation = recordingPermission.prepareForDirectScreenshot()
         switch preparation {
         case .ready:
             pendingScreenshotPermission = nil

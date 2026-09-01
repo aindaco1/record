@@ -46,7 +46,8 @@ or after the explicit manual command.
 10. Screenshot capture uses native ScreenCaptureKit and ImageIO only. Pixels
     are written directly to the approved local export root and the local
     pasteboard; no screenshot history, preview database, OCR, upload, or editor
-    is created.
+    is created. Full-display and area commands request direct screen access;
+    window/application capture uses Apple's selection-scoped private picker.
 
 FluidAudio currently contains download-capable APIs even though Record calls
 only its local existence and loading APIs. This is why the sandbox boundary is

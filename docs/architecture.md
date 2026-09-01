@@ -62,7 +62,11 @@ capture is encoded off the main actor, validated, and atomically published
 directly into the same user-approved export root as finished recording
 sessions. Clipboard publication is a separate outcome and always uses lossless
 PNG bytes, even when disk export is JPEG. The system picker filter and custom
-area geometry remain memory-only.
+area geometry remain memory-only. One explicit own-application policy keeps the
+shared resolver DRY: recording filters exclude Record, while screenshot filters
+include Record after any selection overlay is dismissed. Permission routing is
+likewise command-specific: direct display/area capture requests broad screen
+access, while window/application capture uses Apple's selection-scoped picker.
 
 Each current session is a directory containing an atomically updated
 `session.json`, independently finalized source media, optional local

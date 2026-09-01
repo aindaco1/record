@@ -3,6 +3,14 @@ import RecordCore
 import XCTest
 
 final class ScreenshotCaptureTests: XCTestCase {
+    func testOnlyDirectDisplayModesRequireBroadScreenCaptureAccess() {
+        XCTAssertTrue(ScreenshotCaptureKind.display.requiresDirectScreenCaptureAccess)
+        XCTAssertFalse(
+            ScreenshotCaptureKind.windowOrApplication.requiresDirectScreenCaptureAccess
+        )
+        XCTAssertTrue(ScreenshotCaptureKind.area.requiresDirectScreenCaptureAccess)
+    }
+
     func testStillPixelSizePreservesNativeFiveKDimensions() throws {
         XCTAssertEqual(
             try ScreenshotPixelSize(width: 5_120, height: 2_880),

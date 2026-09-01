@@ -76,7 +76,12 @@ enum ScreenCaptureContentResolver {
         }
 
         return ResolvedScreenshotContent(
-            filter: displayFilter(display: display, privacy: privacy, content: content),
+            filter: displayFilter(
+                display: display,
+                privacy: privacy,
+                content: content,
+                ownApplicationPolicy: .include
+            ),
             pixelSize: pixelSize,
             sourceRect: region,
             style: .display
@@ -95,7 +100,12 @@ enum ScreenCaptureContentResolver {
                 in: content,
                 source: selection.plan.source
             )
-            filter = displayFilter(display: display, privacy: privacy, content: content)
+            filter = displayFilter(
+                display: display,
+                privacy: privacy,
+                content: content,
+                ownApplicationPolicy: .include
+            )
         } else {
             filter = selection.contentFilter
         }
@@ -196,11 +206,13 @@ enum ScreenCaptureContentResolver {
     private static func displayFilter(
         display: SCDisplay,
         privacy: CapturePrivacyConfiguration,
-        content: SCShareableContent
+        content: SCShareableContent,
+        ownApplicationPolicy: ScreenCaptureFilterPlan.OwnApplicationPolicy = .exclude
     ) -> SCContentFilter {
         let plan = ScreenCaptureFilterPlan(
             privacy: privacy,
             ownBundleIdentifier: Bundle.main.bundleIdentifier,
+            ownApplicationPolicy: ownApplicationPolicy,
             availableApplicationBundleIdentifiers: Set(
                 content.applications.map(\.bundleIdentifier)
             ),

@@ -29,6 +29,17 @@ All notable changes to Record are documented here. Record follows
   for screenshots instead of creating parallel selection or storage systems.
 - Screenshots preserve native source dimensions rather than inheriting the
   bounded 4K/even-dimension video profile.
+- Window/application screenshots use Apple's selection-scoped permission
+  directly; broad Screen Recording access is requested only for full-display
+  and custom-area capture.
+
+### Fixed
+
+- Full-display, area, and Apple-picker screenshots can include Record's own
+  windows, while screen recordings retain their own-app exclusion and area
+  selection overlays are dismissed before pixels are captured.
+- Widened and regression-tested Screenshot Settings so the complete
+  **Window or Application** label and footer controls remain visible.
 
 ### Security
 

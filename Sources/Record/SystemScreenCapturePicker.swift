@@ -82,7 +82,8 @@ final class SystemScreenCapturePicker {
 
     func select(
         mode: SystemScreenCapturePickerMode,
-        privacy: CapturePrivacyConfiguration
+        privacy: CapturePrivacyConfiguration,
+        ownApplicationPolicy: ScreenCaptureFilterPlan.OwnApplicationPolicy = .exclude
     ) async throws -> SystemScreenCaptureSelection {
         guard continuation == nil else {
             throw SystemScreenCapturePickerError.alreadyPresenting
@@ -96,15 +97,11 @@ final class SystemScreenCapturePicker {
                 configuration.allowedPickerModes = mode.allowedPickerModes
                 configuration.allowsChangingSelectedContent = false
                 configuration.excludedWindowIDs = []
-                var excludedBundleIdentifiers = Set(
-                    [Bundle.main.bundleIdentifier].compactMap { $0 }
+                configuration.excludedBundleIDs = Self.excludedBundleIdentifiers(
+                    privacy: privacy,
+                    ownBundleIdentifier: Bundle.main.bundleIdentifier,
+                    ownApplicationPolicy: ownApplicationPolicy
                 )
-                if privacy.hideNotifications {
-                    excludedBundleIdentifiers.formUnion(
-                        ScreenCaptureFilterPlan.notificationCenterBundleIdentifiers
-                    )
-                }
-                configuration.excludedBundleIDs = excludedBundleIdentifiers.sorted()
                 picker.configuration = configuration
                 picker.maximumStreamCount = 1
                 let observer = SystemScreenCapturePickerObserverProxy(
@@ -145,6 +142,18 @@ final class SystemScreenCapturePicker {
                 self?.finish(.failure(CancellationError()))
             }
         }
+    }
+
+    nonisolated static func excludedBundleIdentifiers(
+        privacy: CapturePrivacyConfiguration,
+        ownBundleIdentifier: String?,
+        ownApplicationPolicy: ScreenCaptureFilterPlan.OwnApplicationPolicy
+    ) -> [String] {
+        ScreenCaptureFilterPlan.privacyApplicationExclusions(
+            privacy: privacy,
+            ownBundleIdentifier: ownBundleIdentifier,
+            ownApplicationPolicy: ownApplicationPolicy
+        ).sorted()
     }
 
     private func finish(

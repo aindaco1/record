@@ -38,8 +38,11 @@ preferences, temporary recovery sessions, and installed transcription model.
   the pointer.
 - **Capture Window or Application…** (Command-Shift-2) opens Apple's selector.
   A window captures that window; an application captures its visible windows.
+  This selection-scoped path does not request broad Screen Recording access.
 - **Capture Area…** (Command-Shift-4) reuses Record's display-local drag
-  overlay. Screenshots exclude the cursor and can run during a recording.
+  overlay. Full-display and area capture request Screen Recording access on
+  first use. Screenshots can include Record's own windows, exclude the cursor,
+  and run during a recording; the area overlay is removed before capture.
 - Screenshots save immediately to the approved export folder and independently
   copy a lossless PNG to the clipboard. Disk files default to native-resolution
   lossless PNG; **Screenshot Settings…** can select 95%-quality JPEG, adjust

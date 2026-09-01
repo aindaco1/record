@@ -22,6 +22,20 @@ pointer. Window/application capture uses Apple's picker, while area capture
 reuses the existing noncapturing overlay. Opaque filters and geometry remain
 memory-only.
 
+Keep own-application visibility as an explicit resolver policy rather than an
+implicit global exclusion. Recording display filters exclude Record to prevent
+feedback, while still-image display filters include Record so users can capture
+Screenshot Settings and other Record UI. Screenshot picker configuration also
+allows Record as an explicit source. The area overlay orders out before its
+selection continuation resumes, so including Record does not burn the overlay
+into the result.
+
+Request broad Screen Recording access only for full-display and custom-area
+commands, which construct display filters directly. Window/application capture
+goes straight to `SCContentSharingPicker`; the user's explicit system-picker
+selection supplies selection-scoped authorization without the broader bypass
+prompt.
+
 Capture one native-resolution SDR image with `SCScreenshotManager`, excluding
 the cursor and retaining window shadows. Encode and validate off the main
 actor. Atomically publish lossless PNG by default or 95%-quality JPEG with
@@ -38,6 +52,9 @@ but an operation may run alongside a stable recording.
 
 - Recording and screenshot selection/privacy behavior stay DRY while native
   screenshot dimensions remain independent from video encoder bounds.
+- Record can capture its own settings without weakening the recording
+  feedback-loop guard or the notification, menu-bar, and Desktop-item filters.
+- Apple-picker screenshots avoid an unnecessary broad Screen Recording prompt.
 - Clipboard and disk publication can succeed or fail separately without
   discarding the successful local result.
 - Screenshot settings are focused; transcription and plug-in controls retain

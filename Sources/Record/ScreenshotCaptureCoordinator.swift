@@ -143,7 +143,8 @@ final class ScreenshotCaptureCoordinator {
         case .windowOrApplication:
             let selection = try await picker.select(
                 mode: .windowOrApplication,
-                privacy: privacy
+                privacy: privacy,
+                ownApplicationPolicy: .include
             )
             return try await adapter.captureSelection(selection, privacy: privacy)
         case .area:

@@ -12,6 +12,16 @@ public enum ScreenshotCaptureKind: String, CaseIterable, Codable, Sendable {
         case .area: "Area"
         }
     }
+
+    /// Apple's private window/application picker grants access only to the
+    /// explicit selection. Full-display and custom-area capture instead build
+    /// a display filter directly and therefore require Screen Recording access.
+    public var requiresDirectScreenCaptureAccess: Bool {
+        switch self {
+        case .display, .area: true
+        case .windowOrApplication: false
+        }
+    }
 }
 
 public enum ScreenshotImageFormat: String, CaseIterable, Codable, Sendable {

@@ -260,18 +260,27 @@ notifications, private Desktop items, credentials, or other personal content.
    display, Command-Shift-2 for window/application, and Command-Shift-4 for
    area. Edit each shortcut, verify a duplicate is rejected, turn one Off with
    Delete, restore defaults, then resolve any macOS shortcut conflict through
-   the linked Keyboard Shortcuts pane.
+   the linked Keyboard Shortcuts pane. Confirm **Window or Application** is not
+   clipped and every footer control remains inside the settings window.
 2. Put the pointer on each attached display and invoke full-display capture.
    Confirm only the display under the pointer is captured at native pixel
-   dimensions, with no cursor. Confirm the configured capture-privacy switches
-   hide Record, notifications, the menu bar, and Desktop items as applicable.
+   dimensions, with no cursor. Confirm the first direct capture requests Screen
+   Recording access. Confirm Record's visible windows are included while the
+   configured capture-privacy switches hide notifications, the menu bar, and
+   Desktop items as applicable.
 3. Invoke window/application capture. Choose one independent window, then one
    application with multiple visible windows. Confirm the first image includes
    its standard shadow and the second includes the selected app's visible
-   windows without retaining a source choice for the next capture.
+   windows without retaining a source choice for the next capture. From a clean
+   privacy state, confirm this system-picker path does not request broad Screen
+   Recording access. Select Record's Screenshot Settings window and confirm the
+   complete settings UI appears in the image.
 4. Invoke area capture on each display. Confirm the reused overlay accepts a
    drag, Escape cancels without an image or notification, and the saved native
    pixel dimensions match the selected logical area times display scale.
+   Select an area over Screenshot Settings and confirm the settings remain in
+   the result while the dimming overlay, selection border, and instruction text
+   do not.
 5. For every successful capture, confirm one
    `Screenshot YYYY-MM-DD at HH.mm.ss.png` appears directly in the existing
    approved export folder, a same-second collision receives `-2`, the menu-bar
