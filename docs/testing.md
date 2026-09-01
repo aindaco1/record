@@ -9,6 +9,9 @@ regressions run on every pull request.
 - capture configuration limits and lifecycle command/effect transitions
 - ScreenCaptureKit plan translation, source resolution, failure mapping,
   timestamp monotonicity, bounded queue depth, and idempotent stream cleanup
+- native screenshot sizing, picker-mode restriction, pointer-display choice,
+  shortcut validation/persistence/Carbon translation, collision-safe naming,
+  PNG/JPEG encoding, JPEG white flattening, and atomic still-image publication
 - fixed-capacity media and audio-writer ingress eviction, one-shot health
   events, off-callback conversion/writes, exact silence padding, failure
   cleanup, deterministic draining, and shared-timeline mapping under delay,
@@ -25,6 +28,8 @@ regressions run on every pull request.
 - command-scoped permission ordering, exact TCC service selection, and
   one-shot recording-intent recovery across a privacy restart, including
   one-time transfer of the successful audio-only permission tap into capture
+- screenshot-only Screen Recording permission and one-shot screenshot-intent
+  recovery across a privacy restart, without microphone or system-audio access
 - session state transitions and atomic manifest round trips
 - immutable pause/resume segment naming, manifest events, idempotent rotation,
   stop/rotation serialization, passthrough codec preservation, private CAF
@@ -71,11 +76,12 @@ and out-of-process plugin capability denial.
 
 ## Manual smoke test available now
 
-The current integrated build supports main-display, application, window, and
-region video; screen pause/resume; audio-only recording; and the capture-privacy,
-recording-name, and Gifski handoff plugins. Camera overlays, editing, and an
-external plugin host are not yet integrated, so those rows in the hardware
-matrix remain future acceptance criteria.
+The current integrated build supports full-display, application/window, and
+area screenshots; main-display, application, window, and region video; screen
+pause/resume; audio-only recording; and the capture-privacy, recording-name,
+and Gifski handoff plugins. Camera overlays, editing, and an external plugin
+host are not yet integrated, so those rows in the hardware matrix remain
+future acceptance criteria.
 
 Use synthetic or non-sensitive content for development recordings:
 
@@ -243,6 +249,49 @@ transcript text. Disable Apple Intelligence or test an unsupported language and
 confirm the menu becomes unavailable while ordinary transcription continues.
 Turn the option off and confirm the next session produces the ordinary
 transcript without a refinement report.
+
+## Screenshot acceptance
+
+Use synthetic windows and a disposable approved export folder. Do not include
+notifications, private Desktop items, credentials, or other personal content.
+
+1. Open **Screenshot Settings…**. Confirm PNG is the default, JPEG quality is
+   95%, shutter sound is on, and the shortcuts are Command-Shift-1 for full
+   display, Command-Shift-2 for window/application, and Command-Shift-4 for
+   area. Edit each shortcut, verify a duplicate is rejected, turn one Off with
+   Delete, restore defaults, then resolve any macOS shortcut conflict through
+   the linked Keyboard Shortcuts pane.
+2. Put the pointer on each attached display and invoke full-display capture.
+   Confirm only the display under the pointer is captured at native pixel
+   dimensions, with no cursor. Confirm the configured capture-privacy switches
+   hide Record, notifications, the menu bar, and Desktop items as applicable.
+3. Invoke window/application capture. Choose one independent window, then one
+   application with multiple visible windows. Confirm the first image includes
+   its standard shadow and the second includes the selected app's visible
+   windows without retaining a source choice for the next capture.
+4. Invoke area capture on each display. Confirm the reused overlay accepts a
+   drag, Escape cancels without an image or notification, and the saved native
+   pixel dimensions match the selected logical area times display scale.
+5. For every successful capture, confirm one
+   `Screenshot YYYY-MM-DD at HH.mm.ss.png` appears directly in the existing
+   approved export folder, a same-second collision receives `-2`, the menu-bar
+   camera flash is brief, and the pasteboard contains a lossless PNG that can
+   be pasted into Preview. No success notification, session directory,
+   manifest, preview, or history should appear.
+6. Select JPEG and confirm the disk file is a 95%-quality `.jpg` while the
+   clipboard remains lossless PNG. Use a transparent synthetic window and
+   confirm the JPEG background is white. Exercise the quality slider.
+7. Start a disposable recording, then perform each screenshot type. Confirm
+   capture stays available and saves/copies normally, but the shutter is
+   silent so it cannot bleed into the mic track. Stop and inspect the recording
+   independently.
+8. Make the export folder unavailable, then separately force a pasteboard
+   rejection in a development build. Confirm save and clipboard are independent:
+   the successful result remains available and the partial-failure notification
+   contains no captured content or source title. Restore the folder afterward.
+9. Quit and relaunch. Confirm format, JPEG quality, sound, shortcuts, and the
+   shared export-folder bookmark persist; selected windows/apps/areas and
+   screenshot pixels do not.
 
 ## Export folder access
 

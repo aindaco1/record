@@ -21,10 +21,20 @@ Priorities may change as real recordings expose better opportunities.
 - macOS 27 / Xcode 27 compatibility validation without raising the macOS 15
   deployment target or moving signed releases onto a beta toolchain.
 
+## 1.3.0
+
+- Native-resolution PNG/JPEG screenshots for full display, Apple-selected
+  window/application, and custom area.
+- Immediate save to the shared approved export folder plus independent
+  lossless-PNG clipboard publication.
+- Editable global screenshot shortcuts with conflict reporting and Off states,
+  plus a focused screenshot settings window and recording-safe shutter cue.
+
 ## Next
 
 - First-class microphone and frame-rate selection.
-- A settings window for output, transcription, and plugin preferences.
+- Broader settings surfaces for recording, transcription, and plugin
+  preferences; screenshot settings are implemented separately.
 - Direct source selection and pause/resume acceptance tests on real hardware.
 
 ## Parked ideas
@@ -43,8 +53,7 @@ umbrella issues until a real use case justifies the complexity.
   contract, with deterministic long-file, two-track, and failure tests; exact
   speaker-count constraints only when a real offline-diarization consumer and
   representative fixtures justify them.
-- A lightweight manifest-derived recording history and configurable global
-  shortcuts with conflict reporting and an explicit off state.
+- A lightweight manifest-derived recording history.
 - Localization and VoiceOver-focused accessibility review.
 
 ## Non-goals

@@ -9,6 +9,14 @@ private struct SendableSharingPicker: @unchecked Sendable {
 }
 
 final class SystemScreenCapturePickerTests: XCTestCase {
+    func testScreenshotPickerAllowsOnlyApplicationsAndWindows() {
+        let modes = SystemScreenCapturePickerMode.windowOrApplication.allowedPickerModes
+
+        XCTAssertTrue(modes.contains(.singleApplication))
+        XCTAssertTrue(modes.contains(.singleWindow))
+        XCTAssertFalse(modes.contains(.singleDisplay))
+    }
+
     func testCancellationCallbackCanArriveOffMainActor() async {
         let picker = SendableSharingPicker(value: SCContentSharingPicker.shared)
         let callbackReturned = expectation(description: "picker callback returned")

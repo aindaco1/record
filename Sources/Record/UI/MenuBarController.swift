@@ -16,11 +16,19 @@ final class MenuBarController {
     static let checkForUpdatesMenuTitle = "Check for Updates…"
     static let launchAtLoginMenuTitle = "Open at Login"
     static let screenSourceMenuTitle = "Screen source"
+    static let captureDisplayMenuTitle = "Capture Full Display"
+    static let captureWindowMenuTitle = "Capture Window or Application…"
+    static let captureAreaMenuTitle = "Capture Area…"
+    static let screenshotSettingsMenuTitle = "Screenshot Settings…"
 
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
+    private let captureDisplayItem: NSMenuItem
+    private let captureWindowItem: NSMenuItem
+    private let captureAreaItem: NSMenuItem
+    private let screenshotSettingsItem: NSMenuItem
     private let pauseResumeItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
     private let screenSourceItem: NSMenuItem
@@ -45,6 +53,9 @@ final class MenuBarController {
     private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
     private var captureHealthNote: String?
+    private var screenshotFlashGeneration = 0
+    private var screenshotCaptureIsAvailable = true
+    private var recordingExportFolderIsEnabled = true
 
     var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
     var isTranscriptRefinementSelected: Bool { transcriptRefinementItem.state == .on }
@@ -58,6 +69,11 @@ final class MenuBarController {
     var isPauseResumeVisible: Bool { !pauseResumeItem.isHidden }
     var pauseResumeTitle: String { pauseResumeItem.title }
     var isPauseResumeEnabled: Bool { pauseResumeItem.isEnabled }
+    var areScreenshotCaptureItemsEnabled: Bool {
+        captureDisplayItem.isEnabled && captureWindowItem.isEnabled
+            && captureAreaItem.isEnabled
+    }
+    var isExportFolderEnabled: Bool { exportFolderItem.isEnabled }
     var selectedScreenSource: ScreenCaptureSourcePreference? {
         let items: [(ScreenCaptureSourcePreference, NSMenuItem)] = [
             (.mainDisplay, mainDisplaySourceItem),
@@ -68,6 +84,8 @@ final class MenuBarController {
     }
 
     var onToggle: (() -> Void)?
+    var onCaptureScreenshot: ((ScreenshotCaptureKind) -> Void)?
+    var onShowScreenshotSettings: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
     var onPauseResume: (() -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
@@ -100,6 +118,40 @@ final class MenuBarController {
         transcriptionLabel.isEnabled = false
         transcriptionLabel.isHidden = true
         menu.addItem(transcriptionLabel)
+
+        menu.addItem(.separator())
+
+        captureDisplayItem = NSMenuItem(
+            title: Self.captureDisplayMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureDisplayItem.representedObject = ScreenshotCaptureKind.display.rawValue
+        menu.addItem(captureDisplayItem)
+
+        captureWindowItem = NSMenuItem(
+            title: Self.captureWindowMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureWindowItem.representedObject =
+            ScreenshotCaptureKind.windowOrApplication.rawValue
+        menu.addItem(captureWindowItem)
+
+        captureAreaItem = NSMenuItem(
+            title: Self.captureAreaMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureAreaItem.representedObject = ScreenshotCaptureKind.area.rawValue
+        menu.addItem(captureAreaItem)
+
+        screenshotSettingsItem = NSMenuItem(
+            title: Self.screenshotSettingsMenuTitle,
+            action: #selector(showScreenshotSettingsClicked),
+            keyEquivalent: ","
+        )
+        menu.addItem(screenshotSettingsItem)
 
         menu.addItem(.separator())
 
@@ -284,6 +336,10 @@ final class MenuBarController {
 
         for item in [
             toggleItem,
+            captureDisplayItem,
+            captureWindowItem,
+            captureAreaItem,
+            screenshotSettingsItem,
             pauseResumeItem,
             audioOnlyItem,
             mainDisplaySourceItem,
@@ -331,6 +387,46 @@ final class MenuBarController {
                 )
                 : .idle
         )
+    }
+
+    func updateScreenshotShortcuts(_ shortcuts: ScreenshotShortcutSet) {
+        let items: [(ScreenshotCaptureKind, NSMenuItem)] = [
+            (.display, captureDisplayItem),
+            (.windowOrApplication, captureWindowItem),
+            (.area, captureAreaItem),
+        ]
+        for (kind, item) in items {
+            guard let shortcut = shortcuts[kind], shortcut.keyLabel.count == 1 else {
+                item.keyEquivalent = ""
+                item.keyEquivalentModifierMask = []
+                continue
+            }
+            item.keyEquivalent = shortcut.keyLabel.lowercased()
+            item.keyEquivalentModifierMask = Self.appKitModifiers(shortcut.modifiers)
+        }
+    }
+
+    func updateScreenshotCaptureAvailable(_ available: Bool) {
+        screenshotCaptureIsAvailable = available
+        captureDisplayItem.isEnabled = available
+        captureWindowItem.isEnabled = available
+        captureAreaItem.isEnabled = available
+        exportFolderItem.isEnabled = available && recordingExportFolderIsEnabled
+    }
+
+    /// A short camera glyph confirms successful save-and-copy without raising
+    /// a notification or changing the persistent recording state.
+    func flashScreenshotSuccess(duration: TimeInterval = 0.35) {
+        screenshotFlashGeneration += 1
+        let generation = screenshotFlashGeneration
+        statusItem.button?.image = Self.screenshotFlashImage()
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.screenshotFlashGeneration == generation else { return }
+            self.statusItem.button?.image =
+                self.recordingIndicatorIsActive
+                ? Self.recordingMenuBarImage()
+                : Self.menuBarImage()
+        }
     }
 
     func updateRequestingPermissions(for mode: RecordingMode) {
@@ -538,6 +634,25 @@ final class MenuBarController {
         return animation
     }
 
+    static func screenshotFlashImage() -> NSImage? {
+        let image = NSImage(
+            systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot saved")
+        image?.isTemplate = true
+        image?.size = NSSize(width: 16, height: 16)
+        return image
+    }
+
+    private static func appKitModifiers(
+        _ modifiers: ScreenshotShortcutModifiers
+    ) -> NSEvent.ModifierFlags {
+        var result: NSEvent.ModifierFlags = []
+        if modifiers.contains(.command) { result.insert(.command) }
+        if modifiers.contains(.shift) { result.insert(.shift) }
+        if modifiers.contains(.option) { result.insert(.option) }
+        if modifiers.contains(.control) { result.insert(.control) }
+        return result
+    }
+
     private static func privacyMenuItem(
         title: String,
         feature: CapturePrivacyFeature,
@@ -583,7 +698,9 @@ final class MenuBarController {
         pauseResumeItem.isEnabled = presentation.pauseResumeEnabled
         audioOnlyItem.isEnabled = presentation.audioOnlyEnabled
         screenSourceItem.isEnabled = presentation.screenSourceEnabled
-        exportFolderItem.isEnabled = presentation.exportFolderEnabled
+        recordingExportFolderIsEnabled = presentation.exportFolderEnabled
+        exportFolderItem.isEnabled =
+            recordingExportFolderIsEnabled && screenshotCaptureIsAvailable
         setCapturePrivacyItemsEnabled(presentation.capturePrivacyEnabled)
         setRecordingIndicatorActive(presentation.recordingIndicatorActive)
     }
@@ -609,6 +726,13 @@ final class MenuBarController {
     }
 
     @objc private func toggleClicked() { onToggle?() }
+    @objc private func captureScreenshotClicked(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+            let kind = ScreenshotCaptureKind(rawValue: rawValue)
+        else { return }
+        onCaptureScreenshot?(kind)
+    }
+    @objc private func showScreenshotSettingsClicked() { onShowScreenshotSettings?() }
     @objc private func pauseResumeClicked() { onPauseResume?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func screenSourceClicked(_ sender: NSMenuItem) {

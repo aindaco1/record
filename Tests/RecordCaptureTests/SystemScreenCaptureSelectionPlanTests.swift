@@ -12,6 +12,10 @@ final class SystemScreenCaptureSelectionPlanTests: XCTestCase {
 
         XCTAssertEqual(plan.source, .systemSelection(style: .application))
         XCTAssertEqual(plan.outputSize, .init(width: 3_840, height: 2_160))
+        XCTAssertEqual(
+            plan.nativePixelSize,
+            try ScreenshotPixelSize(width: 5_120, height: 2_880)
+        )
     }
 
     func testRegionUsesItsOwnGeometryForOutputSize() throws {
@@ -25,6 +29,10 @@ final class SystemScreenCaptureSelectionPlanTests: XCTestCase {
 
         XCTAssertEqual(plan.source, .systemRegion(rect: region))
         XCTAssertEqual(plan.outputSize, .init(width: 1_600, height: 1_200))
+        XCTAssertEqual(
+            plan.nativePixelSize,
+            try ScreenshotPixelSize(width: 1_600, height: 1_200)
+        )
     }
 
     func testRejectsRegionForANonDisplayOrOutsideTheDisplay() {

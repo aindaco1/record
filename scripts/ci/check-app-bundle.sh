@@ -27,6 +27,7 @@ fi
 required_files=(
     "$app_path/Contents/Info.plist"
     "$app_path/Contents/Resources/Record.icns"
+    "$app_path/Contents/Resources/Shutter.mp3"
     "$app_path/Contents/Resources/record-macwhisper"
     "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
     "$app_path/Contents/Resources/Licenses/Record-MIT.txt"
@@ -42,6 +43,11 @@ for required_file in "${required_files[@]}"; do
 done
 if [[ ! -x "$app_path/Contents/Resources/record-macwhisper" ]]; then
     echo "Record MacWhisper helper is not executable" >&2
+    exit 1
+fi
+shutter_hash="$(/usr/bin/shasum -a 256 "$app_path/Contents/Resources/Shutter.mp3" | /usr/bin/awk '{print $1}')"
+if [[ "$shutter_hash" != "fd2839e68a7787f849843116d6d4dea5aeef8f4d82419278a573200948aa3d91" ]]; then
+    echo "bundled shutter sound failed its documented SHA-256 check" >&2
     exit 1
 fi
 

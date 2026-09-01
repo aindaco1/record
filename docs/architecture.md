@@ -19,19 +19,23 @@ flowchart LR
     Transcript --> Refine["Optional on-device refinement"]
     Session --> Export["Validated atomic export"]
     Session --> Plugins["Built-in capability services"]
+    Command --> Still["One-shot ScreenCaptureKit screenshot"]
+    Still --> Image["Validated PNG or JPEG + PNG clipboard"]
 ```
 
 ## Modules
 
 - `RecordCore`: versioned configuration, session manifests, commands, edit
-  operations, model identifiers, and plugin lifecycle state.
+  operations, screenshot formats/shortcuts/filenames, model identifiers, and
+  plugin lifecycle state.
 - `RecordCapture`: ScreenCaptureKit source resolution, bounded stream
   configuration, microphone/system-audio routing, raw timestamp validation,
   cursor/click settings, and the future camera adapter.
 - `RecordMedia`: bounded queues, Metal composition, hardware encoding,
   segmentation, muxing, and non-destructive export.
 - `Record` application target: AppKit menu-bar UI, local transcription
-  adapters, built-in plugin services, signed updates, and login registration.
+  adapters, screenshot settings/hotkeys/export/clipboard feedback, built-in
+  plugin services, signed updates, and login registration.
 - `record`: diagnostic and automation CLI sharing the same command layer.
 
 `RecordCore` owns typed capture configuration and the pure command/effect
@@ -52,6 +56,13 @@ disabled. `SMAppService.mainApp` owns optional login registration, so Record
 does not install a custom LaunchAgent.
 
 ## Session format
+
+Screenshots deliberately do not create sessions or manifests. A one-shot
+capture is encoded off the main actor, validated, and atomically published
+directly into the same user-approved export root as finished recording
+sessions. Clipboard publication is a separate outcome and always uses lossless
+PNG bytes, even when disk export is JPEG. The system picker filter and custom
+area geometry remain memory-only.
 
 Each current session is a directory containing an atomically updated
 `session.json`, independently finalized source media, optional local
@@ -149,3 +160,10 @@ transcription, export, and handoff adapters add only their format- or
 capability-specific checks. The AppKit menu applies one complete presentation
 value for each recording phase so a transition cannot inherit stale command
 availability from a previous phase.
+
+Screen recording and screenshots share one ScreenCaptureKit content resolver,
+one Apple picker adapter, one custom-area overlay, and one capture-privacy
+configuration. Still-image sizing is a separate pure contract because native
+screenshots must not inherit the recording writer's 4K/even-dimension bound.
+Global hotkeys translate into the same three typed screenshot commands used by
+the menu; Carbon registration avoids an Accessibility permission request.

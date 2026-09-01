@@ -38,6 +38,8 @@ ditto --norsrc --noextattr \
 install -m 0644 Sources/Record/Info.plist "$app_path/Contents/Info.plist"
 install -m 0644 Sources/Record/Resources/Record.icns \
     "$app_path/Contents/Resources/Record.icns"
+install -m 0644 Sources/Record/Resources/Shutter.mp3 \
+    "$app_path/Contents/Resources/Shutter.mp3"
 install -m 0755 scripts/setup/record-macwhisper-wrapper.sh \
     "$app_path/Contents/Resources/record-macwhisper"
 install -m 0644 THIRD_PARTY_NOTICES.md \

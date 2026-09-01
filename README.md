@@ -4,9 +4,10 @@ Record is a local-first screen and audio recorder for macOS. It keeps Quill's
 small menu-bar workflow, adds useful NewKap-inspired controls, and uses native
 Swift instead of Electron.
 
-Record 1.0 captures the main display, microphone, and system audio; keeps the
-two audio sources as separate files; and can transcribe them locally. Finished
-sessions are exported to a user-approved folder, with Desktop as the default.
+Record captures screenshots, screen video, microphone audio, and system audio;
+keeps the two recording audio sources as separate files; and can transcribe
+them locally. Finished media is exported to a user-approved folder, with
+Desktop as the default.
 
 ## Requirements
 
@@ -33,13 +34,26 @@ preferences, temporary recovery sessions, and installed transcription model.
 
 ## Use
 
+- **Capture Full Display** (Command-Shift-1) captures the display containing
+  the pointer.
+- **Capture Window or Application…** (Command-Shift-2) opens Apple's selector.
+  A window captures that window; an application captures its visible windows.
+- **Capture Area…** (Command-Shift-4) reuses Record's display-local drag
+  overlay. Screenshots exclude the cursor and can run during a recording.
+- Screenshots save immediately to the approved export folder and independently
+  copy a lossless PNG to the clipboard. Disk files default to native-resolution
+  lossless PNG; **Screenshot Settings…** can select 95%-quality JPEG, adjust
+  quality and sound, edit a shortcut, or turn one Off. JPEG transparency is
+  flattened onto white.
+
 - **Start screen recording** records the main display to a video-only
   `recording.mov` and writes `mic.wav` and `system.wav` independently as
   uncompressed 24-bit PCM.
 - **Start audio-only recording** writes the same two independent audio tracks
   without capturing the display.
 - **Select export folder…** changes the approved destination. Desktop is suggested on
-  first use, and the sandbox grant persists across launches.
+  first use, the sandbox grant persists across launches, and screenshots use
+  this same destination.
 - **Open temp session** opens private recovery storage for sessions that have
   not been exported.
 - **Open last recording** reveals the newest finished session from private or

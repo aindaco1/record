@@ -1,7 +1,8 @@
 # Local-only enforcement
 
-Record treats recordings, transcripts, clipboard-derived names, plugin state,
-diagnostics, and file metadata as private local data. The product has no
+Record treats screenshots, recordings, transcripts, clipboard content and
+clipboard-derived names, plugin state, diagnostics, and file metadata as
+private local data. The product has no
 accounts, telemetry, cloud transcription, upload, or model download path.
 Its only in-app network operation is a signed software-update check at launch
 or after the explicit manual command.
@@ -42,6 +43,10 @@ or after the explicit manual command.
    and accepts only revalidated keep/remove decisions. It adds no networking
    API or entitlement, never downloads a model, and preserves the raw local
    transcript whenever output changes.
+10. Screenshot capture uses native ScreenCaptureKit and ImageIO only. Pixels
+    are written directly to the approved local export root and the local
+    pasteboard; no screenshot history, preview database, OCR, upload, or editor
+    is created.
 
 FluidAudio currently contains download-capable APIs even though Record calls
 only its local existence and loading APIs. This is why the sandbox boundary is
@@ -58,13 +63,20 @@ implemented. Screen and system-audio capture remain protected by macOS privacy
 consent and their Info.plist usage descriptions; they do not require a network
 entitlement.
 
-Finished session exports default to Desktop, but Desktop is only a suggested location
+Finished session and screenshot exports default to Desktop, but Desktop is only a suggested location
 until the user approves it through Record's folder picker. The resulting
 app-scoped bookmark is stored in the app container and its access lifetime is
 balanced explicitly. Record atomically validates a complete external session
 before deleting its finalized private working copy. Any export or validation
 failure preserves the private original, and cleanup refuses paths outside the
 direct session root.
+
+Screenshots reuse that same balanced security-scoped bookmark. They are
+published through a hidden temporary file, validated as the requested image
+type and pixel dimensions, and collision-safely renamed. A JPEG is flattened
+onto white; the clipboard independently receives lossless PNG. Partial failure
+preserves whichever local result succeeded and reports no captured content in
+the notification.
 
 ## Boundary and limitations
 

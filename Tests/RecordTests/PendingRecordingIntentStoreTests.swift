@@ -59,6 +59,25 @@ final class PendingRecordingIntentStoreTests: XCTestCase {
         XCTAssertNil(defaults.object(forKey: PendingRecordingIntentStore.key))
     }
 
+    func testScreenshotIntentIsConsumedExactlyOnce() throws {
+        let defaults = try makeDefaults()
+        let store = PendingScreenshotIntentStore(defaults: defaults)
+
+        store.save(.windowOrApplication)
+
+        XCTAssertEqual(store.consume(), .windowOrApplication)
+        XCTAssertNil(store.consume())
+    }
+
+    func testInvalidScreenshotIntentFailsClosed() throws {
+        let defaults = try makeDefaults()
+        defaults.set("remote-display", forKey: PendingScreenshotIntentStore.key)
+        let store = PendingScreenshotIntentStore(defaults: defaults)
+
+        XCTAssertNil(store.consume())
+        XCTAssertNil(defaults.object(forKey: PendingScreenshotIntentStore.key))
+    }
+
     private func makeDefaults() throws -> UserDefaults {
         let suite = "com.aindaco.record.pending-intent-tests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

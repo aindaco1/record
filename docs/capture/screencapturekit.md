@@ -10,6 +10,8 @@ flowchart LR
     Config["CaptureConfiguration"] --> Plan["ScreenCaptureStreamPlan"]
     Catalog["SCShareableContent"] --> Resolve["Explicit source resolution"]
     Selection --> Stream
+    Selection --> Still["One-shot SCScreenshotManager"]
+    Resolve --> Still
     Plan --> Stream["SCStream"]
     Resolve --> Stream
     Stream --> Router["Serial screen / system / mic callbacks"]
@@ -50,6 +52,13 @@ flowchart LR
 - Picker-selected displays are resolved again immediately before capture so
   the existing notification, menu-bar, desktop-item, and own-app exclusion
   policy remains the one canonical display-filter implementation.
+- Still images use `SCScreenshotManager` through the same resolver. Full-display
+  and area captures apply the existing notification, menu-bar, Desktop-item,
+  and own-app privacy policy; explicit application/window captures include only
+  the selected source.
+- Screenshot output keeps the source's native pixel dimensions, excludes the
+  cursor, and includes standard window shadows. It does not use the recording
+  profile's 4K/even-dimension bound or start a sample stream.
 
 The adapter uses Apple's recommended native content and stream APIs:
 [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit),
@@ -74,6 +83,10 @@ failure event rather than repeated logs containing private source details.
   display, one application, one independent window, or a custom display-local
   region. Every mode uses the bounded sample handoff, common A/V anchor,
   hardware-required writer, and atomic session manifest.
+- Screenshot commands capture the display containing the pointer, an
+  Apple-selected window/application, or a display-local dragged area. Only one
+  screenshot selection/capture may be active at once; it may otherwise run
+  during an active recording.
 - Sixty-fps and first-class microphone controls remain follow-up UI.
 - Camera capture/compositing remains a separate follow-up slice.
 - Hardware/TCC validation is intentionally not part of ordinary CI. It must

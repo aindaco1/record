@@ -14,6 +14,21 @@ Runtime Swift package dependencies and their licenses are recorded by
 The assembled app includes the complete dependency licenses in
 `Contents/Resources/Licenses`.
 
+The bundled screenshot shutter is the high-quality Freesound preview of
+“camera shutter.wav” by mywhats, published under the Creative Commons CC0 1.0
+public-domain dedication:
+
+- source: https://freesound.org/people/mywhats/sounds/175517/
+- source description: a Zenit-E analog-camera shutter
+- bundled file: `Sources/Record/Resources/Shutter.mp3`
+- bundled SHA-256: `fd2839e68a7787f849843116d6d4dea5aeef8f4d82419278a573200948aa3d91`
+- bundled preview changes: Freesound's MP3 preview encoding; playback volume is
+  reduced by Record at runtime
+
+CC0 permits copying, modification, distribution, and performance, including
+commercial use, without permission or attribution. The source and checksum are
+retained here so the immutable bundled asset remains auditable.
+
 [NewKap](https://github.com/MuntasirMalek/NewKap) and the locally installed Kap
 plugins informed product behavior and architecture research. Record embeds
 NewKap's `static/menubarDefaultTemplate@2x.png` from commit

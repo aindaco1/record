@@ -15,6 +15,13 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
         XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
         XCTAssertEqual(MenuBarController.screenSourceMenuTitle, "Screen source")
+        XCTAssertEqual(MenuBarController.captureDisplayMenuTitle, "Capture Full Display")
+        XCTAssertEqual(
+            MenuBarController.captureWindowMenuTitle,
+            "Capture Window or Application…"
+        )
+        XCTAssertEqual(MenuBarController.captureAreaMenuTitle, "Capture Area…")
+        XCTAssertEqual(MenuBarController.screenshotSettingsMenuTitle, "Screenshot Settings…")
     }
 
     func testScreenSourceMenuHasExactlyOnePersistentModeSelected() {
@@ -132,6 +139,31 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(animation.duration, 0.65)
         XCTAssertTrue(animation.autoreverses)
         XCTAssertEqual(animation.repeatCount, .infinity)
+    }
+
+    func testScreenshotFlashImageIsAProperlySizedTemplate() throws {
+        let image = try XCTUnwrap(MenuBarController.screenshotFlashImage())
+
+        XCTAssertTrue(image.isTemplate)
+        XCTAssertEqual(image.size, NSSize(width: 16, height: 16))
+    }
+
+    func testScreenshotCaptureLocksOnlyItsSharedDestinationAndRestoresRecordingPolicy() {
+        let menu = MenuBarController()
+
+        XCTAssertTrue(menu.areScreenshotCaptureItemsEnabled)
+        XCTAssertTrue(menu.isExportFolderEnabled)
+        menu.updateScreenshotCaptureAvailable(false)
+        XCTAssertFalse(menu.areScreenshotCaptureItemsEnabled)
+        XCTAssertFalse(menu.isExportFolderEnabled)
+
+        menu.update(recording: true, elapsed: "0:01", mode: .screen)
+        menu.updateScreenshotCaptureAvailable(true)
+        XCTAssertTrue(menu.areScreenshotCaptureItemsEnabled)
+        XCTAssertFalse(menu.isExportFolderEnabled)
+
+        menu.update(recording: false, elapsed: nil)
+        XCTAssertTrue(menu.isExportFolderEnabled)
     }
 
     func testPauseControlIsScopedToScreenRecordingAndRepresentsTransitions() {

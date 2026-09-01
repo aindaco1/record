@@ -5,6 +5,14 @@ import RecordCore
 
 enum SystemScreenCapturePickerMode: Sendable {
     case source
+    case windowOrApplication
+
+    var allowedPickerModes: SCContentSharingPickerMode {
+        switch self {
+        case .source: [.singleDisplay, .singleApplication, .singleWindow]
+        case .windowOrApplication: [.singleApplication, .singleWindow]
+        }
+    }
 }
 
 enum SystemScreenCapturePickerError: Error, Equatable {
@@ -85,10 +93,7 @@ final class SystemScreenCapturePicker {
                 self.continuation = continuation
                 let picker = SCContentSharingPicker.shared
                 var configuration = SCContentSharingPickerConfiguration()
-                configuration.allowedPickerModes =
-                    switch mode {
-                    case .source: [.singleDisplay, .singleApplication, .singleWindow]
-                    }
+                configuration.allowedPickerModes = mode.allowedPickerModes
                 configuration.allowsChangingSelectedContent = false
                 configuration.excludedWindowIDs = []
                 var excludedBundleIdentifiers = Set(
