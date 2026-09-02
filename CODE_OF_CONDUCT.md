@@ -9,8 +9,8 @@ experience level, education, socioeconomic status, nationality, appearance,
 race, religion, or sexual identity and orientation.
 
 Be respectful, specific, and constructive. Critique ideas and code, not people.
-Respect privacy: never request or repost another person's recordings,
-transcripts, credentials, or identifying diagnostics.
+Respect privacy: never request or repost another person's screenshots,
+recordings, transcripts, credentials, or identifying diagnostics.
 
 ## Unacceptable behavior
 

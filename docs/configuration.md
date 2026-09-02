@@ -1,8 +1,8 @@
 # Advanced configuration
 
-Most settings belong in Record's menu. Advanced development and automation
-settings use a versioned JSON file at `~/.config/record/config.json` relative
-to Record's sandbox home:
+Most settings belong in Record's Settings window. Advanced development and
+automation settings use a versioned JSON file at
+`~/.config/record/config.json` relative to Record's sandbox home:
 
 ```json
 {
@@ -25,8 +25,9 @@ to Record's sandbox home:
 ```
 
 `recordings_directory` controls private working and recovery storage, not the
-finished export folder. Choose the export folder from Record's menu so macOS can
-issue and persist a scoped sandbox grant.
+finished export folder. Choose **Settings → General → Save to** so macOS can
+issue and persist the one scoped sandbox grant shared by screenshots and
+completed recordings.
 
 Supported transcription engines are `parakeet` and `macwhisper`. Parakeet model
 aliases are `v2` and `v3`; v3 is the default. MacWhisper requires an explicit

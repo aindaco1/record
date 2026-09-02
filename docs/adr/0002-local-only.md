@@ -1,13 +1,14 @@
 # ADR 0002: Enforce a local-only data boundary
 
-- Status: accepted; update cadence amended by ADR 0011
+- Status: accepted; update cadence amended by ADR 0011 and screenshot handling
+  specified by ADR 0014
 - Date: 2026-08-06
 
 ## Decision
 
-Record does not send recording content, transcripts, metadata, clipboard
-content, or diagnostics over the network. It has no account, telemetry, cloud
-transcription, collaboration, or upload subsystem.
+Record does not send screenshot pixels, recording content, transcripts,
+metadata, clipboard content, or diagnostics over the network. It has no
+account, telemetry, cloud transcription, collaboration, or upload subsystem.
 
 Transcription engines load assets already present on disk. Models may be
 bundled with a release or imported through an explicit local-file workflow;
@@ -16,8 +17,8 @@ the recording application does not fetch them.
 Record may check for software updates once at launch or after an explicit user
 command. ADRs 0004 and 0011 confine those requests to Sparkle's sandboxed
 downloader service and require a signed GitHub release feed and signed archive.
-No recording content, transcript, identifier, local path, or diagnostic is part
-of a request.
+No screenshot, recording content, transcript, identifier, local path, or
+diagnostic is part of a request.
 
 ## Consequences
 

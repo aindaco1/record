@@ -21,8 +21,9 @@ cleanup; the temporary keychain is deleted even after failure.
 ## Candidate preparation
 
 1. Run `./scripts/ci/local-gate.sh` on the exact candidate commit.
-2. Complete the implemented 1.0 manual smoke cases in `docs/testing.md`; mark
-   future source-picker, camera, pause/resume, and editor rows not applicable.
+2. Complete every implemented manual smoke case in `docs/testing.md`; mark only
+   explicitly future camera, editor, 60-fps, and extension-host rows not
+   applicable.
 3. Add `docs/releases/MAJOR.MINOR.PATCH.md` and finalize `CHANGELOG.md`.
 4. Merge the candidate to `main` and wait for all hosted checks.
 5. Within seven days of the successful `main` CI run, create and push a signed
@@ -69,7 +70,10 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
 
 ## Post-release verification
 
-1. Verify the GitHub artifact attestation.
+1. Download the public release assets, not short-lived workflow artifacts.
+   Verify GitHub artifact attestations for `Record.zip`, `Record.dmg`, and
+   `appcast.xml`; the checksum manifest and metadata are covered by
+   `SHA256SUMS`, not separate attestations.
 2. Run `shasum -a 256 -c SHA256SUMS` beside all downloaded artifacts.
 3. Run `scripts/release/verify-dmg.sh` on the absolute path to the downloaded
    `Record.dmg`. It verifies image integrity, the exact app-plus-Applications
@@ -83,3 +87,7 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
 6. Confirm the previous version's microphone, screen/system-audio, and
    system-audio-only grants remain enabled and neither recording path repeats
    an approved prompt. Compare both apps with `scripts/ci/check-tcc-identity.sh`.
+7. After every public and updater check passes, delete the merged release
+   branch and short-lived CI app artifacts. Keep signed tags, GitHub release
+   assets, the current installed app, and only the dependency caches and test
+   builds still needed for development.

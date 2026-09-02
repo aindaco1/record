@@ -1,7 +1,7 @@
 # Bounded media ingress
 
 `BoundedScreenCaptureSink` is the asynchronous boundary between native capture
-callbacks and the future encoder/writer. Each input track has an independently
+callbacks and the hardware encoder/writer. Each input track has an independently
 fixed capacity. Callback threads only take a short lock, retain the sample, and
 schedule at most one drain operation.
 

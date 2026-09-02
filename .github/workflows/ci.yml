@@ -103,15 +103,17 @@ jobs:
           xcodebuild -version
 
       # Swift Build is Xcode 27's new default SwiftPM engine. Compile the app
-      # with it even while its binary-framework test staging bug remains open.
+      # with it while the full default-engine test path is revalidated on the
+      # evolving public-preview image.
       - name: Compile with the Swift Build engine
         run: swift build --build-system swiftbuild
 
       - name: Validate Swift 6.4 and the macOS 27 SDK
         env:
-          # Xcode 27 beta 4's Swift Build engine does not stage Sparkle beside
-          # executable-target test bundles. The native engine runs the complete
-          # suite; the preceding step still guards Swift Build compilation.
+          # The reported Sparkle staging issue is closed upstream, but retain
+          # the native full-suite path until the hosted preview itself passes a
+          # deliberate default-engine trial. The preceding step still guards
+          # Swift Build compilation.
           # https://github.com/swiftlang/swift-package-manager/issues/10384
           RECORD_SWIFT_BUILD_SYSTEM: native
         run: ./scripts/ci/validate.sh

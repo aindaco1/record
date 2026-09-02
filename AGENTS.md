@@ -5,8 +5,8 @@ repository.
 
 ## Product invariants
 
-- Keep recording content, transcripts, clipboard-derived names, diagnostics,
-  and session metadata local.
+- Keep screenshots, recording content, transcripts, clipboard content and
+  clipboard-derived names, diagnostics, and session metadata local.
 - Do not add accounts, analytics, upload clients, cloud transcription, or model
   downloads.
 - The main app must retain no incoming or outgoing network entitlement. The

@@ -4,6 +4,10 @@ This ledger records every Quill issue and PR reviewed on 2026-08-06. Source
 items remain untouched because Record is a standalone repository and the
 Record owner does not have write access to `digimata/quill`.
 
+This is a historical migration record, not the current roadmap. Later shipped
+behavior and scope decisions are documented in `CHANGELOG.md`, `ROADMAP.md`,
+and the current Record issue-triage snapshot.
+
 ## Issues
 
 | Source | Decision in Record |
@@ -25,7 +29,7 @@ Record owner does not have write access to `digimata/quill`.
 |---|---|
 | [#55 Parakeet v3](https://github.com/digimata/quill/pull/55) | Superseded by #4 and Record's typed model registry. |
 | [#54 LaunchAgent audio](https://github.com/digimata/quill/pull/54) | Preserve diagnostic insight; replace LaunchAgent deployment with a signed app bundle and SMAppService. |
-| [#53 releases/Homebrew](https://github.com/digimata/quill/pull/53) | Reuse the outcome, not the workflow: signed/notarized app, protected release environment, attestations, then Homebrew Cask. |
+| [#53 releases/Homebrew](https://github.com/digimata/quill/pull/53) | Reuse the signed/notarized app, protected release environment, and attestation outcomes. A Homebrew Cask was later declined for the 1.x scope. |
 | [#52 Whisper](https://github.com/digimata/quill/pull/52) | Reimplement behind the local engine protocol after cache, cancellation, VAD, and long-file tests. |
 | [#27 meeting detection](https://github.com/digimata/quill/pull/27) | Defer; automatic prompts are outside the focused v1 workflow. |
 | [#25 echo filter](https://github.com/digimata/quill/pull/25) | Rework against real fixtures; preserve canonical segments and make suppression reversible. |

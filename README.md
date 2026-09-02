@@ -13,7 +13,10 @@ Desktop as the default.
 
 - macOS 15 or newer
 - Apple Silicon
-- Screen & System Audio Recording and/or System Audio Recording Only access
+- Screen Recording access for full-display/area screenshots and screen video;
+  Apple's window/application picker can grant selection-scoped screenshot access
+- Screen & System Audio Recording and/or System Audio Recording Only access for
+  recording system audio
 - Microphone access when recording the microphone
 
 ## Install
@@ -25,6 +28,9 @@ same single-app image can automate that copy. No additional installer is
 required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
+
+The current release is [Record 1.3.0](https://github.com/aindaco1/record/releases/tag/v1.3.0),
+build 14, published September 2, 2026.
 
 Record has no Dock icon. Open it from the ring in the menu bar.
 
@@ -104,10 +110,10 @@ install the same bridge explicitly with:
 ./scripts/setup/install-macwhisper-cli.sh
 ```
 
-Choose **Settings… → Recording → MacWhisper (Small)**. This option is absent
-unless MacWhisper, its bundled `mw`, and Record's sandbox helper are all
-available. Record validates the MacWhisper application signature before each
-invocation and never falls back silently from one engine to another.
+Open **Settings… → Recording** and choose **MacWhisper (Small)** from **Model**.
+This option is absent unless MacWhisper, its bundled `mw`, and Record's sandbox
+helper are all available. Record validates the MacWhisper application signature
+before each invocation and never falls back silently from one engine to another.
 
 If a local transcription fails, **Retry Failed Transcription** appears in the
 Record menu until the job is retried. Record keeps both source audio
@@ -146,10 +152,10 @@ helpers, or grant plugins network access.
 
 ## Privacy and security
 
-Record does not upload recordings, transcripts, clipboard-derived names,
-diagnostics, or identifiers. It has no accounts, analytics, cloud
-transcription, or recording network client. The sandboxed main app has no
-incoming or outgoing network entitlement.
+Record does not upload screenshots, recordings, transcripts, clipboard
+content or clipboard-derived names, diagnostics, or identifiers. It has no
+accounts, analytics, cloud transcription, or capture network client. The
+sandboxed main app has no incoming or outgoing network entitlement.
 
 The launch update check and explicit update command are the narrow exception:
 Sparkle's sandboxed downloader service contacts the public GitHub release feed
@@ -201,8 +207,9 @@ boundaries.
 - [Advanced configuration](docs/configuration.md)
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
+- [Record 1.3.0 release notes](docs/releases/1.3.0.md)
 - [Quill migration record](docs/migration/quill-triage.md)
-- [Current GitHub issue triage](docs/project/issue-triage-1.1.3.md)
+- [Current GitHub issue triage](docs/project/issue-triage-1.3.0.md)
 - [Support](SUPPORT.md)
 
 ## Provenance and license

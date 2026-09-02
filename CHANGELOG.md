@@ -6,7 +6,14 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-09-01
+### Changed
+
+- Refreshed current-state, privacy, security, architecture, testing, release,
+  roadmap, and support documentation after the 1.3.0 publication and updater
+  acceptance pass. Historical triage snapshots are now clearly separated from
+  the live tracker.
+
+## [1.3.0] - 2026-09-02
 
 ### Added
 
@@ -35,7 +42,7 @@ All notable changes to Record are documented here. Record follows
   and custom-area capture.
 - Consolidated shared export-folder, capture-privacy, screenshot, recording-name,
   transcription, and login preferences into one Settings window. The menu now
-  keeps immediate actions, retains Screen Source, and shows Open Recovery
+  keeps immediate actions, retains Screen source, and shows Open Recovery
   Folder only when private session material exists.
 
 ### Fixed
@@ -326,7 +333,9 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/aindaco1/record/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/aindaco1/record/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/aindaco1/record/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/aindaco1/record/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/aindaco1/record/compare/v1.1.3...v1.2.0

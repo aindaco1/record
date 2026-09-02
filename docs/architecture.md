@@ -25,9 +25,9 @@ flowchart LR
 
 ## Modules
 
-- `RecordCore`: versioned configuration, session manifests, commands, edit
-  operations, screenshot formats/shortcuts/filenames, model identifiers, and
-  plugin lifecycle state.
+- `RecordCore`: versioned configuration, session manifests, commands,
+  screenshot formats/shortcuts/filenames, model identifiers, and capability
+  lifecycle state.
 - `RecordCapture`: ScreenCaptureKit source resolution, bounded stream
   configuration, microphone/system-audio routing, raw timestamp validation,
   cursor/click settings, and the future camera adapter.
@@ -42,8 +42,8 @@ flowchart LR
 lifecycle. `RecordCapture` translates those types into ScreenCaptureKit without
 duplicating session state. `RecordMedia` owns the bounded asynchronous handoff,
 common media timeline, and independently finalized hardware-encoded segments.
-Future source pickers, editing, camera, and out-of-process extensions must
-preserve those boundaries rather than moving mutable state into the menu layer.
+Future editing, camera, and out-of-process extensions must preserve those
+boundaries rather than moving mutable state into the menu layer.
 
 ## Application services
 
@@ -144,9 +144,10 @@ stateDiagram-v2
 - Perform the requested PCM WAV conversion only after capture has stopped and
   outside capture callbacks.
 
-Long-duration and 4K60 acceptance gates remain roadmap criteria for source and
-frame-rate controls. Current release gates exercise the implemented 30 fps main
-display path plus independent audio tracks and recovery states.
+Long-duration and 4K60 acceptance gates remain roadmap criteria for future
+frame-rate controls. Current release gates exercise the implemented 30 fps
+display/window/application/region paths plus independent audio tracks and
+recovery states.
 
 ## DRY boundaries
 

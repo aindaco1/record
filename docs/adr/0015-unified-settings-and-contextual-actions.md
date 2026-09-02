@@ -30,8 +30,8 @@ boundary. Screenshot and completed recording output continue to use the same
 approved export root.
 
 Keep the menu focused on immediate actions: screenshot and recording commands,
-Screen Source, opening the last recording or video in Gifski, retrying a failed
-transcription, checking for updates, and quitting. Keep Screen Source in the
+Screen source, opening the last recording or video in Gifski, retrying a failed
+transcription, checking for updates, and quitting. Keep Screen source in the
 menu because it changes the next capture action directly. Show **Open Recovery
 Folder** only when the private recovery root contains a direct, non-symbolic-link
 session directory with a manifest. Reuse the same recording presentation policy

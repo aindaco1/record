@@ -1,19 +1,23 @@
 # Privacy policy
 
-Effective: August 26, 2026
+Effective: September 2, 2026
 
 Record is local-first software. It does not create an account, collect
-analytics, upload recordings, upload transcripts, sell data, or send crash
-reports. Recording media, transcripts, configuration, plugin preferences, and
-session diagnostics remain on the Mac where Record runs.
+analytics, upload screenshots or recordings, upload transcripts, sell data, or
+send crash reports. Screenshot pixels, recording media, transcripts,
+configuration, plugin preferences, and session diagnostics remain on the Mac
+where Record runs.
 
 ## Files and permissions
 
 Record accesses the microphone, screen, and system audio only after the user
-starts the corresponding recording mode and grants macOS permission. It writes
-finished sessions only to a folder the user approves. It may read the clipboard
-only when an enabled recording-name template explicitly contains the
-`{clipboard}` token.
+starts the corresponding recording or screenshot command and grants any macOS
+permission that command requires. Full-display and area screenshots use Screen
+Recording access; window/application screenshots use Apple's selection-scoped
+picker. Record writes screenshots and finished sessions only to one folder the
+user approves. Each screenshot capture independently attempts to write a
+lossless PNG to the local clipboard. Record reads the clipboard only when an
+enabled recording-name template explicitly contains the `{clipboard}` token.
 
 ## Network access
 
@@ -37,10 +41,11 @@ the readable output changes.
 
 ## Retention and deletion
 
-Record keeps files until the user deletes them. After a completed session is
-validated in the approved export folder, Record deletes its redundant private
-working copy. Failed or interrupted sessions remain in private session storage
-for recovery. Removing Record does not automatically delete exported sessions.
+Record keeps exported screenshots and sessions until the user deletes them.
+After a completed session is validated in the approved export folder, Record
+deletes its redundant private working copy. Failed or interrupted sessions
+remain in private session storage for recovery. Removing Record does not
+automatically delete exported screenshots or sessions.
 
 ## Changes
 
