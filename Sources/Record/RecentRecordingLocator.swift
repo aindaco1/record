@@ -134,3 +134,46 @@ enum RecentRecordingLocator {
         return lhs.directory.lastPathComponent < rhs.directory.lastPathComponent
     }
 }
+
+/// Detects private sessions that still need recovery or manual inspection.
+/// The private recordings root is the only authority: exported sessions live
+/// elsewhere, and unrelated or symlinked directories never make this action
+/// appear in the menu.
+enum RecoveryMaterialLocator {
+    static func hasMaterial(
+        under root: URL,
+        fileManager: FileManager = .default
+    ) -> Bool {
+        let root = root.standardizedFileURL
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
+        guard
+            let entries = try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: Array(keys),
+                options: [.skipsHiddenFiles]
+            )
+        else { return false }
+
+        return entries.contains { entry in
+            let entry = entry.standardizedFileURL
+            guard entry.deletingLastPathComponent() == root,
+                let values = try? entry.resourceValues(forKeys: keys),
+                values.isDirectory == true,
+                values.isSymbolicLink != true,
+                entry.resolvingSymlinksInPath().deletingLastPathComponent()
+                    == root.resolvingSymlinksInPath()
+            else { return false }
+            let manifest = entry.appendingPathComponent("session.json")
+            let manifestKeys: Set<URLResourceKey> = [
+                .isRegularFileKey, .isSymbolicLinkKey,
+            ]
+            guard
+                let manifestValues = try? manifest.resourceValues(
+                    forKeys: manifestKeys
+                )
+            else { return false }
+            return manifestValues.isRegularFile == true
+                && manifestValues.isSymbolicLink != true
+        }
+    }
+}

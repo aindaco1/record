@@ -9,6 +9,35 @@ private struct SendableSharingPicker: @unchecked Sendable {
 }
 
 final class SystemScreenCapturePickerTests: XCTestCase {
+    func testScreenshotPickerAllowsOnlyApplicationsAndWindows() {
+        let modes = SystemScreenCapturePickerMode.windowOrApplication.allowedPickerModes
+
+        XCTAssertTrue(modes.contains(.singleApplication))
+        XCTAssertTrue(modes.contains(.singleWindow))
+        XCTAssertFalse(modes.contains(.singleDisplay))
+    }
+
+    func testScreenshotPickerCanIncludeRecordWhileHidingNotifications() {
+        let excluded = SystemScreenCapturePicker.excludedBundleIdentifiers(
+            privacy: .init(),
+            ownBundleIdentifier: "com.aindaco.record",
+            ownApplicationPolicy: .include
+        )
+
+        XCTAssertFalse(excluded.contains("com.aindaco.record"))
+        XCTAssertTrue(excluded.contains("com.apple.notificationcenterui"))
+    }
+
+    func testRecordingPickerContinuesToExcludeRecord() {
+        let excluded = SystemScreenCapturePicker.excludedBundleIdentifiers(
+            privacy: .init(),
+            ownBundleIdentifier: "com.aindaco.record",
+            ownApplicationPolicy: .exclude
+        )
+
+        XCTAssertTrue(excluded.contains("com.aindaco.record"))
+    }
+
     func testCancellationCallbackCanArriveOffMainActor() async {
         let picker = SendableSharingPicker(value: SCContentSharingPicker.shared)
         let callbackReturned = expectation(description: "picker callback returned")

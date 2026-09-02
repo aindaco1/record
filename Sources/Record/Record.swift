@@ -148,12 +148,22 @@ final class AppController {
     private let transcription: TranscriptionCoordinator
     private let recordingPermission: RecordingPermissionController
     private let pendingRecordingIntentStore: PendingRecordingIntentStore
+    private let pendingScreenshotIntentStore: PendingScreenshotIntentStore
     private let exportDirectoryAccess = ExportDirectoryAccess()
     private let capturePrivacyPreferences = CapturePrivacyPreferences()
     private let recordingNamePreferences = RecordingNamePreferences()
     private let screenCaptureSourcePreferences = ScreenCaptureSourcePreferences()
     private let systemScreenCapturePicker = SystemScreenCapturePicker()
     private let regionSelectionController = RegionSelectionController()
+    private let screenshotPreferences = ScreenshotPreferences()
+    private let screenshotShortcutRegistrar = GlobalScreenshotShortcutRegistrar()
+    private lazy var screenshotCaptureCoordinator = ScreenshotCaptureCoordinator(
+        picker: systemScreenCapturePicker,
+        regionSelector: regionSelectionController
+    )
+    private lazy var settingsController = SettingsWindowController(
+        screenshotPreferences: screenshotPreferences
+    )
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
     private var ticker: Timer?
@@ -164,6 +174,8 @@ final class AppController {
     private var sessionPublishTask: Task<Void, Never>?
     private var recentRecordingRefreshTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
+    private var screenshotCaptureTask: Task<Void, Never>?
+    private var pendingScreenshotPermission: ScreenshotCaptureKind?
     private var permissionFlow = RecordingPermissionFlowState()
     private var pendingVideoStop = false
     private var videoPaused = false
@@ -180,18 +192,26 @@ final class AppController {
         recordingPermission: RecordingPermissionController =
             RecordingPermissionController(),
         pendingRecordingIntentStore: PendingRecordingIntentStore =
-            PendingRecordingIntentStore()
+            PendingRecordingIntentStore(),
+        pendingScreenshotIntentStore: PendingScreenshotIntentStore =
+            PendingScreenshotIntentStore()
     ) {
         self.root = root
         self.recordingPermission = recordingPermission
         self.pendingRecordingIntentStore = pendingRecordingIntentStore
+        self.pendingScreenshotIntentStore = pendingScreenshotIntentStore
         let recordingToResume = pendingRecordingIntentStore.consume()
+        let screenshotToResume = pendingScreenshotIntentStore.consume()
         let notifications = RecordNotificationCenter(recordingsRoot: root)
         self.notifications = notifications
         transcription = TranscriptionCoordinator { notification in
             notifications.post(notification)
         }
         menuBar.onToggle = { [weak self] in self?.toggle() }
+        menuBar.onCaptureScreenshot = { [weak self] in self?.requestScreenshot($0) }
+        menuBar.onShowSettings = { [weak self] in
+            self?.showSettings()
+        }
         menuBar.onStartAudioOnly = { [weak self] in
             self?.requestRecording(.audioOnly)
         }
@@ -199,37 +219,58 @@ final class AppController {
         menuBar.onSelectScreenSource = { [weak self] in
             self?.selectScreenCaptureSource($0)
         }
-        menuBar.onToggleCapturePrivacy = { [weak self] in self?.toggleCapturePrivacy($0) }
-        menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
-        menuBar.onEditRecordingNameTemplate = { [weak self] in
+        menuBar.onOpenLastVideoInGifski = { [weak self] in self?.openLastVideoInGifski() }
+        menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
+        menuBar.onOpenRecoveryFolder = { [weak self] in self?.openRecoveryFolder() }
+        menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
+        menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
+        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] availability in
+            self?.settingsController.updateInteractionAvailability(availability)
+        }
+        menuBar.onQuit = { [weak self] in self?.shutdown() }
+        screenshotShortcutRegistrar.onCapture = { [weak self] in
+            self?.requestScreenshot($0)
+        }
+        settingsController.onChooseExportFolder = { [weak self] in
+            self?.chooseExportFolder()
+        }
+        settingsController.onScreenshotPreferencesChanged = { [weak self] in
+            self?.refreshScreenshotPreferences()
+        }
+        settingsController.onToggleCapturePrivacy = { [weak self] in
+            self?.toggleCapturePrivacy($0)
+        }
+        settingsController.onToggleLaunchAtLogin = { [weak self] in
+            self?.toggleLaunchAtLogin()
+        }
+        settingsController.onToggleRecordingName = { [weak self] in
+            self?.toggleRecordingName()
+        }
+        settingsController.onEditRecordingNameTemplate = { [weak self] in
             self?.editRecordingNameTemplate()
         }
-        menuBar.onOpenLastVideoInGifski = { [weak self] in self?.openLastVideoInGifski() }
-        menuBar.onSelectTranscriptionEngine = { [weak self] in
+        settingsController.onSelectTranscriptionEngine = { [weak self] in
             self?.selectTranscriptionEngine($0)
         }
-        menuBar.onToggleTranscriptRefinement = { [weak self] in
+        settingsController.onToggleTranscriptRefinement = { [weak self] in
             self?.toggleTranscriptRefinement()
         }
-        menuBar.onSetUpParakeetModel = { [weak self] in
+        settingsController.onSetUpParakeetModel = { [weak self] in
             self?.presentParakeetModelSetup()
         }
-        menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
-        menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
-        menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
-        menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
-        menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
-        menuBar.onToggleLaunchAtLogin = { [weak self] in self?.toggleLaunchAtLogin() }
-        menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.update(recording: false, elapsed: nil)
+        settingsController.updateInteractionAvailability(
+            menuBar.settingsInteractionAvailability
+        )
         menuBar.updateScreenCaptureSource(screenCaptureSourcePreferences.selected)
         menuBar.updateLastRecording(available: false)
-        refreshCapturePrivacyMenu()
-        refreshRecordingNameMenu()
+        refreshCapturePrivacySettings()
+        refreshRecordingNameSettings()
         refreshGifskiMenu()
-        refreshTranscriptionEngineMenu()
-        refreshLaunchAtLoginMenu()
+        refreshTranscriptionSettings()
+        refreshLaunchAtLoginSettings()
         restoreExportFolderAccess()
+        refreshScreenshotPreferences()
         refreshRecentRecordingMenu()
         let restoredExportRoot = exportDirectoryLease?.url
 
@@ -246,11 +287,17 @@ final class AppController {
                     recoverInterrupted: false
                 )
             }
+            refreshRecentRecordingMenu()
         }
 
         if let recordingToResume {
             DispatchQueue.main.async { [weak self] in
                 self?.requestRecording(recordingToResume, resumingAfterRestart: true)
+            }
+        }
+        if let screenshotToResume {
+            DispatchQueue.main.async { [weak self] in
+                self?.requestScreenshot(screenshotToResume, resumingAfterRestart: true)
             }
         }
     }
@@ -267,12 +314,16 @@ final class AppController {
     /// Stop any live session cleanly (finalizing files) and exit.
     func shutdown() {
         quitAfterStop = true
+        screenshotCaptureTask?.cancel()
         if activeRecording == nil, let videoStartTask {
             videoStartTask.cancel()
             self.videoStartTask = nil
             menuBar.update(recording: false, elapsed: nil)
         }
-        guard activeRecording != nil || sessionPublishTask != nil || videoRotationTask != nil else {
+        guard
+            activeRecording != nil || sessionPublishTask != nil || videoRotationTask != nil
+                || screenshotCaptureTask != nil
+        else {
             NSApp.terminate(nil)
             return
         }
@@ -287,7 +338,7 @@ final class AppController {
     func prepareForTermination() -> Bool {
         guard
             activeRecording != nil || sessionPublishTask != nil || videoStartTask != nil
-                || videoRotationTask != nil
+                || videoRotationTask != nil || screenshotCaptureTask != nil
         else {
             return true
         }
@@ -300,6 +351,185 @@ final class AppController {
             requestRecording(.screen)
         } else {
             stopSession()
+        }
+    }
+
+    private func requestScreenshot(
+        _ kind: ScreenshotCaptureKind,
+        resumingAfterRestart: Bool = false
+    ) {
+        guard screenshotCaptureTask == nil,
+            permissionTask == nil,
+            videoStartTask == nil
+        else { return }
+
+        ensureExportFolderAccess()
+        guard let exportDirectoryLease else { return }
+        let exportDirectory = exportDirectoryLease.url
+
+        // Apple's private picker authorizes its explicit window/application
+        // selection for the capture session. Avoid asking for broad display
+        // access before presenting that privacy-preserving path.
+        guard kind.requiresDirectScreenCaptureAccess else {
+            pendingScreenshotPermission = nil
+            beginScreenshotCapture(kind, exportDirectoryLease: exportDirectoryLease)
+            return
+        }
+
+        // macOS may terminate the process when Screen Recording access changes.
+        // Never let that privacy handoff interrupt an audio-only recording;
+        // once permission already exists, screenshots remain available during
+        // every recording mode.
+        if activeRecording != nil, !recordingPermission.isScreenCaptureGranted {
+            postNotification(
+                title: "Screen access needed for screenshots",
+                body:
+                    "Stop the current recording, take one screenshot to grant access, then try again.",
+                directory: exportDirectory
+            )
+            return
+        }
+
+        if pendingScreenshotPermission == kind, !resumingAfterRestart {
+            restart(resumingScreenshot: kind)
+            return
+        }
+
+        let preparation = recordingPermission.prepareForDirectScreenshot()
+        switch preparation {
+        case .ready:
+            pendingScreenshotPermission = nil
+            beginScreenshotCapture(kind, exportDirectoryLease: exportDirectoryLease)
+        case .waitingForRestart(let blocker):
+            pendingScreenshotPermission = kind
+            if resumingAfterRestart,
+                !recordingPermission.presentSettingsRequired(for: blocker)
+            {
+                pendingScreenshotPermission = nil
+            }
+        case .needsSettings(let blocker):
+            pendingScreenshotPermission = kind
+            if !recordingPermission.presentSettingsRequired(for: blocker) {
+                pendingScreenshotPermission = nil
+            }
+        }
+    }
+
+    private func beginScreenshotCapture(
+        _ kind: ScreenshotCaptureKind,
+        exportDirectoryLease: ExportDirectoryLease
+    ) {
+        let retainedExportDirectoryLease = exportDirectoryLease
+        let format = screenshotPreferences.format
+        let jpegQuality = screenshotPreferences.jpegQuality
+        let playShutterSound = screenshotPreferences.playShutterSound
+        let recordingIsActive = activeRecording != nil
+        let privacy = capturePrivacyPreferences.configuration
+        menuBar.updateScreenshotCaptureAvailable(false)
+
+        screenshotCaptureTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let exportDirectory = retainedExportDirectoryLease.url
+            do {
+                let output = try await self.screenshotCaptureCoordinator.capture(
+                    kind: kind,
+                    privacy: privacy,
+                    format: format,
+                    jpegQuality: jpegQuality,
+                    exportDirectory: exportDirectory,
+                    playShutterSound: playShutterSound,
+                    recordingIsActive: recordingIsActive
+                )
+                if Task.isCancelled {
+                    self.screenshotCaptureTask = nil
+                    self.menuBar.updateScreenshotCaptureAvailable(true)
+                    self.terminateIfRequested()
+                    return
+                }
+                self.finishScreenshotCapture(output, exportDirectory: exportDirectory)
+            } catch {
+                if !Self.isSourceSelectionCancellation(error) {
+                    FileHandle.standardError.write(
+                        Data("screenshot capture failed: \(error)\n".utf8)
+                    )
+                    self.postNotification(
+                        title: "Screenshot capture failed",
+                        body: "No screenshot was saved or copied. Try the capture again.",
+                        directory: exportDirectory
+                    )
+                }
+                self.screenshotCaptureTask = nil
+                self.menuBar.updateScreenshotCaptureAvailable(true)
+                self.terminateIfRequested()
+            }
+        }
+    }
+
+    private func finishScreenshotCapture(
+        _ output: ScreenshotCaptureOutput,
+        exportDirectory: URL
+    ) {
+        screenshotCaptureTask = nil
+        menuBar.updateScreenshotCaptureAvailable(true)
+
+        if output.isCompleteSuccess {
+            menuBar.flashScreenshotSuccess()
+        } else if output.savedURL != nil {
+            postNotification(
+                title: "Screenshot saved, clipboard unavailable",
+                body: "The image is safe in the export folder. Copy it from Finder if needed.",
+                directory: exportDirectory
+            )
+        } else if output.copiedToClipboard {
+            postNotification(
+                title: "Screenshot copied, save failed",
+                body: "Paste the image now to preserve it, then check the export folder.",
+                directory: exportDirectory
+            )
+        } else {
+            postNotification(
+                title: "Screenshot couldn’t be saved or copied",
+                body: "Check the export folder and try the capture again.",
+                directory: exportDirectory
+            )
+        }
+        if let saveFailure = output.saveFailure {
+            FileHandle.standardError.write(Data("screenshot save failed: \(saveFailure)\n".utf8))
+        }
+        if let clipboardFailure = output.clipboardFailure {
+            FileHandle.standardError.write(
+                Data("screenshot clipboard failed: \(clipboardFailure)\n".utf8)
+            )
+        }
+        terminateIfRequested()
+    }
+
+    private func showSettings() {
+        settingsController.updateInteractionAvailability(
+            menuBar.settingsInteractionAvailability
+        )
+        refreshCapturePrivacySettings()
+        refreshRecordingNameSettings()
+        refreshTranscriptionSettings()
+        refreshLaunchAtLoginSettings()
+        settingsController.show(
+            exportDirectory: exportDirectoryLease?.url
+                ?? exportDirectoryAccess.suggestedDirectory
+        )
+    }
+
+    private func refreshScreenshotPreferences() {
+        let shortcuts = screenshotPreferences.shortcuts
+        menuBar.updateScreenshotShortcuts(shortcuts)
+        let failures = screenshotShortcutRegistrar.apply(shortcuts)
+        settingsController.showShortcutRegistrationFailures(failures)
+        if !failures.isEmpty {
+            let detail = failures.map {
+                "\($0.kind.rawValue)=\($0.status)"
+            }.joined(separator: ", ")
+            FileHandle.standardError.write(
+                Data("screenshot shortcut registration failed: \(detail)\n".utf8)
+            )
         }
     }
 
@@ -564,6 +794,7 @@ final class AppController {
             return
         }
         recordingExportName = nil
+        refreshRecentRecordingMenu()
         terminateIfRequested()
     }
 
@@ -632,6 +863,7 @@ final class AppController {
                 directory: session.dir
             )
         }
+        refreshRecentRecordingMenu()
         terminateIfRequested()
     }
 
@@ -653,6 +885,7 @@ final class AppController {
                 directory: sessionDirectory
             )
             Task { [transcription] in await transcription.enqueue(sessionDirectory) }
+            refreshRecentRecordingMenu()
             terminateIfRequested()
             return
         }
@@ -741,6 +974,7 @@ final class AppController {
         }
         setLastFinishedRecordingDirectory(publishedDirectory)
         refreshGifskiMenu()
+        refreshRecentRecordingMenu()
         Task { [transcription] in await transcription.enqueue(publishedDirectory) }
         terminateIfRequested()
     }
@@ -871,6 +1105,9 @@ final class AppController {
             body: Self.startFailureMessage(for: error),
             directory: directory ?? root
         )
+        if directory != nil {
+            refreshRecentRecordingMenu()
+        }
     }
 
     private static func captureFailure(from error: Error) -> CaptureFailure? {
@@ -923,16 +1160,16 @@ final class AppController {
     private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
         guard activeRecording == nil else { return }
         capturePrivacyPreferences.toggle(feature)
-        refreshCapturePrivacyMenu()
+        refreshCapturePrivacySettings()
     }
 
-    private func refreshCapturePrivacyMenu() {
-        menuBar.updateCapturePrivacy(capturePrivacyPreferences.configuration)
+    private func refreshCapturePrivacySettings() {
+        settingsController.updateCapturePrivacy(capturePrivacyPreferences.configuration)
     }
 
     private func toggleRecordingName() {
         recordingNamePreferences.isEnabled.toggle()
-        refreshRecordingNameMenu()
+        refreshRecordingNameSettings()
     }
 
     private func editRecordingNameTemplate() {
@@ -953,7 +1190,7 @@ final class AppController {
         do {
             try recordingNamePreferences.setTemplate(input.stringValue)
             recordingNamePreferences.isEnabled = true
-            refreshRecordingNameMenu()
+            refreshRecordingNameSettings()
         } catch {
             let failure = NSAlert()
             failure.alertStyle = .warning
@@ -963,8 +1200,8 @@ final class AppController {
         }
     }
 
-    private func refreshRecordingNameMenu() {
-        menuBar.updateRecordingName(
+    private func refreshRecordingNameSettings() {
+        settingsController.updateRecordingName(
             enabled: recordingNamePreferences.isEnabled,
             template: recordingNamePreferences.template.rawValue
         )
@@ -1008,7 +1245,13 @@ final class AppController {
     }
 
     private func terminateIfRequested() {
-        if quitAfterStop {
+        if quitAfterStop,
+            activeRecording == nil,
+            sessionPublishTask == nil,
+            videoStartTask == nil,
+            videoRotationTask == nil,
+            screenshotCaptureTask == nil
+        {
             NSApp.terminate(nil)
         }
     }
@@ -1040,7 +1283,7 @@ final class AppController {
 
     private func selectTranscriptionEngine(_ engine: TranscriptionEngineOption) {
         TranscriptionPreferences.select(engine)
-        refreshTranscriptionEngineMenu()
+        refreshTranscriptionSettings()
         if engine == .parakeet {
             presentMissingParakeetModelIfNeeded(force: true)
         }
@@ -1050,10 +1293,10 @@ final class AppController {
         TranscriptionPreferences.setRefinementEnabled(
             !Config.refineTranscriptWithAppleIntelligence()
         )
-        refreshTranscriptionEngineMenu()
+        refreshTranscriptionSettings()
     }
 
-    private func refreshTranscriptionEngineMenu() {
+    private func refreshTranscriptionSettings() {
         if MacWhisperExecutable.installedApplicationCLI() != nil {
             try? MacWhisperExecutable.installBundledApplicationScriptIfNeeded()
         }
@@ -1070,7 +1313,7 @@ final class AppController {
             (try? ParakeetModelID(
                 configurationValue: TranscriptionPreferences.defaultParakeetModel
             )) ?? .v3
-        menuBar.updateTranscriptionEngine(
+        settingsController.updateTranscriptionEngine(
             engine,
             macWhisperAvailable: macWhisperAvailable,
             parakeetModelAvailable: ParakeetModelInstaller.isInstalled(parakeetModel)
@@ -1078,7 +1321,7 @@ final class AppController {
         let refinementCapability = OnDeviceTranscriptRefinementAdviser.currentCapability(
             language: Config.transcriptionLanguage()
         )
-        menuBar.updateTranscriptRefinement(
+        settingsController.updateTranscriptRefinement(
             enabled: Config.refineTranscriptWithAppleIntelligence(),
             available: refinementCapability.canEnable,
             detail: refinementCapability.detail
@@ -1141,7 +1384,7 @@ final class AppController {
             self.menuBar.updateTranscription(nil)
             switch result {
             case .success:
-                self.refreshTranscriptionEngineMenu()
+                self.refreshTranscriptionSettings()
                 let alert = NSAlert()
                 alert.messageText = "Parakeet Is Ready"
                 alert.informativeText =
@@ -1183,7 +1426,7 @@ final class AppController {
         )
     }
 
-    private func openFolder() {
+    private func openRecoveryFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
     }
@@ -1221,14 +1464,19 @@ final class AppController {
     private func refreshRecentRecordingMenu() {
         recentRecordingRefreshTask?.cancel()
         let roots = recentRecordingRoots
+        let recoveryRoot = root
         recentRecordingRefreshTask = Task { [weak self] in
-            let snapshot = await Task.detached(priority: .utility) {
-                RecentRecordingLocator.snapshot(under: roots)
+            let (snapshot, hasRecoveryMaterial) = await Task.detached(priority: .utility) {
+                (
+                    RecentRecordingLocator.snapshot(under: roots),
+                    RecoveryMaterialLocator.hasMaterial(under: recoveryRoot)
+                )
             }.value
             guard !Task.isCancelled else { return }
             self?.setLastFinishedRecordingDirectory(snapshot.recordingDirectory)
             self?.lastFinishedVideoURL = snapshot.videoURL
             self?.refreshGifskiMenu()
+            self?.menuBar.updateRecoveryMaterial(available: hasRecoveryMaterial)
             self?.recentRecordingRefreshTask = nil
         }
     }
@@ -1242,12 +1490,12 @@ final class AppController {
         let previousState = launchAtLoginController.state
         do {
             let state = try launchAtLoginController.toggle()
-            refreshLaunchAtLoginMenu()
+            refreshLaunchAtLoginSettings()
             if state == .requiresApproval, previousState != .requiresApproval {
                 presentLaunchAtLoginApproval()
             }
         } catch {
-            refreshLaunchAtLoginMenu()
+            refreshLaunchAtLoginSettings()
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = "Record couldn’t change Login Items"
@@ -1263,8 +1511,8 @@ final class AppController {
         }
     }
 
-    private func refreshLaunchAtLoginMenu() {
-        menuBar.updateLaunchAtLogin(launchAtLoginController.state)
+    private func refreshLaunchAtLoginSettings() {
+        settingsController.updateLaunchAtLogin(launchAtLoginController.state)
     }
 
     private func presentLaunchAtLoginApproval() {
@@ -1283,11 +1531,16 @@ final class AppController {
     func handleTerminationRequest(
         appleEvent: NSAppleEventDescriptor?
     ) -> Bool {
-        guard let pendingRecordingMode = permissionFlow.pendingMode else { return false }
         guard Self.isPrivacySettingsQuitEvent(appleEvent) else { return false }
-
-        restart(resuming: pendingRecordingMode)
-        return true
+        if let pendingRecordingMode = permissionFlow.pendingMode {
+            restart(resuming: pendingRecordingMode)
+            return true
+        }
+        if let pendingScreenshotPermission {
+            restart(resumingScreenshot: pendingScreenshotPermission)
+            return true
+        }
+        return false
     }
 
     static func shouldRelaunchAfterPrivacySettingsQuit(
@@ -1353,6 +1606,34 @@ final class AppController {
         }
     }
 
+    private func restart(resumingScreenshot kind: ScreenshotCaptureKind) {
+        guard activeRecording == nil, screenshotCaptureTask == nil else { return }
+        pendingScreenshotPermission = nil
+        pendingScreenshotIntentStore.save(kind)
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = false
+        configuration.createsNewApplicationInstance = true
+        let applicationURL = Bundle.main.bundleURL
+
+        Task { @MainActor [weak self] in
+            do {
+                _ = try await NSWorkspace.shared.openApplication(
+                    at: applicationURL,
+                    configuration: configuration
+                )
+                NSApp.terminate(nil)
+            } catch {
+                self?.pendingScreenshotIntentStore.clear()
+                self?.postNotification(
+                    title: "Record couldn’t restart",
+                    body: "Quit Record from the menu bar, then open it again.",
+                    directory: self?.root
+                )
+            }
+        }
+    }
+
     private func postNotification(
         title: String,
         body: String,
@@ -1390,7 +1671,7 @@ final class AppController {
             )
         }
         notifications.updateExportRoot(exportDirectoryLease?.url)
-        menuBar.updateExportDirectory(
+        settingsController.updateExportDirectory(
             exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
         )
     }
@@ -1402,11 +1683,17 @@ final class AppController {
     }
 
     private func chooseExportFolder() {
+        guard activeRecording == nil,
+            sessionPublishTask == nil,
+            videoStartTask == nil,
+            permissionTask == nil,
+            screenshotCaptureTask == nil
+        else { return }
         do {
             guard let selection = try exportDirectoryAccess.choose() else { return }
             exportDirectoryLease = selection
             notifications.updateExportRoot(selection.url)
-            menuBar.updateExportDirectory(selection.url)
+            settingsController.updateExportDirectory(selection.url)
             refreshRecentRecordingMenu()
             Task { [transcription] in
                 await transcription.resumePending(

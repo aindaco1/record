@@ -3,6 +3,7 @@ import AVFoundation
 import CoreAudio
 import CoreGraphics
 import Foundation
+import RecordCore
 
 enum MicrophonePermissionState: Equatable, Sendable {
     case authorized
@@ -177,6 +178,8 @@ final class RecordingPermissionController {
         self.settingsPresenter = settingsPresenter ?? Self.presentSettingsRequired
     }
 
+    var isScreenCaptureGranted: Bool { screen.isGranted }
+
     func prepare(for mode: RecordingMode) async -> RecordingPermissionPreparation {
         switch microphone.state {
         case .authorized:
@@ -207,6 +210,16 @@ final class RecordingPermissionController {
             }
             return .ready
         }
+    }
+
+    /// Direct full-display and area screenshots need only Screen Recording
+    /// access. Apple-picker window/application screenshots do not call this
+    /// path and inherit the picker's selection-scoped authorization instead.
+    func prepareForDirectScreenshot() -> RecordingPermissionPreparation {
+        if screen.isGranted { return .ready }
+        return screen.requestAccess()
+            ? .ready
+            : .waitingForRestart(.screenAndSystemAudio)
     }
 
     /// Returns true only when the user chose to open the relevant pane. The
@@ -255,6 +268,33 @@ final class PendingRecordingIntentStore {
     func consume() -> RecordingMode? {
         defer { defaults.removeObject(forKey: Self.key) }
         return defaults.string(forKey: Self.key).flatMap(RecordingMode.init(rawValue:))
+    }
+
+    func clear() {
+        defaults.removeObject(forKey: Self.key)
+    }
+}
+
+/// Carries a screenshot command across the process replacement required after
+/// a Screen Recording privacy change. No selected window, title, or pixels are
+/// persisted; the user chooses content again after relaunch.
+@MainActor
+final class PendingScreenshotIntentStore {
+    static let key = "screenshots.pendingAfterPrivacyRestart"
+
+    private let defaults: UserDefaults
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func save(_ kind: ScreenshotCaptureKind) {
+        defaults.set(kind.rawValue, forKey: Self.key)
+    }
+
+    func consume() -> ScreenshotCaptureKind? {
+        defer { defaults.removeObject(forKey: Self.key) }
+        return defaults.string(forKey: Self.key).flatMap(ScreenshotCaptureKind.init(rawValue:))
     }
 
     func clear() {

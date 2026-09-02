@@ -27,6 +27,8 @@ by default, exposes macOS's requires-approval state, and never installs a
 custom daemon or LaunchAgent. Because `.notFound` may be returned before first
 registration for a valid installed main app, Record treats it as an actionable
 off state; `register()` remains macOS's authoritative eligibility check.
+ADR 0015 later moves this durable preference into **Settings → General** without
+changing the ServiceManagement boundary.
 
 ## Consequences
 

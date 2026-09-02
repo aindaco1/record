@@ -53,6 +53,6 @@
     <key>NSAudioCaptureUsageDescription</key>
     <string>Record captures system audio for local recordings and on-device transcription. Audio never leaves this Mac.</string>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>Record captures the screen, windows, or apps you select and saves the recording locally. Video never leaves this Mac.</string>
+    <string>Record captures screenshots and screen recordings of displays, windows, apps, or areas you select. Images and video never leave this Mac.</string>
 </dict>
 </plist>

@@ -3,61 +3,69 @@ import QuartzCore
 import RecordCore
 
 /// Status bar item in the top-right of the menu bar. Shows recording state at
-/// a glance and provides the only persistent control surface for the daemon
-/// (since we run as `.accessory` — no dock icon, no main window).
+/// a glance and provides the primary operational surface for the accessory app;
+/// durable configuration lives in the separate settings window.
 @MainActor
 final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
-    static let transcriptionModelMenuTitle = "Transcript model"
-    static let transcriptRefinementMenuTitle = "Improve Transcript Readability"
-    static let openTempSessionMenuTitle = "Open temp session"
+    static let settingsMenuTitle = "Settings…"
+    static let openRecoveryFolderMenuTitle = "Open Recovery Folder…"
     static let openLastRecordingMenuTitle = "Open last recording"
-    static let exportFolderMenuTitle = "Select export folder…"
     static let checkForUpdatesMenuTitle = "Check for Updates…"
-    static let launchAtLoginMenuTitle = "Open at Login"
     static let screenSourceMenuTitle = "Screen source"
+    static let captureDisplayMenuTitle = "Capture Full Display"
+    static let captureWindowMenuTitle = "Capture Window or Application…"
+    static let captureAreaMenuTitle = "Capture Area…"
 
     private let statusItem: NSStatusItem
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
+    private let captureDisplayItem: NSMenuItem
+    private let captureWindowItem: NSMenuItem
+    private let captureAreaItem: NSMenuItem
+    private let settingsItem: NSMenuItem
     private let pauseResumeItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
     private let screenSourceItem: NSMenuItem
     private let mainDisplaySourceItem: NSMenuItem
     private let systemPickerSourceItem: NSMenuItem
     private let regionSourceItem: NSMenuItem
-    private let hideNotificationsItem: NSMenuItem
-    private let hideMenuBarItem: NSMenuItem
-    private let hideDesktopItemsItem: NSMenuItem
-    private let recordingNameItem: NSMenuItem
-    private let recordingNameTemplateItem: NSMenuItem
     private let gifskiItem: NSMenuItem
-    private let transcriptionEngineItem: NSMenuItem
-    private let parakeetEngineItem: NSMenuItem
-    private let macWhisperEngineItem: NSMenuItem
-    private let transcriptRefinementItem: NSMenuItem
-    private let parakeetModelSetupItem: NSMenuItem
     private let retryTranscriptionItem: NSMenuItem
+    private let recoveryFolderItem: NSMenuItem
     private let openLastRecordingItem: NSMenuItem
-    private let exportFolderItem: NSMenuItem
     private let checkForUpdatesItem: NSMenuItem
-    private let launchAtLoginItem: NSMenuItem
     private var recordingIndicatorIsActive = false
     private var captureHealthNote: String?
+    private var screenshotFlashGeneration = 0
+    private var screenshotCaptureIsAvailable = true
+    private var recordingExportFolderIsEnabled = true
+    private var capturePrivacyIsEnabled = true
 
-    var isMacWhisperMenuItemVisible: Bool { !macWhisperEngineItem.isHidden }
-    var isTranscriptRefinementSelected: Bool { transcriptRefinementItem.state == .on }
-    var isTranscriptRefinementEnabled: Bool { transcriptRefinementItem.isEnabled }
-    var canDispatchTranscriptRefinementAction: Bool {
-        transcriptRefinementItem.target === self
-            && transcriptRefinementItem.action == #selector(toggleTranscriptRefinementClicked)
-    }
     var isRetryTranscriptionMenuItemVisible: Bool { !retryTranscriptionItem.isHidden }
+    var isRecoveryFolderMenuItemVisible: Bool { !recoveryFolderItem.isHidden }
     var isOpenLastRecordingEnabled: Bool { openLastRecordingItem.isEnabled }
     var isPauseResumeVisible: Bool { !pauseResumeItem.isHidden }
     var pauseResumeTitle: String { pauseResumeItem.title }
     var isPauseResumeEnabled: Bool { pauseResumeItem.isEnabled }
+    var areScreenshotCaptureItemsEnabled: Bool {
+        captureDisplayItem.isEnabled && captureWindowItem.isEnabled
+            && captureAreaItem.isEnabled
+    }
+    var settingsInteractionAvailability: SettingsInteractionAvailability {
+        SettingsInteractionAvailability(
+            destinationSelectionEnabled:
+                recordingExportFolderIsEnabled && screenshotCaptureIsAvailable,
+            capturePrivacyEnabled: capturePrivacyIsEnabled
+        )
+    }
+    var topLevelMenuTitles: [String] {
+        statusItem.menu?.items.filter { !$0.isSeparatorItem }.map(\.title) ?? []
+    }
+    var topLevelMenuLayout: [String] {
+        statusItem.menu?.items.map { $0.isSeparatorItem ? "|" : $0.title } ?? []
+    }
     var selectedScreenSource: ScreenCaptureSourcePreference? {
         let items: [(ScreenCaptureSourcePreference, NSMenuItem)] = [
             (.mainDisplay, mainDisplaySourceItem),
@@ -68,22 +76,17 @@ final class MenuBarController {
     }
 
     var onToggle: (() -> Void)?
+    var onCaptureScreenshot: ((ScreenshotCaptureKind) -> Void)?
+    var onShowSettings: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
     var onPauseResume: (() -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
-    var onToggleCapturePrivacy: ((CapturePrivacyFeature) -> Void)?
-    var onToggleRecordingName: (() -> Void)?
-    var onEditRecordingNameTemplate: (() -> Void)?
     var onOpenLastVideoInGifski: (() -> Void)?
-    var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
-    var onToggleTranscriptRefinement: (() -> Void)?
-    var onSetUpParakeetModel: (() -> Void)?
     var onRetryTranscription: (() -> Void)?
-    var onOpenFolder: (() -> Void)?
+    var onOpenRecoveryFolder: (() -> Void)?
     var onOpenLastRecording: (() -> Void)?
-    var onChooseExportFolder: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
-    var onToggleLaunchAtLogin: (() -> Void)?
+    var onSettingsInteractionAvailabilityChanged: ((SettingsInteractionAvailability) -> Void)?
     var onQuit: (() -> Void)?
 
     init() {
@@ -100,6 +103,33 @@ final class MenuBarController {
         transcriptionLabel.isEnabled = false
         transcriptionLabel.isHidden = true
         menu.addItem(transcriptionLabel)
+
+        menu.addItem(.separator())
+
+        captureDisplayItem = NSMenuItem(
+            title: Self.captureDisplayMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureDisplayItem.representedObject = ScreenshotCaptureKind.display.rawValue
+        menu.addItem(captureDisplayItem)
+
+        captureWindowItem = NSMenuItem(
+            title: Self.captureWindowMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureWindowItem.representedObject =
+            ScreenshotCaptureKind.windowOrApplication.rawValue
+        menu.addItem(captureWindowItem)
+
+        captureAreaItem = NSMenuItem(
+            title: Self.captureAreaMenuTitle,
+            action: #selector(captureScreenshotClicked),
+            keyEquivalent: ""
+        )
+        captureAreaItem.representedObject = ScreenshotCaptureKind.area.rawValue
+        menu.addItem(captureAreaItem)
 
         menu.addItem(.separator())
 
@@ -142,105 +172,7 @@ final class MenuBarController {
         screenSourceItem.submenu = screenSourceMenu
         menu.addItem(screenSourceItem)
 
-        let pluginsItem = NSMenuItem(title: "Plugins", action: nil, keyEquivalent: "")
-        let pluginsMenu = NSMenu(title: "Plugins")
-        pluginsMenu.autoenablesItems = false
-        hideNotificationsItem = Self.privacyMenuItem(
-            title: "Hide Notifications from Capture",
-            feature: .notifications,
-            toolTip:
-                "Capture-only. Notification sounds can still be recorded unless Focus is enabled."
-        )
-        pluginsMenu.addItem(hideNotificationsItem)
-        hideMenuBarItem = Self.privacyMenuItem(
-            title: "Hide Menu Bar (including Clock)",
-            feature: .menuBar,
-            toolTip: "Capture-only. Does not change SystemUIServer or macOS preferences."
-        )
-        pluginsMenu.addItem(hideMenuBarItem)
-        hideDesktopItemsItem = Self.privacyMenuItem(
-            title: "Hide Desktop Items from Capture",
-            feature: .desktopItems,
-            toolTip: "Capture-only. Existing Finder windows remain visible."
-        )
-        pluginsMenu.addItem(hideDesktopItemsItem)
-        pluginsMenu.addItem(.separator())
-        recordingNameItem = NSMenuItem(
-            title: "Rename Finished Recording",
-            action: #selector(toggleRecordingNameClicked),
-            keyEquivalent: ""
-        )
-        pluginsMenu.addItem(recordingNameItem)
-        recordingNameTemplateItem = NSMenuItem(
-            title: "Recording Name Template…",
-            action: #selector(editRecordingNameTemplateClicked),
-            keyEquivalent: ""
-        )
-        pluginsMenu.addItem(recordingNameTemplateItem)
-        pluginsMenu.addItem(.separator())
-        gifskiItem = NSMenuItem(
-            title: "Open Last Video in Gifski",
-            action: #selector(openLastVideoInGifskiClicked),
-            keyEquivalent: ""
-        )
-        pluginsMenu.addItem(gifskiItem)
-        pluginsItem.submenu = pluginsMenu
-        menu.addItem(pluginsItem)
-
-        transcriptionEngineItem = NSMenuItem(
-            title: Self.transcriptionModelMenuTitle,
-            action: nil,
-            keyEquivalent: ""
-        )
-        let transcriptionMenu = NSMenu(title: "Transcription")
-        transcriptionMenu.autoenablesItems = false
-        parakeetEngineItem = NSMenuItem(
-            title: "Parakeet (Default)",
-            action: #selector(transcriptionEngineClicked),
-            keyEquivalent: ""
-        )
-        parakeetEngineItem.representedObject = TranscriptionEngineOption.parakeet.rawValue
-        transcriptionMenu.addItem(parakeetEngineItem)
-        macWhisperEngineItem = NSMenuItem(
-            title: "MacWhisper (Small)",
-            action: #selector(transcriptionEngineClicked),
-            keyEquivalent: ""
-        )
-        macWhisperEngineItem.representedObject =
-            TranscriptionEngineOption.macwhisper.rawValue
-        transcriptionMenu.addItem(macWhisperEngineItem)
-        transcriptionMenu.addItem(.separator())
-        transcriptRefinementItem = NSMenuItem(
-            title: Self.transcriptRefinementMenuTitle,
-            action: #selector(toggleTranscriptRefinementClicked),
-            keyEquivalent: ""
-        )
-        transcriptionMenu.addItem(transcriptRefinementItem)
-        transcriptionMenu.addItem(.separator())
-        parakeetModelSetupItem = NSMenuItem(
-            title: "Set Up Parakeet Model…",
-            action: #selector(setUpParakeetModelClicked),
-            keyEquivalent: ""
-        )
-        transcriptionMenu.addItem(parakeetModelSetupItem)
-        transcriptionMenu.addItem(.separator())
-        retryTranscriptionItem = NSMenuItem(
-            title: "Retry Failed Transcription",
-            action: #selector(retryTranscriptionClicked),
-            keyEquivalent: ""
-        )
-        retryTranscriptionItem.isHidden = true
-        retryTranscriptionItem.isEnabled = false
-        transcriptionMenu.addItem(retryTranscriptionItem)
-        transcriptionEngineItem.submenu = transcriptionMenu
-        menu.addItem(transcriptionEngineItem)
-
-        let openFolder = NSMenuItem(
-            title: Self.openTempSessionMenuTitle,
-            action: #selector(openFolderClicked),
-            keyEquivalent: "o"
-        )
-        menu.addItem(openFolder)
+        menu.addItem(.separator())
 
         openLastRecordingItem = NSMenuItem(
             title: Self.openLastRecordingMenuTitle,
@@ -250,12 +182,39 @@ final class MenuBarController {
         openLastRecordingItem.isEnabled = false
         menu.addItem(openLastRecordingItem)
 
-        exportFolderItem = NSMenuItem(
-            title: Self.exportFolderMenuTitle,
-            action: #selector(chooseExportFolderClicked),
+        gifskiItem = NSMenuItem(
+            title: "Open Last Video in Gifski",
+            action: #selector(openLastVideoInGifskiClicked),
             keyEquivalent: ""
         )
-        menu.addItem(exportFolderItem)
+        menu.addItem(gifskiItem)
+
+        retryTranscriptionItem = NSMenuItem(
+            title: "Retry Failed Transcription",
+            action: #selector(retryTranscriptionClicked),
+            keyEquivalent: ""
+        )
+        retryTranscriptionItem.isHidden = true
+        retryTranscriptionItem.isEnabled = false
+        menu.addItem(retryTranscriptionItem)
+
+        recoveryFolderItem = NSMenuItem(
+            title: Self.openRecoveryFolderMenuTitle,
+            action: #selector(openRecoveryFolderClicked),
+            keyEquivalent: ""
+        )
+        recoveryFolderItem.isHidden = true
+        recoveryFolderItem.isEnabled = false
+        menu.addItem(recoveryFolderItem)
+
+        menu.addItem(.separator())
+
+        settingsItem = NSMenuItem(
+            title: Self.settingsMenuTitle,
+            action: #selector(showSettingsClicked),
+            keyEquivalent: ","
+        )
+        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
@@ -265,13 +224,6 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         menu.addItem(checkForUpdatesItem)
-
-        launchAtLoginItem = NSMenuItem(
-            title: Self.launchAtLoginMenuTitle,
-            action: #selector(toggleLaunchAtLoginClicked),
-            keyEquivalent: ""
-        )
-        menu.addItem(launchAtLoginItem)
 
         menu.addItem(.separator())
 
@@ -284,27 +236,20 @@ final class MenuBarController {
 
         for item in [
             toggleItem,
+            captureDisplayItem,
+            captureWindowItem,
+            captureAreaItem,
             pauseResumeItem,
             audioOnlyItem,
             mainDisplaySourceItem,
             systemPickerSourceItem,
             regionSourceItem,
-            hideNotificationsItem,
-            hideMenuBarItem,
-            hideDesktopItemsItem,
-            recordingNameItem,
-            recordingNameTemplateItem,
             gifskiItem,
-            parakeetEngineItem,
-            macWhisperEngineItem,
-            transcriptRefinementItem,
-            parakeetModelSetupItem,
             retryTranscriptionItem,
-            openFolder,
+            recoveryFolderItem,
             openLastRecordingItem,
-            exportFolderItem,
+            settingsItem,
             checkForUpdatesItem,
-            launchAtLoginItem,
             quit,
         ] {
             item.target = self
@@ -331,6 +276,46 @@ final class MenuBarController {
                 )
                 : .idle
         )
+    }
+
+    func updateScreenshotShortcuts(_ shortcuts: ScreenshotShortcutSet) {
+        let items: [(ScreenshotCaptureKind, NSMenuItem)] = [
+            (.display, captureDisplayItem),
+            (.windowOrApplication, captureWindowItem),
+            (.area, captureAreaItem),
+        ]
+        for (kind, item) in items {
+            guard let shortcut = shortcuts[kind], shortcut.keyLabel.count == 1 else {
+                item.keyEquivalent = ""
+                item.keyEquivalentModifierMask = []
+                continue
+            }
+            item.keyEquivalent = shortcut.keyLabel.lowercased()
+            item.keyEquivalentModifierMask = Self.appKitModifiers(shortcut.modifiers)
+        }
+    }
+
+    func updateScreenshotCaptureAvailable(_ available: Bool) {
+        screenshotCaptureIsAvailable = available
+        captureDisplayItem.isEnabled = available
+        captureWindowItem.isEnabled = available
+        captureAreaItem.isEnabled = available
+        publishSettingsInteractionAvailability()
+    }
+
+    /// A short camera glyph confirms successful save-and-copy without raising
+    /// a notification or changing the persistent recording state.
+    func flashScreenshotSuccess(duration: TimeInterval = 0.35) {
+        screenshotFlashGeneration += 1
+        let generation = screenshotFlashGeneration
+        statusItem.button?.image = Self.screenshotFlashImage()
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.screenshotFlashGeneration == generation else { return }
+            self.statusItem.button?.image =
+                self.recordingIndicatorIsActive
+                ? Self.recordingMenuBarImage()
+                : Self.menuBarImage()
+        }
     }
 
     func updateRequestingPermissions(for mode: RecordingMode) {
@@ -386,22 +371,10 @@ final class MenuBarController {
         }
     }
 
-    func updateCapturePrivacy(_ configuration: CapturePrivacyConfiguration) {
-        hideNotificationsItem.state = configuration.hideNotifications ? .on : .off
-        hideMenuBarItem.state = configuration.hideMenuBar ? .on : .off
-        hideDesktopItemsItem.state = configuration.hideDesktopItems ? .on : .off
-    }
-
     func updateScreenCaptureSource(_ source: ScreenCaptureSourcePreference) {
         mainDisplaySourceItem.state = source == .mainDisplay ? .on : .off
         systemPickerSourceItem.state = source == .systemPicker ? .on : .off
         regionSourceItem.state = source == .region ? .on : .off
-    }
-
-    func updateRecordingName(enabled: Bool, template: String) {
-        recordingNameItem.state = enabled ? .on : .off
-        recordingNameTemplateItem.isEnabled = enabled
-        recordingNameTemplateItem.toolTip = template
     }
 
     func updateGifski(available: Bool, hasFinishedVideo: Bool) {
@@ -422,35 +395,6 @@ final class MenuBarController {
         retryTranscriptionItem.isEnabled = retryAvailable
     }
 
-    func updateTranscriptionEngine(
-        _ engine: TranscriptionEngineOption,
-        macWhisperAvailable: Bool,
-        parakeetModelAvailable: Bool
-    ) {
-        parakeetEngineItem.state = engine == .parakeet ? .on : .off
-        macWhisperEngineItem.state = engine == .macwhisper ? .on : .off
-        macWhisperEngineItem.isHidden = !macWhisperAvailable
-        macWhisperEngineItem.isEnabled = macWhisperAvailable
-        macWhisperEngineItem.title = "MacWhisper (Small)"
-        macWhisperEngineItem.toolTip = "Uses the installed local MacWhisper Small model"
-        parakeetModelSetupItem.isHidden = parakeetModelAvailable
-        parakeetModelSetupItem.toolTip =
-            "Download from FluidInference and import a verified local Parakeet model"
-    }
-
-    func updateTranscriptRefinement(enabled: Bool, available: Bool, detail: String) {
-        transcriptRefinementItem.state = enabled ? .on : .off
-        transcriptRefinementItem.isEnabled = available
-        transcriptRefinementItem.toolTip = detail
-    }
-
-    /// Show the default or approved destination for finished exports. An
-    /// ellipsis communicates that selecting the item opens a folder picker.
-    func updateExportDirectory(_ url: URL) {
-        exportFolderItem.title = Self.exportFolderMenuTitle
-        exportFolderItem.toolTip = url.path
-    }
-
     func updateLastRecording(available: Bool) {
         openLastRecordingItem.title = Self.openLastRecordingMenuTitle
         openLastRecordingItem.isEnabled = available
@@ -458,22 +402,9 @@ final class MenuBarController {
             available ? "Reveal the most recently finished recording in Finder" : nil
     }
 
-    func updateLaunchAtLogin(_ state: LaunchAtLoginState) {
-        launchAtLoginItem.title = Self.launchAtLoginMenuTitle
-        launchAtLoginItem.isEnabled = state != .unavailable
-        launchAtLoginItem.state =
-            switch state {
-            case .disabled, .unavailable: .off
-            case .enabled: .on
-            case .requiresApproval: .mixed
-            }
-        launchAtLoginItem.toolTip =
-            switch state {
-            case .disabled: "Open Record automatically after you sign in"
-            case .enabled: "Record will open automatically after you sign in"
-            case .requiresApproval: "Click to approve Record in Login Items"
-            case .unavailable: "Open at Login is unavailable for this copy of Record"
-            }
+    func updateRecoveryMaterial(available: Bool) {
+        recoveryFolderItem.isHidden = !available
+        recoveryFolderItem.isEnabled = available
     }
 
     // NewKap's MIT-licensed 2x menu-bar ring is embedded so the signed app has
@@ -538,19 +469,23 @@ final class MenuBarController {
         return animation
     }
 
-    private static func privacyMenuItem(
-        title: String,
-        feature: CapturePrivacyFeature,
-        toolTip: String
-    ) -> NSMenuItem {
-        let item = NSMenuItem(
-            title: title,
-            action: #selector(toggleCapturePrivacyClicked),
-            keyEquivalent: ""
-        )
-        item.representedObject = feature.rawValue
-        item.toolTip = toolTip
-        return item
+    static func screenshotFlashImage() -> NSImage? {
+        let image = NSImage(
+            systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot saved")
+        image?.isTemplate = true
+        image?.size = NSSize(width: 16, height: 16)
+        return image
+    }
+
+    private static func appKitModifiers(
+        _ modifiers: ScreenshotShortcutModifiers
+    ) -> NSEvent.ModifierFlags {
+        var result: NSEvent.ModifierFlags = []
+        if modifiers.contains(.command) { result.insert(.command) }
+        if modifiers.contains(.shift) { result.insert(.shift) }
+        if modifiers.contains(.option) { result.insert(.option) }
+        if modifiers.contains(.control) { result.insert(.control) }
+        return result
     }
 
     private static func screenSourceMenuItem(
@@ -565,10 +500,8 @@ final class MenuBarController {
         return item
     }
 
-    private func setCapturePrivacyItemsEnabled(_ enabled: Bool) {
-        hideNotificationsItem.isEnabled = enabled
-        hideMenuBarItem.isEnabled = enabled
-        hideDesktopItemsItem.isEnabled = enabled
+    private func publishSettingsInteractionAvailability() {
+        onSettingsInteractionAvailabilityChanged?(settingsInteractionAvailability)
     }
 
     private func apply(_ presentation: RecordingMenuPresentation) {
@@ -583,8 +516,9 @@ final class MenuBarController {
         pauseResumeItem.isEnabled = presentation.pauseResumeEnabled
         audioOnlyItem.isEnabled = presentation.audioOnlyEnabled
         screenSourceItem.isEnabled = presentation.screenSourceEnabled
-        exportFolderItem.isEnabled = presentation.exportFolderEnabled
-        setCapturePrivacyItemsEnabled(presentation.capturePrivacyEnabled)
+        recordingExportFolderIsEnabled = presentation.exportFolderEnabled
+        capturePrivacyIsEnabled = presentation.capturePrivacyEnabled
+        publishSettingsInteractionAvailability()
         setRecordingIndicatorActive(presentation.recordingIndicatorActive)
     }
 
@@ -609,6 +543,13 @@ final class MenuBarController {
     }
 
     @objc private func toggleClicked() { onToggle?() }
+    @objc private func captureScreenshotClicked(_ sender: NSMenuItem) {
+        guard let rawValue = sender.representedObject as? String,
+            let kind = ScreenshotCaptureKind(rawValue: rawValue)
+        else { return }
+        onCaptureScreenshot?(kind)
+    }
+    @objc private func showSettingsClicked() { onShowSettings?() }
     @objc private func pauseResumeClicked() { onPauseResume?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func screenSourceClicked(_ sender: NSMenuItem) {
@@ -617,32 +558,10 @@ final class MenuBarController {
         else { return }
         onSelectScreenSource?(source)
     }
-    @objc private func toggleCapturePrivacyClicked(_ sender: NSMenuItem) {
-        guard
-            let rawValue = sender.representedObject as? String,
-            let feature = CapturePrivacyFeature(rawValue: rawValue)
-        else { return }
-        onToggleCapturePrivacy?(feature)
-    }
-    @objc private func toggleRecordingNameClicked() { onToggleRecordingName?() }
-    @objc private func editRecordingNameTemplateClicked() { onEditRecordingNameTemplate?() }
     @objc private func openLastVideoInGifskiClicked() { onOpenLastVideoInGifski?() }
-    @objc private func transcriptionEngineClicked(_ sender: NSMenuItem) {
-        guard
-            let rawValue = sender.representedObject as? String,
-            let engine = TranscriptionEngineOption(rawValue: rawValue)
-        else { return }
-        onSelectTranscriptionEngine?(engine)
-    }
-    @objc private func setUpParakeetModelClicked() { onSetUpParakeetModel?() }
-    @objc private func toggleTranscriptRefinementClicked() {
-        onToggleTranscriptRefinement?()
-    }
     @objc private func retryTranscriptionClicked() { onRetryTranscription?() }
-    @objc private func openFolderClicked() { onOpenFolder?() }
+    @objc private func openRecoveryFolderClicked() { onOpenRecoveryFolder?() }
     @objc private func openLastRecordingClicked() { onOpenLastRecording?() }
-    @objc private func chooseExportFolderClicked() { onChooseExportFolder?() }
     @objc private func checkForUpdatesClicked() { onCheckForUpdates?() }
-    @objc private func toggleLaunchAtLoginClicked() { onToggleLaunchAtLogin?() }
     @objc private func quitClicked() { onQuit?() }
 }

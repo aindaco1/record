@@ -57,6 +57,30 @@ final class ScreenCaptureFilterPlanTests: XCTestCase {
         XCTAssertTrue(plan.exceptedWindowIDs.isEmpty)
     }
 
+    func testScreenshotPolicyIncludesRecordWithoutWeakeningOtherPrivacyFilters() {
+        let plan = ScreenCaptureFilterPlan(
+            privacy: .init(),
+            ownBundleIdentifier: "com.aindaco.record",
+            ownApplicationPolicy: .include,
+            availableApplicationBundleIdentifiers: [
+                "com.aindaco.record",
+                "com.apple.finder",
+                "com.apple.notificationcenterui",
+            ],
+            windows: [
+                .init(id: 1, ownerBundleIdentifier: "com.apple.finder", layer: -1),
+                .init(id: 2, ownerBundleIdentifier: "com.apple.finder", layer: 0),
+            ]
+        )
+
+        XCTAssertFalse(plan.excludedApplicationBundleIdentifiers.contains("com.aindaco.record"))
+        XCTAssertTrue(
+            plan.excludedApplicationBundleIdentifiers.contains("com.apple.notificationcenterui")
+        )
+        XCTAssertTrue(plan.excludedApplicationBundleIdentifiers.contains("com.apple.finder"))
+        XCTAssertEqual(plan.exceptedWindowIDs, [2])
+    }
+
     func testDesktopClassifierDoesNotDependOnWindowTitlesOrCoordinates() {
         XCTAssertTrue(
             ScreenCaptureFilterPlan.isDesktopWindow(

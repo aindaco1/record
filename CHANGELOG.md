@@ -6,6 +6,52 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-01
+
+### Added
+
+- Added native-resolution screenshots for the display under the pointer,
+  Apple-selected windows or applications, and a custom selected area.
+- Added editable global shortcuts, defaulting to Command-Shift-1,
+  Command-Shift-2, and Command-Shift-4, plus a Screenshots section in the
+  unified Settings window with an explicit Off state and shortcut-conflict
+  guidance.
+- Added immediate save to the existing approved export folder and independent
+  lossless-PNG clipboard publication. Disk export defaults to lossless PNG and
+  optionally supports JPEG at a default 95% quality with transparency
+  flattened onto white.
+- Added a brief menu-bar success flash and an optional CC0 shutter sound. The
+  sound is automatically suppressed during active recordings.
+
+### Changed
+
+- Reused the existing Apple content picker, custom-area overlay, capture
+  privacy policy, export-folder bookmark, and ScreenCaptureKit filter resolver
+  for screenshots instead of creating parallel selection or storage systems.
+- Screenshots preserve native source dimensions rather than inheriting the
+  bounded 4K/even-dimension video profile.
+- Window/application screenshots use Apple's selection-scoped permission
+  directly; broad Screen Recording access is requested only for full-display
+  and custom-area capture.
+- Consolidated shared export-folder, capture-privacy, screenshot, recording-name,
+  transcription, and login preferences into one Settings window. The menu now
+  keeps immediate actions, retains Screen Source, and shows Open Recovery
+  Folder only when private session material exists.
+
+### Fixed
+
+- Full-display, area, and Apple-picker screenshots can include Record's own
+  windows, while screen recordings retain their own-app exclusion and area
+  selection overlays are dismissed before pixels are captured.
+- Regression-tested unified Settings so the complete
+  **Window or Application** label and footer controls remain visible.
+
+### Security
+
+- Screenshot pixels, selected-content filters, clipboard data, filenames, and
+  export diagnostics remain local. The feature adds no account, analytics,
+  upload, cloud processing, model download, or main-app network entitlement.
+
 ## [1.2.3] - 2026-08-31
 
 ### Changed

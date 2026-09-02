@@ -13,6 +13,7 @@ public struct SystemScreenCaptureSelectionPlan: Equatable, Sendable {
     public let region: CaptureRect?
     public let source: CaptureSource
     public let outputSize: CaptureOutputSize
+    public let nativePixelSize: ScreenshotPixelSize
 
     public init(
         style: CaptureSelectionStyle,
@@ -37,10 +38,14 @@ public struct SystemScreenCaptureSelectionPlan: Equatable, Sendable {
 
         let selectedWidth = region?.width ?? contentRect.width
         let selectedHeight = region?.height ?? contentRect.height
+        let nativePixelSize = try ScreenshotPixelSize(
+            width: Int((selectedWidth * pointPixelScale).rounded(.up)),
+            height: Int((selectedHeight * pointPixelScale).rounded(.up))
+        )
         guard
             let outputSize = CaptureOutputSize.boundedForCapture(
-                pixelWidth: Int((selectedWidth * pointPixelScale).rounded(.up)),
-                pixelHeight: Int((selectedHeight * pointPixelScale).rounded(.up))
+                pixelWidth: nativePixelSize.width,
+                pixelHeight: nativePixelSize.height
             )
         else {
             throw ScreenCaptureAdapterError.invalidSystemSelection
@@ -50,6 +55,7 @@ public struct SystemScreenCaptureSelectionPlan: Equatable, Sendable {
         self.contentRect = contentRect
         self.pointPixelScale = pointPixelScale
         self.region = region
+        self.nativePixelSize = nativePixelSize
         source =
             region.map(CaptureSource.systemRegion)
             ?? .systemSelection(style: style)
