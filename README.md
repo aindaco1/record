@@ -28,9 +28,10 @@ SHA-256 checksums and build provenance on the
 
 Record has no Dock icon. Open it from the ring in the menu bar.
 
-To uninstall, turn off **Open at Login**, quit Record, and move Record.app to
-the Trash. Remove Record's container only if you also want to delete its
-preferences, temporary recovery sessions, and installed transcription model.
+To uninstall, turn off **Settings… → General → Open Record at Login**, quit
+Record, and move Record.app to the Trash. Remove Record's container only if you
+also want to delete its preferences, temporary recovery sessions, and installed
+transcription model.
 
 ## Use
 
@@ -45,7 +46,7 @@ preferences, temporary recovery sessions, and installed transcription model.
   and run during a recording; the area overlay is removed before capture.
 - Screenshots save immediately to the approved export folder and independently
   copy a lossless PNG to the clipboard. Disk files default to native-resolution
-  lossless PNG; **Screenshot Settings…** can select 95%-quality JPEG, adjust
+  lossless PNG; **Settings… → Screenshots** can select 95%-quality JPEG, adjust
   quality and sound, edit a shortcut, or turn one Off. JPEG transparency is
   flattened onto white.
 
@@ -54,11 +55,11 @@ preferences, temporary recovery sessions, and installed transcription model.
   uncompressed 24-bit PCM.
 - **Start audio-only recording** writes the same two independent audio tracks
   without capturing the display.
-- **Select export folder…** changes the approved destination. Desktop is suggested on
-  first use, the sandbox grant persists across launches, and screenshots use
-  this same destination.
-- **Open temp session** opens private recovery storage for sessions that have
-  not been exported.
+- **Settings… → General → Save to** changes the one approved destination for
+  screenshots and completed screen or audio recordings. Desktop is suggested
+  on first use and the sandbox grant persists across launches.
+- **Open Recovery Folder…** appears only while private failed, interrupted, or
+  unexported session material needs inspection.
 - **Open last recording** reveals the newest finished session from private or
   approved export storage. Record derives this from `session.json` and keeps no
   separate activity database.
@@ -66,7 +67,8 @@ preferences, temporary recovery sessions, and installed transcription model.
   newer version is available, Sparkle presents its standard update prompt;
   download and installation remain user approved.
 - **Check for Updates…** retains the same signed flow as a manual fallback.
-- **Open at Login** uses the macOS Login Items service and is off by default.
+- **Settings… → General → Open Record at Login** uses the macOS Login Items
+  service and is off by default.
 
 Each exported session contains an atomic `session.json` manifest. Screen
 sessions also contain `recording.mov`; both recording modes contain `mic.wav`
@@ -84,7 +86,7 @@ capture, and transcription copies.
 
 Parakeet v3 is the default transcription engine. Record never downloads a
 model itself. If the verified model is missing, Record offers a setup prompt
-and **Transcript model → Set Up Parakeet Model…**. Download the pinned model
+and **Settings… → Recording → Set Up Parakeet Model…**. Download the pinned model
 from FluidInference, then let Record verify every file and atomically import it
 into local storage. See the [Parakeet setup guide](docs/models/parakeet.md).
 
@@ -102,13 +104,13 @@ install the same bridge explicitly with:
 ./scripts/setup/install-macwhisper-cli.sh
 ```
 
-Choose **Transcript model → MacWhisper (Small)**. This option is absent
+Choose **Settings… → Recording → MacWhisper (Small)**. This option is absent
 unless MacWhisper, its bundled `mw`, and Record's sandbox helper are all
 available. Record validates the MacWhisper application signature before each
 invocation and never falls back silently from one engine to another.
 
-If a local transcription fails, **Transcript model → Retry Failed
-Transcription** appears until the job is retried. Record keeps both source audio
+If a local transcription fails, **Retry Failed Transcription** appears in the
+Record menu until the job is retried. Record keeps both source audio
 files unchanged. Voice processing reduces speaker-to-microphone echo by default;
 when aligned cross-track speech still duplicates, Record conservatively removes
 only high-confidence mic copies from the readable transcript and keeps the
@@ -118,7 +120,7 @@ without deleting them, and opens only Record's temporary recovery folder from
 the notification.
 
 On macOS 26 or newer, an eligible Mac with Apple Intelligence enabled can opt
-in to **Transcript model → Improve Transcript Readability**. Apple's on-device
+in to **Settings… → Recording → Improve Transcript Readability**. Apple's on-device
 Foundation Models framework advises Record only on bounded filled-pause and
 immediate-repeat candidates; Record validates every decision, preserves timing
 and source-speaker labels, and marks simultaneous cross-speaker segments as
@@ -131,12 +133,13 @@ source hash.
 
 ## Built-in plugins
 
-The Plugins menu contains small, capability-specific features rather than an
-in-process arbitrary-code plugin API:
+Settings groups small, capability-specific features by what they affect rather
+than presenting an in-process arbitrary-code plugin API:
 
 - hide notifications, the menu bar, or Desktop items from screen capture;
 - rename completed sessions using sanitized templates;
-- open the last completed video in an already-installed Gifski app.
+- hand the last completed video to an already-installed Gifski app from the
+  Record menu.
 
 These settings do not modify global macOS display preferences, download
 helpers, or grant plugins network access.

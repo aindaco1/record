@@ -17,6 +17,9 @@ setup action in the Transcript model menu. The user downloads the model from
 FluidInference's immutable Hugging Face revision in a browser or external CLI,
 then explicitly selects the downloaded directory.
 
+ADR 0015 later consolidates model selection and setup into
+**Settings → Recording** without changing this import boundary.
+
 Record has no model-download code or network entitlement. Its importer accepts
 only the Parakeet v3 allowlist, rejects symbolic-link traversal, verifies exact
 sizes and pinned SHA-256 hashes with bounded-memory streaming, copies into a

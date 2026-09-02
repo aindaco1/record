@@ -161,8 +161,8 @@ final class AppController {
         picker: systemScreenCapturePicker,
         regionSelector: regionSelectionController
     )
-    private lazy var screenshotSettingsController = ScreenshotSettingsWindowController(
-        preferences: screenshotPreferences
+    private lazy var settingsController = SettingsWindowController(
+        screenshotPreferences: screenshotPreferences
     )
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
@@ -209,8 +209,8 @@ final class AppController {
         }
         menuBar.onToggle = { [weak self] in self?.toggle() }
         menuBar.onCaptureScreenshot = { [weak self] in self?.requestScreenshot($0) }
-        menuBar.onShowScreenshotSettings = { [weak self] in
-            self?.showScreenshotSettings()
+        menuBar.onShowSettings = { [weak self] in
+            self?.showSettings()
         }
         menuBar.onStartAudioOnly = { [weak self] in
             self?.requestRecording(.audioOnly)
@@ -219,45 +219,56 @@ final class AppController {
         menuBar.onSelectScreenSource = { [weak self] in
             self?.selectScreenCaptureSource($0)
         }
-        menuBar.onToggleCapturePrivacy = { [weak self] in self?.toggleCapturePrivacy($0) }
-        menuBar.onToggleRecordingName = { [weak self] in self?.toggleRecordingName() }
-        menuBar.onEditRecordingNameTemplate = { [weak self] in
-            self?.editRecordingNameTemplate()
-        }
         menuBar.onOpenLastVideoInGifski = { [weak self] in self?.openLastVideoInGifski() }
-        menuBar.onSelectTranscriptionEngine = { [weak self] in
-            self?.selectTranscriptionEngine($0)
-        }
-        menuBar.onToggleTranscriptRefinement = { [weak self] in
-            self?.toggleTranscriptRefinement()
-        }
-        menuBar.onSetUpParakeetModel = { [weak self] in
-            self?.presentParakeetModelSetup()
-        }
         menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
-        menuBar.onOpenFolder = { [weak self] in self?.openFolder() }
+        menuBar.onOpenRecoveryFolder = { [weak self] in self?.openRecoveryFolder() }
         menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
-        menuBar.onChooseExportFolder = { [weak self] in self?.chooseExportFolder() }
         menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
-        menuBar.onToggleLaunchAtLogin = { [weak self] in self?.toggleLaunchAtLogin() }
+        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] availability in
+            self?.settingsController.updateInteractionAvailability(availability)
+        }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         screenshotShortcutRegistrar.onCapture = { [weak self] in
             self?.requestScreenshot($0)
         }
-        screenshotSettingsController.onChooseExportFolder = { [weak self] in
+        settingsController.onChooseExportFolder = { [weak self] in
             self?.chooseExportFolder()
         }
-        screenshotSettingsController.onPreferencesChanged = { [weak self] in
+        settingsController.onScreenshotPreferencesChanged = { [weak self] in
             self?.refreshScreenshotPreferences()
         }
+        settingsController.onToggleCapturePrivacy = { [weak self] in
+            self?.toggleCapturePrivacy($0)
+        }
+        settingsController.onToggleLaunchAtLogin = { [weak self] in
+            self?.toggleLaunchAtLogin()
+        }
+        settingsController.onToggleRecordingName = { [weak self] in
+            self?.toggleRecordingName()
+        }
+        settingsController.onEditRecordingNameTemplate = { [weak self] in
+            self?.editRecordingNameTemplate()
+        }
+        settingsController.onSelectTranscriptionEngine = { [weak self] in
+            self?.selectTranscriptionEngine($0)
+        }
+        settingsController.onToggleTranscriptRefinement = { [weak self] in
+            self?.toggleTranscriptRefinement()
+        }
+        settingsController.onSetUpParakeetModel = { [weak self] in
+            self?.presentParakeetModelSetup()
+        }
         menuBar.update(recording: false, elapsed: nil)
+        settingsController.updateInteractionAvailability(
+            menuBar.settingsInteractionAvailability
+        )
         menuBar.updateScreenCaptureSource(screenCaptureSourcePreferences.selected)
         menuBar.updateLastRecording(available: false)
-        refreshCapturePrivacyMenu()
-        refreshRecordingNameMenu()
+        refreshCapturePrivacySettings()
+        refreshRecordingNameSettings()
         refreshGifskiMenu()
-        refreshTranscriptionEngineMenu()
-        refreshLaunchAtLoginMenu()
+        refreshTranscriptionSettings()
+        refreshLaunchAtLoginSettings()
         restoreExportFolderAccess()
         refreshScreenshotPreferences()
         refreshRecentRecordingMenu()
@@ -276,6 +287,7 @@ final class AppController {
                     recoverInterrupted: false
                 )
             }
+            refreshRecentRecordingMenu()
         }
 
         if let recordingToResume {
@@ -492,8 +504,15 @@ final class AppController {
         terminateIfRequested()
     }
 
-    private func showScreenshotSettings() {
-        screenshotSettingsController.show(
+    private func showSettings() {
+        settingsController.updateInteractionAvailability(
+            menuBar.settingsInteractionAvailability
+        )
+        refreshCapturePrivacySettings()
+        refreshRecordingNameSettings()
+        refreshTranscriptionSettings()
+        refreshLaunchAtLoginSettings()
+        settingsController.show(
             exportDirectory: exportDirectoryLease?.url
                 ?? exportDirectoryAccess.suggestedDirectory
         )
@@ -503,7 +522,7 @@ final class AppController {
         let shortcuts = screenshotPreferences.shortcuts
         menuBar.updateScreenshotShortcuts(shortcuts)
         let failures = screenshotShortcutRegistrar.apply(shortcuts)
-        screenshotSettingsController.showShortcutRegistrationFailures(failures)
+        settingsController.showShortcutRegistrationFailures(failures)
         if !failures.isEmpty {
             let detail = failures.map {
                 "\($0.kind.rawValue)=\($0.status)"
@@ -775,6 +794,7 @@ final class AppController {
             return
         }
         recordingExportName = nil
+        refreshRecentRecordingMenu()
         terminateIfRequested()
     }
 
@@ -843,6 +863,7 @@ final class AppController {
                 directory: session.dir
             )
         }
+        refreshRecentRecordingMenu()
         terminateIfRequested()
     }
 
@@ -864,6 +885,7 @@ final class AppController {
                 directory: sessionDirectory
             )
             Task { [transcription] in await transcription.enqueue(sessionDirectory) }
+            refreshRecentRecordingMenu()
             terminateIfRequested()
             return
         }
@@ -952,6 +974,7 @@ final class AppController {
         }
         setLastFinishedRecordingDirectory(publishedDirectory)
         refreshGifskiMenu()
+        refreshRecentRecordingMenu()
         Task { [transcription] in await transcription.enqueue(publishedDirectory) }
         terminateIfRequested()
     }
@@ -1082,6 +1105,9 @@ final class AppController {
             body: Self.startFailureMessage(for: error),
             directory: directory ?? root
         )
+        if directory != nil {
+            refreshRecentRecordingMenu()
+        }
     }
 
     private static func captureFailure(from error: Error) -> CaptureFailure? {
@@ -1134,16 +1160,16 @@ final class AppController {
     private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
         guard activeRecording == nil else { return }
         capturePrivacyPreferences.toggle(feature)
-        refreshCapturePrivacyMenu()
+        refreshCapturePrivacySettings()
     }
 
-    private func refreshCapturePrivacyMenu() {
-        menuBar.updateCapturePrivacy(capturePrivacyPreferences.configuration)
+    private func refreshCapturePrivacySettings() {
+        settingsController.updateCapturePrivacy(capturePrivacyPreferences.configuration)
     }
 
     private func toggleRecordingName() {
         recordingNamePreferences.isEnabled.toggle()
-        refreshRecordingNameMenu()
+        refreshRecordingNameSettings()
     }
 
     private func editRecordingNameTemplate() {
@@ -1164,7 +1190,7 @@ final class AppController {
         do {
             try recordingNamePreferences.setTemplate(input.stringValue)
             recordingNamePreferences.isEnabled = true
-            refreshRecordingNameMenu()
+            refreshRecordingNameSettings()
         } catch {
             let failure = NSAlert()
             failure.alertStyle = .warning
@@ -1174,8 +1200,8 @@ final class AppController {
         }
     }
 
-    private func refreshRecordingNameMenu() {
-        menuBar.updateRecordingName(
+    private func refreshRecordingNameSettings() {
+        settingsController.updateRecordingName(
             enabled: recordingNamePreferences.isEnabled,
             template: recordingNamePreferences.template.rawValue
         )
@@ -1257,7 +1283,7 @@ final class AppController {
 
     private func selectTranscriptionEngine(_ engine: TranscriptionEngineOption) {
         TranscriptionPreferences.select(engine)
-        refreshTranscriptionEngineMenu()
+        refreshTranscriptionSettings()
         if engine == .parakeet {
             presentMissingParakeetModelIfNeeded(force: true)
         }
@@ -1267,10 +1293,10 @@ final class AppController {
         TranscriptionPreferences.setRefinementEnabled(
             !Config.refineTranscriptWithAppleIntelligence()
         )
-        refreshTranscriptionEngineMenu()
+        refreshTranscriptionSettings()
     }
 
-    private func refreshTranscriptionEngineMenu() {
+    private func refreshTranscriptionSettings() {
         if MacWhisperExecutable.installedApplicationCLI() != nil {
             try? MacWhisperExecutable.installBundledApplicationScriptIfNeeded()
         }
@@ -1287,7 +1313,7 @@ final class AppController {
             (try? ParakeetModelID(
                 configurationValue: TranscriptionPreferences.defaultParakeetModel
             )) ?? .v3
-        menuBar.updateTranscriptionEngine(
+        settingsController.updateTranscriptionEngine(
             engine,
             macWhisperAvailable: macWhisperAvailable,
             parakeetModelAvailable: ParakeetModelInstaller.isInstalled(parakeetModel)
@@ -1295,7 +1321,7 @@ final class AppController {
         let refinementCapability = OnDeviceTranscriptRefinementAdviser.currentCapability(
             language: Config.transcriptionLanguage()
         )
-        menuBar.updateTranscriptRefinement(
+        settingsController.updateTranscriptRefinement(
             enabled: Config.refineTranscriptWithAppleIntelligence(),
             available: refinementCapability.canEnable,
             detail: refinementCapability.detail
@@ -1358,7 +1384,7 @@ final class AppController {
             self.menuBar.updateTranscription(nil)
             switch result {
             case .success:
-                self.refreshTranscriptionEngineMenu()
+                self.refreshTranscriptionSettings()
                 let alert = NSAlert()
                 alert.messageText = "Parakeet Is Ready"
                 alert.informativeText =
@@ -1400,7 +1426,7 @@ final class AppController {
         )
     }
 
-    private func openFolder() {
+    private func openRecoveryFolder() {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         NSWorkspace.shared.open(root)
     }
@@ -1438,14 +1464,19 @@ final class AppController {
     private func refreshRecentRecordingMenu() {
         recentRecordingRefreshTask?.cancel()
         let roots = recentRecordingRoots
+        let recoveryRoot = root
         recentRecordingRefreshTask = Task { [weak self] in
-            let snapshot = await Task.detached(priority: .utility) {
-                RecentRecordingLocator.snapshot(under: roots)
+            let (snapshot, hasRecoveryMaterial) = await Task.detached(priority: .utility) {
+                (
+                    RecentRecordingLocator.snapshot(under: roots),
+                    RecoveryMaterialLocator.hasMaterial(under: recoveryRoot)
+                )
             }.value
             guard !Task.isCancelled else { return }
             self?.setLastFinishedRecordingDirectory(snapshot.recordingDirectory)
             self?.lastFinishedVideoURL = snapshot.videoURL
             self?.refreshGifskiMenu()
+            self?.menuBar.updateRecoveryMaterial(available: hasRecoveryMaterial)
             self?.recentRecordingRefreshTask = nil
         }
     }
@@ -1459,12 +1490,12 @@ final class AppController {
         let previousState = launchAtLoginController.state
         do {
             let state = try launchAtLoginController.toggle()
-            refreshLaunchAtLoginMenu()
+            refreshLaunchAtLoginSettings()
             if state == .requiresApproval, previousState != .requiresApproval {
                 presentLaunchAtLoginApproval()
             }
         } catch {
-            refreshLaunchAtLoginMenu()
+            refreshLaunchAtLoginSettings()
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = "Record couldn’t change Login Items"
@@ -1480,8 +1511,8 @@ final class AppController {
         }
     }
 
-    private func refreshLaunchAtLoginMenu() {
-        menuBar.updateLaunchAtLogin(launchAtLoginController.state)
+    private func refreshLaunchAtLoginSettings() {
+        settingsController.updateLaunchAtLogin(launchAtLoginController.state)
     }
 
     private func presentLaunchAtLoginApproval() {
@@ -1640,10 +1671,7 @@ final class AppController {
             )
         }
         notifications.updateExportRoot(exportDirectoryLease?.url)
-        menuBar.updateExportDirectory(
-            exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
-        )
-        screenshotSettingsController.updateExportDirectory(
+        settingsController.updateExportDirectory(
             exportDirectoryLease?.url ?? exportDirectoryAccess.suggestedDirectory
         )
     }
@@ -1665,8 +1693,7 @@ final class AppController {
             guard let selection = try exportDirectoryAccess.choose() else { return }
             exportDirectoryLease = selection
             notifications.updateExportRoot(selection.url)
-            menuBar.updateExportDirectory(selection.url)
-            screenshotSettingsController.updateExportDirectory(selection.url)
+            settingsController.updateExportDirectory(selection.url)
             refreshRecentRecordingMenu()
             Task { [transcription] in
                 await transcription.resumePending(

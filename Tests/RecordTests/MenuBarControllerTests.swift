@@ -4,16 +4,13 @@ import XCTest
 @MainActor
 final class MenuBarControllerTests: XCTestCase {
     func testMenuUsesStableActionLabels() {
-        XCTAssertEqual(MenuBarController.transcriptionModelMenuTitle, "Transcript model")
+        XCTAssertEqual(MenuBarController.settingsMenuTitle, "Settings…")
         XCTAssertEqual(
-            MenuBarController.transcriptRefinementMenuTitle,
-            "Improve Transcript Readability"
+            MenuBarController.openRecoveryFolderMenuTitle,
+            "Open Recovery Folder…"
         )
-        XCTAssertEqual(MenuBarController.exportFolderMenuTitle, "Select export folder…")
-        XCTAssertEqual(MenuBarController.openTempSessionMenuTitle, "Open temp session")
         XCTAssertEqual(MenuBarController.openLastRecordingMenuTitle, "Open last recording")
         XCTAssertEqual(MenuBarController.checkForUpdatesMenuTitle, "Check for Updates…")
-        XCTAssertEqual(MenuBarController.launchAtLoginMenuTitle, "Open at Login")
         XCTAssertEqual(MenuBarController.screenSourceMenuTitle, "Screen source")
         XCTAssertEqual(MenuBarController.captureDisplayMenuTitle, "Capture Full Display")
         XCTAssertEqual(
@@ -21,7 +18,30 @@ final class MenuBarControllerTests: XCTestCase {
             "Capture Window or Application…"
         )
         XCTAssertEqual(MenuBarController.captureAreaMenuTitle, "Capture Area…")
-        XCTAssertEqual(MenuBarController.screenshotSettingsMenuTitle, "Screenshot Settings…")
+    }
+
+    func testMenuKeepsActionsAndMovesPersistentPreferencesIntoSettings() throws {
+        let menu = MenuBarController()
+
+        for movedTitle in [
+            "Plugins",
+            "Transcript model",
+            "Select export folder…",
+            "Open at Login",
+            "Screenshot Settings…",
+        ] {
+            XCTAssertFalse(menu.topLevelMenuTitles.contains(movedTitle), movedTitle)
+        }
+
+        let settingsIndex = try XCTUnwrap(
+            menu.topLevelMenuLayout.firstIndex(of: MenuBarController.settingsMenuTitle)
+        )
+        XCTAssertEqual(menu.topLevelMenuLayout[settingsIndex - 1], "|")
+        XCTAssertEqual(menu.topLevelMenuLayout[settingsIndex + 1], "|")
+        XCTAssertEqual(
+            menu.topLevelMenuLayout[settingsIndex + 2],
+            MenuBarController.checkForUpdatesMenuTitle
+        )
     }
 
     func testScreenSourceMenuHasExactlyOnePersistentModeSelected() {
@@ -58,45 +78,14 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertFalse(menu.isOpenLastRecordingEnabled)
     }
 
-    func testMacWhisperIsAbsentUnlessTheIntegrationIsAvailable() {
+    func testRecoveryFolderAppearsOnlyWhenMaterialExists() {
         let menu = MenuBarController()
 
-        menu.updateTranscriptionEngine(
-            .parakeet,
-            macWhisperAvailable: false,
-            parakeetModelAvailable: true
-        )
-        XCTAssertFalse(menu.isMacWhisperMenuItemVisible)
-
-        menu.updateTranscriptionEngine(
-            .parakeet,
-            macWhisperAvailable: true,
-            parakeetModelAvailable: true
-        )
-        XCTAssertTrue(menu.isMacWhisperMenuItemVisible)
-    }
-
-    func testTranscriptRefinementShowsSelectionButDisablesUnavailableCapability() {
-        let menu = MenuBarController()
-
-        XCTAssertTrue(menu.canDispatchTranscriptRefinementAction)
-
-        menu.updateTranscriptRefinement(
-            enabled: true,
-            available: false,
-            detail: "Unavailable"
-        )
-
-        XCTAssertTrue(menu.isTranscriptRefinementSelected)
-        XCTAssertFalse(menu.isTranscriptRefinementEnabled)
-
-        menu.updateTranscriptRefinement(
-            enabled: false,
-            available: true,
-            detail: "Available"
-        )
-        XCTAssertFalse(menu.isTranscriptRefinementSelected)
-        XCTAssertTrue(menu.isTranscriptRefinementEnabled)
+        XCTAssertFalse(menu.isRecoveryFolderMenuItemVisible)
+        menu.updateRecoveryMaterial(available: true)
+        XCTAssertTrue(menu.isRecoveryFolderMenuItemVisible)
+        menu.updateRecoveryMaterial(available: false)
+        XCTAssertFalse(menu.isRecoveryFolderMenuItemVisible)
     }
 
     func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {
@@ -148,22 +137,41 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertEqual(image.size, NSSize(width: 16, height: 16))
     }
 
-    func testScreenshotCaptureLocksOnlyItsSharedDestinationAndRestoresRecordingPolicy() {
+    func testScreenshotCaptureLocksOnlySharedDestinationAndRestoresRecordingPolicy() {
         let menu = MenuBarController()
 
         XCTAssertTrue(menu.areScreenshotCaptureItemsEnabled)
-        XCTAssertTrue(menu.isExportFolderEnabled)
+        XCTAssertTrue(menu.settingsInteractionAvailability.destinationSelectionEnabled)
         menu.updateScreenshotCaptureAvailable(false)
         XCTAssertFalse(menu.areScreenshotCaptureItemsEnabled)
-        XCTAssertFalse(menu.isExportFolderEnabled)
+        XCTAssertFalse(menu.settingsInteractionAvailability.destinationSelectionEnabled)
 
         menu.update(recording: true, elapsed: "0:01", mode: .screen)
         menu.updateScreenshotCaptureAvailable(true)
         XCTAssertTrue(menu.areScreenshotCaptureItemsEnabled)
-        XCTAssertFalse(menu.isExportFolderEnabled)
+        XCTAssertFalse(menu.settingsInteractionAvailability.destinationSelectionEnabled)
+        XCTAssertFalse(menu.settingsInteractionAvailability.capturePrivacyEnabled)
 
         menu.update(recording: false, elapsed: nil)
-        XCTAssertTrue(menu.isExportFolderEnabled)
+        XCTAssertEqual(menu.settingsInteractionAvailability, .idle)
+    }
+
+    func testSettingsReceivesRecordingAvailabilityChanges() {
+        let menu = MenuBarController()
+        var received: [SettingsInteractionAvailability] = []
+        menu.onSettingsInteractionAvailabilityChanged = { received.append($0) }
+
+        menu.update(recording: true, elapsed: "0:01", mode: .screen)
+        XCTAssertEqual(
+            received.last,
+            SettingsInteractionAvailability(
+                destinationSelectionEnabled: false,
+                capturePrivacyEnabled: false
+            )
+        )
+
+        menu.update(recording: false, elapsed: nil)
+        XCTAssertEqual(received.last, .idle)
     }
 
     func testPauseControlIsScopedToScreenRecordingAndRepresentsTransitions() {

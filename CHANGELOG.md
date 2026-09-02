@@ -13,8 +13,9 @@ All notable changes to Record are documented here. Record follows
 - Added native-resolution screenshots for the display under the pointer,
   Apple-selected windows or applications, and a custom selected area.
 - Added editable global shortcuts, defaulting to Command-Shift-1,
-  Command-Shift-2, and Command-Shift-4, plus a screenshot-focused settings
-  window with an explicit Off state and shortcut-conflict guidance.
+  Command-Shift-2, and Command-Shift-4, plus a Screenshots section in the
+  unified Settings window with an explicit Off state and shortcut-conflict
+  guidance.
 - Added immediate save to the existing approved export folder and independent
   lossless-PNG clipboard publication. Disk export defaults to lossless PNG and
   optionally supports JPEG at a default 95% quality with transparency
@@ -32,13 +33,17 @@ All notable changes to Record are documented here. Record follows
 - Window/application screenshots use Apple's selection-scoped permission
   directly; broad Screen Recording access is requested only for full-display
   and custom-area capture.
+- Consolidated shared export-folder, capture-privacy, screenshot, recording-name,
+  transcription, and login preferences into one Settings window. The menu now
+  keeps immediate actions, retains Screen Source, and shows Open Recovery
+  Folder only when private session material exists.
 
 ### Fixed
 
 - Full-display, area, and Apple-picker screenshots can include Record's own
   windows, while screen recordings retain their own-app exclusion and area
   selection overlays are dismissed before pixels are captured.
-- Widened and regression-tested Screenshot Settings so the complete
+- Regression-tested unified Settings so the complete
   **Window or Application** label and footer controls remain visible.
 
 ### Security

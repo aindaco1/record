@@ -167,6 +167,62 @@ final class RecentRecordingLocatorTests: XCTestCase {
         XCTAssertNil(snapshot.videoURL)
     }
 
+    func testRecoveryMaterialAppearsForAPrivateSessionManifest() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.container) }
+
+        XCTAssertFalse(RecoveryMaterialLocator.hasMaterial(under: fixture.privateRoot))
+        _ = try makeSession(
+            named: "failed-export",
+            under: fixture.privateRoot,
+            state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 30)
+        )
+        XCTAssertTrue(RecoveryMaterialLocator.hasMaterial(under: fixture.privateRoot))
+    }
+
+    func testRecoveryMaterialRejectsUnrelatedNestedAndSymlinkedDirectories() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.container) }
+
+        try FileManager.default.createDirectory(
+            at: fixture.privateRoot.appendingPathComponent("unrelated", isDirectory: true),
+            withIntermediateDirectories: true
+        )
+        let nestedRoot = fixture.privateRoot.appendingPathComponent("nested", isDirectory: true)
+        try FileManager.default.createDirectory(at: nestedRoot, withIntermediateDirectories: true)
+        _ = try makeSession(
+            named: "session",
+            under: nestedRoot,
+            state: .interrupted,
+            endedAt: Date(timeIntervalSince1970: 30)
+        )
+        let outside = try makeSession(
+            named: "outside",
+            under: fixture.container,
+            state: .failed,
+            endedAt: Date(timeIntervalSince1970: 30)
+        )
+        try FileManager.default.createSymbolicLink(
+            at: fixture.privateRoot.appendingPathComponent("linked", isDirectory: true),
+            withDestinationURL: outside
+        )
+        let linkedManifest = fixture.privateRoot.appendingPathComponent(
+            "linked-manifest",
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: linkedManifest,
+            withIntermediateDirectories: true
+        )
+        try FileManager.default.createSymbolicLink(
+            at: linkedManifest.appendingPathComponent("session.json"),
+            withDestinationURL: outside.appendingPathComponent("session.json")
+        )
+
+        XCTAssertFalse(RecoveryMaterialLocator.hasMaterial(under: fixture.privateRoot))
+    }
+
     private func makeFixture() throws -> (
         container: URL,
         privateRoot: URL,

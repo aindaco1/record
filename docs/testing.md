@@ -99,7 +99,8 @@ Use synthetic or non-sensitive content for development recordings:
    first when needed, followed by **Screen & System Audio Recording**. It must
    not request **System Audio Recording Only** or open System Settings itself.
    While permission or source selection is in progress, recording mode, source,
-   export-folder, and capture-privacy configuration must remain disabled.
+   and the **Settings → General** destination and capture-privacy controls must
+   remain disabled.
    If you choose Open System Settings and enable Record, Privacy & Security
    should terminate the old process; Record should reopen and resume the Start
    command once. On first use, also approve Desktop in the export-folder picker.
@@ -112,14 +113,16 @@ Use synthetic or non-sensitive content for development recordings:
    not advance, and the menu must disable conflicting actions during each
    rotation. Stop once while paused in a second disposable recording.
 5. Stop recording and wait for **saving recording…** to return to idle. Confirm
-   recording mode, source, export-folder, and capture-privacy configuration stay
+   recording mode, source, destination, and capture-privacy configuration stay
    disabled until idle returns. Then confirm
    a template-named session directory appears on Desktop containing
    `session.json`, video-only `recording.mov`, and independently playable
    24-bit PCM `mic.wav` and `system.wav`. Open the MOV in QuickTime and confirm
    the main display has the expected aspect ratio; the mic file should contain your
    voice and the system file the played clip. Confirm the finalized private
-   working directory no longer appears in **Open temp session**.
+   working directory is removed and **Open Recovery Folder** is absent. Leave a
+   disposable failed or interrupted private session and confirm that action
+   appears, opens the private recovery root, and disappears after cleanup.
 6. Revoke **System Audio Recording Only**, then choose **Start audio-only
    recording**. Record should request microphone access when needed, followed
    by System Audio Recording Only. It must not request screen capture. After a
@@ -144,6 +147,14 @@ Use synthetic or non-sensitive content for development recordings:
 10. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
+Open **Settings…** and switch through General, Screenshots, and Recording.
+Confirm every label and control fits at the minimum window size, including
+**Window or Application**, and that there is exactly one **Save to** control.
+The menu must retain **Screen source** but omit the former Plugins, Transcript
+model, Select export folder, Open at Login, and Screenshot Settings entries.
+**Settings…** must sit in its own divided area immediately above
+**Check for Updates…**.
+
 Repeat the screen flow with each **Screen source** mode. For the system picker,
 select one display, one application, and one independent window; close the
 source during one disposable recording and confirm Record stops and preserves
@@ -153,20 +164,21 @@ the selection. Relaunch and confirm only the selected mode persists: Record
 must ask for the source again and must not retain a window title, app name,
 display identifier, or region.
 
-Choose **Open at Login**, confirm Record appears in System Settings → General →
-Login Items, then disable it again. If macOS reports that approval is required,
-the menu should show a mixed state and open the Login Items pane without
-re-registering repeatedly. A first `.notFound` state must still leave the menu
-item enabled so registration can proceed.
+Open **Settings → General**, enable **Open Record at Login**, and confirm Record
+appears in System Settings → General → Login Items, then disable it again. If
+macOS reports that approval is required, the control should show a mixed state
+and open the Login Items pane without re-registering repeatedly. A first
+`.notFound` state must still leave the control enabled so registration can
+proceed.
 
-Open **Plugins → Recording Name Template…**, test date/time and bundled-word
-tokens, then use a synthetic clipboard value with `{clipboard}`. Confirm unsafe
-path punctuation is removed, a duplicate name receives a numeric suffix, and
-disabling **Rename Finished Recording** restores the plain legacy name. Never
-use sensitive clipboard content in a development test.
+Open **Settings → Recording**, enable **Rename Finished Recording**, edit the
+template, test date/time and bundled-word tokens, then use a synthetic clipboard
+value with `{clipboard}`. Confirm unsafe path punctuation is removed, a duplicate
+name receives a numeric suffix, and disabling the option restores the plain
+legacy name. Never use sensitive clipboard content in a development test.
 
 With Gifski installed, record and stop a short synthetic video, then choose
-**Plugins → Open Last Video in Gifski**. Confirm Gifski receives the existing
+**Open Last Video in Gifski**. Confirm Gifski receives the existing
 MOV and Record neither downloads a helper nor creates another media copy.
 Quit and relaunch Record, then repeat the handoff without making another screen
 recording. It must remain available even if an audio-only session finished in
@@ -217,11 +229,11 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Transcript model → MacWhisper (Small)** in the Record menu and repeat the
+**Settings → Recording → Transcript Model → MacWhisper (Small)** and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either WAV file, and a job
 where every available track fails must not create a successful transcript.
-After a failure, choose **Transcript model → Retry Failed Transcription**
+After a failure, choose **Retry Failed Transcription** in the Record menu
 and confirm the action disappears while the job runs and a successful retry
 creates the canonical transcript without changing either source file.
 Screen and audio-only sessions use the same independent WAV inputs for local
@@ -237,7 +249,7 @@ model. The MacWhisper menu choice must be absent when either MacWhisper, its
 bundled `mw`, or Record's user-script bridge is missing.
 
 On an eligible macOS 26+ test Mac, enable Apple Intelligence and choose
-**Transcript model → Improve Transcript Readability**. Record synthetic speech
+**Settings → Recording → Improve Transcript Readability**. Record synthetic speech
 with filled pauses, an immediate repeated word, and a short interval where the
 microphone and system speakers overlap. Confirm the final JSON and Markdown
 retain speaker labels and timestamps, label overlapping segments, and contain
@@ -246,7 +258,7 @@ no unconstrained rewrites. If any token is removed, confirm
 enabled cases, inspect `transcript.refinement.json` for the v1 policy, source
 hash, capability outcome, and content-free decisions; it must not duplicate
 transcript text. Disable Apple Intelligence or test an unsupported language and
-confirm the menu becomes unavailable while ordinary transcription continues.
+confirm the setting becomes unavailable while ordinary transcription continues.
 Turn the option off and confirm the next session produces the ordinary
 transcript without a refinement report.
 
@@ -255,10 +267,11 @@ transcript without a refinement report.
 Use synthetic windows and a disposable approved export folder. Do not include
 notifications, private Desktop items, credentials, or other personal content.
 
-1. Open **Screenshot Settings…**. Confirm PNG is the default, JPEG quality is
-   95%, shutter sound is on, and the shortcuts are Command-Shift-1 for full
-   display, Command-Shift-2 for window/application, and Command-Shift-4 for
-   area. Edit each shortcut, verify a duplicate is rejected, turn one Off with
+1. Open **Settings…**, then select **Screenshots**. Confirm PNG is the default,
+   JPEG quality is 95%, shutter sound is on, and the shortcuts are
+   Command-Shift-1 for full display, Command-Shift-2 for window/application,
+   and Command-Shift-4 for area. Edit each shortcut, verify a duplicate is
+   rejected, turn one Off with
    Delete, restore defaults, then resolve any macOS shortcut conflict through
    the linked Keyboard Shortcuts pane. Confirm **Window or Application** is not
    clipped and every footer control remains inside the settings window.
@@ -273,12 +286,12 @@ notifications, private Desktop items, credentials, or other personal content.
    its standard shadow and the second includes the selected app's visible
    windows without retaining a source choice for the next capture. From a clean
    privacy state, confirm this system-picker path does not request broad Screen
-   Recording access. Select Record's Screenshot Settings window and confirm the
+   Recording access. Select Record's Settings window and confirm the
    complete settings UI appears in the image.
 4. Invoke area capture on each display. Confirm the reused overlay accepts a
    drag, Escape cancels without an image or notification, and the saved native
    pixel dimensions match the selected logical area times display scale.
-   Select an area over Screenshot Settings and confirm the settings remain in
+   Select an area over Record Settings and confirm the settings remain in
    the result while the dimming overlay, selection border, and instruction text
    do not.
 5. For every successful capture, confirm one
@@ -304,14 +317,15 @@ notifications, private Desktop items, credentials, or other personal content.
 
 ## Export folder access
 
-In the signed sandboxed app, choose **Select export folder…** from the menu, approve
-Desktop, record a short screen session and a short audio-only session, quit, and
-relaunch. The item tooltip should still show Desktop, both complete session
-directories should export without another prompt, and each finalized private
-working copy should be removed only after its Desktop copy validates. Click the
-completion and transcript notifications and confirm Finder selects each Desktop
-session. Move or revoke the selected folder, relaunch, and confirm Record resets
-the saved grant without changing or deleting unexported private session media.
+In the signed sandboxed app, open **Settings → General**, choose **Change…** next
+to **Save to**, and approve Desktop. Capture a screenshot, record a short screen
+session and a short audio-only session, quit, and relaunch. The saved path should
+still show Desktop; the screenshot and both complete session directories should
+export there without another prompt. Each finalized private working copy must be
+removed only after its Desktop copy validates. Click completion and transcript
+notifications and confirm Finder selects each Desktop session. Move or revoke
+the selected folder, relaunch, and confirm Record resets the saved grant without
+changing or deleting unexported private session media.
 
 ## Update checks
 

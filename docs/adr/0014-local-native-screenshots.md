@@ -13,8 +13,8 @@ would create policy drift and retain more source metadata.
 Add three typed screenshot commands in `RecordCore`: full display, window or
 application, and area. Menu actions and editable Carbon global hotkeys issue
 those same commands. Carbon registration requires no Accessibility event tap;
-an unregistered conflict remains visible in Screenshot Settings and each
-shortcut can be Off.
+an unregistered conflict remains visible in **Settings → Screenshots** and
+each shortcut can be Off.
 
 Resolve still-image filters through the same `RecordCapture` resolver used by
 recording streams. Full-display capture chooses the display containing the
@@ -25,7 +25,7 @@ memory-only.
 Keep own-application visibility as an explicit resolver policy rather than an
 implicit global exclusion. Recording display filters exclude Record to prevent
 feedback, while still-image display filters include Record so users can capture
-Screenshot Settings and other Record UI. Screenshot picker configuration also
+Record Settings and other Record UI. Screenshot picker configuration also
 allows Record as an explicit source. The area overlay orders out before its
 selection continuation resumes, so including Record does not burn the overlay
 into the result.
@@ -57,8 +57,8 @@ but an operation may run alongside a stable recording.
 - Apple-picker screenshots avoid an unnecessary broad Screen Recording prompt.
 - Clipboard and disk publication can succeed or fail separately without
   discarding the successful local result.
-- Screenshot settings are focused; transcription and plug-in controls retain
-  their existing menus.
+- Screenshot preferences remain owned by their existing local store; their UI
+  placement is consolidated with other durable preferences by ADR 0015.
 - Scrolling capture, repeat-area memory, delay, OCR, annotations, previews,
   pinning, editing, and screenshot history remain out of scope.
 - The feature adds no account, analytics, cloud processing, upload client,

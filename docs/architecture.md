@@ -33,9 +33,9 @@ flowchart LR
   cursor/click settings, and the future camera adapter.
 - `RecordMedia`: bounded queues, Metal composition, hardware encoding,
   segmentation, muxing, and non-destructive export.
-- `Record` application target: AppKit menu-bar UI, local transcription
-  adapters, screenshot settings/hotkeys/export/clipboard feedback, built-in
-  plugin services, signed updates, and login registration.
+- `Record` application target: AppKit menu-bar and unified settings UI, local
+  transcription adapters, screenshot hotkeys/export/clipboard feedback,
+  built-in capability services, signed updates, and login registration.
 - `record`: diagnostic and automation CLI sharing the same command layer.
 
 `RecordCore` owns typed capture configuration and the pure command/effect
@@ -164,6 +164,12 @@ transcription, export, and handoff adapters add only their format- or
 capability-specific checks. The AppKit menu applies one complete presentation
 value for each recording phase so a transition cannot inherit stale command
 availability from a previous phase.
+
+Persistent preferences use one settings window with General, Screenshots, and
+Recording sections. The menu remains an operational surface: it keeps capture,
+source-selection, open/retry, update, and quit commands. Settings adapters reuse
+the existing preference stores, security-scoped export bookmark, and recording
+presentation policy rather than creating parallel state or grants.
 
 Screen recording and screenshots share one ScreenCaptureKit content resolver,
 one Apple picker adapter, one custom-area overlay, and one capture-privacy

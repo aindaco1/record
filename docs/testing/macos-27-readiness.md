@@ -71,8 +71,9 @@ TCC state without recording window titles, device names, transcripts, or media.
   menu closed. Confirm inference completes at expected speed. If it fails only
   while inactive, capture content-free Core ML diagnostics and evaluate the
   background-inference entitlement before changing compute units.
-- Confirm completion notifications open Finder, Open at Login accurately tracks
-  `SMAppService`, and a signed Sparkle check can download and install a newer
+- Confirm completion notifications open Finder, **Settings → General → Open
+  Record at Login** accurately tracks `SMAppService`, and a signed Sparkle check
+  can download and install a newer
   notarized test build without adding a network entitlement to the main app.
 
 No beta-only workaround may weaken sandboxing, local-only behavior, signing
