@@ -4,11 +4,11 @@
 
 Search [existing issues](https://github.com/aindaco1/record/issues) before
 opening a new one. Include the Record version, macOS version, Mac model,
-recording mode, permission state, and exact reproduction steps.
+capture mode, permission state, and exact reproduction steps.
 
 Use only synthetic or non-sensitive media when demonstrating a problem. Do not
-attach recordings, transcripts, model files, configuration containing private
-paths, or anything from Record's app container.
+attach screenshots, recordings, transcripts, model files, configuration
+containing private paths, or anything from Record's app container.
 
 For a failed session, describe the manifest state and sanitized log messages;
 do not publish the session itself. The inspection commands in

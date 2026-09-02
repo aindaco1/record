@@ -6,7 +6,7 @@ pinned stable Xcode with `scripts/ci/select-stable-xcode.sh`.
 
 ## Before opening a change
 
-1. Keep recording, transcription, and plugin data local.
+1. Keep screenshot, recording, transcription, clipboard, and plugin data local.
 2. Put reusable domain logic in `RecordCore`; keep AppKit, ScreenCaptureKit,
    AVFoundation, and other hardware APIs behind adapters.
 3. Add deterministic tests for every bug fix and state transition that can be

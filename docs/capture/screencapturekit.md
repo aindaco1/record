@@ -48,9 +48,10 @@ flowchart LR
   independent-window choice. Only the picker mode is persisted; its opaque
   filter, source identifiers, application names, and window titles remain in
   memory for the pending or active recording.
-- Custom-region capture first selects a display through the system picker,
-  then uses a noncapturing overlay to produce display-local geometry. The
-  overlay never takes or stores a screenshot.
+- Custom-region recording first selects a display through the system picker,
+  then uses a noncapturing overlay to produce display-local geometry. Area
+  screenshots reuse the overlay, but it orders out before the separate
+  one-shot capture. The overlay itself never takes or stores a screenshot.
 - Picker-selected displays are resolved again immediately before capture so
   the existing notification, menu-bar, desktop-item, and own-app exclusion
   policy remains the one canonical display-filter implementation.

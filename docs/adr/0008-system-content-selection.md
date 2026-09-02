@@ -15,12 +15,14 @@ memory for the pending or active recording. Persist only whether the user wants
 the main-display fast path, the system picker, or a custom region on the next
 recording.
 
-Custom-region selection uses the system picker to choose a display and a
-short-lived, noncapturing AppKit overlay to produce display-local geometry. It
-does not take a screenshot. Before starting a selected display or region,
-Record resolves the display again and rebuilds the filter through the existing
-capture-privacy policy so own-app, notification, menu-bar, and desktop-item
-rules are not duplicated.
+For screen recordings, custom-region selection uses the system picker to choose
+a display and a short-lived, noncapturing AppKit overlay to produce
+display-local geometry. The overlay itself never captures pixels. ADR 0014
+reuses that overlay for area screenshots, then performs the separate one-shot
+capture only after the overlay is gone. Before starting a selected display or
+region, Record resolves the display again and rebuilds the filter through the
+existing capture-privacy policy so own-app, notification, menu-bar, and
+desktop-item rules are not duplicated.
 
 ## Consequences
 

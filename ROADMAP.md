@@ -1,9 +1,11 @@
 # Roadmap
 
-Record 1.0 intentionally focuses on dependable main-display and audio capture.
-Priorities may change as real recordings expose better opportunities.
+Record prioritizes dependable local capture. Shipped work is retained here for
+context; the **Next** and **Parked ideas** sections describe current direction.
 
-## 1.0.3 reliability
+## Shipped
+
+### 1.0.3 reliability
 
 - Bounded off-callback microphone and system-audio writers with persistent,
   content-free per-track health events.
@@ -13,29 +15,32 @@ Priorities may change as real recordings expose better opportunities.
 - Reversible high-confidence transcript echo suppression while separate raw
   microphone and system tracks remain unchanged.
 
-## 1.1.0
+### 1.1.0
 
 - Display, window, application, and region source selection.
 - Pause and resume with lossless segment concatenation.
-- Representative USB, Bluetooth, and call-length microphone-route acceptance.
 - macOS 27 / Xcode 27 compatibility validation without raising the macOS 15
   deployment target or moving signed releases onto a beta toolchain.
 
-## 1.3.0
+### 1.3.0
 
 - Native-resolution PNG/JPEG screenshots for full display, Apple-selected
   window/application, and custom area.
 - Immediate save to the shared approved export folder plus independent
   lossless-PNG clipboard publication.
 - Editable global screenshot shortcuts with conflict reporting and Off states,
-  plus a focused screenshot settings window and recording-safe shutter cue.
+  plus screenshot controls in the unified Settings window and a recording-safe
+  shutter cue.
+- One Settings window for the shared export destination, capture privacy,
+  screenshot options, login behavior, recording names, and transcription.
 
 ## Next
 
 - First-class microphone and frame-rate selection.
-- Broader settings surfaces for recording, transcription, and plugin
-  preferences; screenshot settings are implemented separately.
-- Direct source selection and pause/resume acceptance tests on real hardware.
+- Representative USB, Bluetooth, and call-length microphone-route acceptance.
+- Direct source-selection and pause/resume acceptance tests on real hardware.
+- macOS 27 runtime/TCC and inactive-app transcription acceptance on physical
+  hardware; the hosted Xcode 27 preview lane remains advisory.
 
 ## Parked ideas
 

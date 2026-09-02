@@ -59,18 +59,17 @@ behavior before merge.
 
 The app sandbox permits microphone input plus read/write access to locations
 explicitly selected by the user. Persistent access uses app-scoped security
-bookmarks. Record 1.0 deliberately omits camera access until that feature is
-implemented. Screen and system-audio capture remain protected by macOS privacy
-consent and their Info.plist usage descriptions; they do not require a network
-entitlement.
+bookmarks. Record 1.x currently omits camera access. Screen and system-audio
+capture remain protected by macOS privacy consent and their Info.plist usage
+descriptions; they do not require a network entitlement.
 
-Finished session and screenshot exports default to Desktop, but Desktop is only a suggested location
-until the user approves it through Record's folder picker. The resulting
-app-scoped bookmark is stored in the app container and its access lifetime is
-balanced explicitly. Record atomically validates a complete external session
-before deleting its finalized private working copy. Any export or validation
-failure preserves the private original, and cleanup refuses paths outside the
-direct session root.
+Finished session and screenshot exports default to Desktop, but Desktop is
+only a suggested location until the user approves it through Record's folder
+picker. The resulting app-scoped bookmark is stored in the app container and
+its access lifetime is balanced explicitly. Record atomically validates a
+complete external session before deleting its finalized private working copy.
+Any export or validation failure preserves the private original, and cleanup
+refuses paths outside the direct session root.
 
 Screenshots reuse that same balanced security-scoped bookmark. They are
 published through a hidden temporary file, validated as the requested image

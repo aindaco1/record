@@ -229,7 +229,7 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Settings → Recording → Transcript Model → MacWhisper (Small)** and repeat the
+**Settings → Recording**, choose **MacWhisper (Small)** from **Model**, and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either WAV file, and a job
 where every available track fails must not create a successful transcript.
@@ -349,9 +349,9 @@ version and confirm the launch check is silent. Use **Check for Updates…** as 
 separate manual fallback and confirm it reports no update.
 
 Before updating, grant all three Record privacy services and capture a short
-screen and audio-only session. After updating 1.0.2 to 1.0.3, confirm the
-toggles still identify Record as enabled and neither recording mode repeats an
-already-approved prompt. Run
+screen and audio-only session. After updating the previous release to the
+candidate release, confirm the toggles still identify Record as enabled and
+neither recording mode repeats an already-approved prompt. Run
 `./scripts/ci/check-tcc-identity.sh /Applications/Record.app` on both builds;
 the reported bundle/team pair and designated requirement must match.
 
@@ -359,7 +359,7 @@ Do not test against an unsigned ad hoc archive. The production feed must reject
 an archive with a changed byte, a feed with a changed byte after signing, an
 unexpected signing key, or a missing Developer ID/notarization chain.
 
-## macOS hardware matrix
+## Current macOS hardware matrix
 
 Hardware tests run only on a dedicated Apple Silicon runner with intentional
 TCC grants and synthetic, non-sensitive media.
@@ -367,13 +367,16 @@ TCC grants and synthetic, non-sensitive media.
 | Area | Required cases |
 |---|---|
 | Source selection | each display, one window, one application, custom region, source disappears mid-session |
-| Video | 1080p30, 1080p60, 4K30, 4K60, Retina scaling, HDR-to-SDR policy |
+| Video | 1080p30, 4K30, Retina scaling, HDR-to-SDR policy |
 | Audio | mic only, system only, both, device switch, route reconfigure, silence, write failure |
-| Camera | built-in/external, disconnect/reconnect, overlay positions and sizes |
-| Input effects | cursor on/off, click highlight on/off, multiple displays and scale factors |
+| Screenshots | full display, window, application, area, PNG/JPEG, clipboard, multiple displays and scale factors |
 | Lifecycle | pause/resume, sleep/wake, lock/unlock, permission denial/revocation, low disk, forced quit |
 | Recovery | termination before first frame, during each segment, during finalization, during plugin activation/restoration |
-| Plugins | notification state, clock mask, desktop icon presentation, names, playback speed/audio pitch, Gifski handoff |
+| Built-in capabilities | notification, menu-bar, and Desktop-item capture privacy; names; Gifski handoff |
+
+Future camera, 60-fps, click-visualization, playback-speed, editor, and external
+extension-host rows become release requirements only after those features are
+implemented. They are not acceptance claims for the current app.
 
 ## Performance gates
 

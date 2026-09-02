@@ -1,6 +1,7 @@
 # macOS 27 readiness
 
-Status: macOS 27 Golden Gate and Xcode 27 are beta software as of 2026-08-07.
+Status: reviewed 2026-09-02. Apple currently publishes macOS 27 Golden Gate
+beta 8 and Xcode 27 beta 6. GitHub's `xcode-27` runner remains a public preview.
 This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45).
 
 ## Current findings
@@ -18,13 +19,12 @@ This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45
   is a public preview hosted on macOS 26 with the macOS 27 SDK. It is useful for
   compiler and SDK diagnostics, but it cannot exercise macOS 27 runtime or TCC
   behavior. Its CI result stays advisory until GitHub marks the image GA.
-- Xcode 27 beta 4's Swift Build engine compiles Record but does not stage the
-  transitive Sparkle binary framework beside `RecordTests`, so its test helper
-  cannot load that bundle. The defect is reported upstream as
-  [swift-package-manager#10384](https://github.com/swiftlang/swift-package-manager/issues/10384).
-  The preview lane still compiles with Swift Build, then runs the complete suite
-  and release build with SwiftPM's native engine. Remove that split after the
-  upstream packaging defect is fixed and a full default-engine run passes.
+- The Swift Build binary-framework staging defect reported as
+  [swift-package-manager#10384](https://github.com/swiftlang/swift-package-manager/issues/10384)
+  was closed upstream on 2026-08-11. Record's preview lane still compiles with
+  Swift Build and runs the complete suite with SwiftPM's native engine. Remove
+  that split only after the current hosted preview image completes the full
+  suite with its default engine; issue closure alone is not runtime evidence.
 - macOS 27 can require Apple's
   [background-inference entitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.background-tasks.continued-processing.inference)
   for Neural Engine work while an app is inactive. Parakeet currently uses

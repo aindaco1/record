@@ -4,8 +4,8 @@
 
 | Version | Security updates |
 |---|---|
-| 1.0.x | Yes |
-| Earlier versions | No |
+| 1.3.x | Yes |
+| 1.2.x and earlier | No |
 
 ## Reporting a vulnerability
 
@@ -15,7 +15,8 @@ arbitrary code execution, permissions, signing, plugins, or recording data.
 
 ## Security invariants
 
-- Media, transcripts, plugin state, and clipboard-derived names remain local.
+- Screenshot pixels, media, transcripts, plugin state, and clipboard content
+  remain local.
 - Core product code does not contain analytics, cloud transcription, or upload
   clients.
 - Completion hooks never invoke a shell and require absolute executables.
