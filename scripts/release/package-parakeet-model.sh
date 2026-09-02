@@ -68,6 +68,7 @@ packaged_model="$bundle_root/$local_folder_name"
 manifest="$package_root/manifest.tsv"
 mkdir -p "$packaged_model"
 
+# shellcheck disable=SC2016 # The single-quoted program is evaluated by Ruby.
 ruby -ne '
   if $_ =~ /\.init\(path: "([^"]+)", size: ([\d_]+), sha256: "([^"]+)"\)/
     puts [$1, $2.delete("_"), $3].join("\t")

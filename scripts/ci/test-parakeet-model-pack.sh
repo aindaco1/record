@@ -6,6 +6,7 @@ workflow="$repo_root/.github/workflows/publish-parakeet-model.yml"
 packager="$repo_root/scripts/release/package-parakeet-model.sh"
 attribution="$repo_root/docs/models/PARAKEET_MODEL_ATTRIBUTION.md"
 
+# shellcheck disable=SC2016 # Match literal GitHub Actions source fragments.
 for required_fragment in \
     'MODEL_RELEASE_TAG: v1.3.0' \
     'MODEL_ASSET_NAME: Record-Parakeet-v3-aed0274.zip' \
@@ -28,6 +29,7 @@ if grep -Fq -- '--clobber' "$workflow"; then
     exit 1
 fi
 
+# shellcheck disable=SC2016 # Match literal packaging-script source fragments.
 for required_fragment in \
     'ParakeetModelVerifier.swift' \
     'sourceRevision:' \
