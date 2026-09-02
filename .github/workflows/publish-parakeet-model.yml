@@ -1,0 +1,97 @@
+name: Publish Parakeet Model Pack
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  attestations: write
+  contents: write
+  id-token: write
+
+concurrency:
+  group: publish-parakeet-model-pack
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify, package, and publish
+    runs-on: macos-15
+    timeout-minutes: 30
+    environment: release
+    env:
+      MODEL_RELEASE_TAG: v1.3.0
+      MODEL_ASSET_NAME: Record-Parakeet-v3-aed0274.zip
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate fixed publication target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_ACTOR" != "$GITHUB_REPOSITORY_OWNER" ]]; then
+            echo "only the repository owner may publish the model pack" >&2
+            exit 1
+          fi
+          git config gpg.format ssh
+          git config gpg.ssh.allowedSignersFile \
+            "$GITHUB_WORKSPACE/.github/allowed_signers"
+          git tag -v "$MODEL_RELEASE_TAG"
+          gh release view "$MODEL_RELEASE_TAG" >/dev/null
+          existing="$(
+            gh release view "$MODEL_RELEASE_TAG" --json assets \
+              --jq '.assets[].name'
+          )"
+          if grep -Fxq "$MODEL_ASSET_NAME" <<< "$existing" || \
+             grep -Fxq "$MODEL_ASSET_NAME.sha256" <<< "$existing"; then
+            echo "model-pack release assets already exist" >&2
+            exit 1
+          fi
+
+      - name: Install pinned Hugging Face client
+        run: |
+          python3 -m venv "$RUNNER_TEMP/huggingface-venv"
+          "$RUNNER_TEMP/huggingface-venv/bin/pip" install \
+            --disable-pip-version-check huggingface_hub==0.36.2
+          printf '%s\n' "$RUNNER_TEMP/huggingface-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Download immutable model revision
+        run: |
+          ./scripts/setup/install-parakeet-model.sh \
+            "$RUNNER_TEMP/parakeet-tdt-0.6b-v3"
+
+      - name: Build verified model pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/model-pack"
+          ./scripts/release/package-parakeet-model.sh \
+            "$RUNNER_TEMP/parakeet-tdt-0.6b-v3" \
+            "$RUNNER_TEMP/model-pack/$MODEL_ASSET_NAME"
+          (
+            cd "$RUNNER_TEMP/model-pack"
+            shasum -a 256 -c "$MODEL_ASSET_NAME.sha256"
+          )
+
+      # actions/attest-build-provenance v4.2.2, pinned to a verified commit.
+      - name: Attest model pack
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: ${{ runner.temp }}/model-pack/${{ env.MODEL_ASSET_NAME }}
+
+      - name: Publish fixed release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$MODEL_RELEASE_TAG" \
+            "$RUNNER_TEMP/model-pack/$MODEL_ASSET_NAME" \
+            "$RUNNER_TEMP/model-pack/$MODEL_ASSET_NAME.sha256"
+          published="$(
+            gh release view "$MODEL_RELEASE_TAG" --json assets \
+              --jq '.assets[] | select(.name == env.MODEL_ASSET_NAME) | [.state, .size] | @tsv'
+          )"
+          if [[ "$published" != $'uploaded\t465779146' ]]; then
+            echo "unexpected published model-pack state: $published" >&2
+            exit 1
+          fi
