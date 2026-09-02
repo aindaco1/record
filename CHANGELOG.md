@@ -8,6 +8,9 @@ All notable changes to Record are documented here. Record follows
 
 ### Changed
 
+- Added a direct, versioned GitHub release download for the verified Parakeet
+  v3 model pack, while retaining explicit local import and the main app's
+  no-network boundary.
 - Refreshed current-state, privacy, security, architecture, testing, release,
   roadmap, and support documentation after the 1.3.0 publication and updater
   acceptance pass. Historical triage snapshots are now clearly separated from

@@ -92,9 +92,10 @@ capture, and transcription copies.
 
 Parakeet v3 is the default transcription engine. Record never downloads a
 model itself. If the verified model is missing, Record offers a setup prompt
-and **Settings… → Recording → Set Up Parakeet Model…**. Download the pinned model
-from FluidInference, then let Record verify every file and atomically import it
-into local storage. See the [Parakeet setup guide](docs/models/parakeet.md).
+and **Settings… → Recording → Set Up Parakeet Model…**. Download Record's
+versioned model pack, then let Record verify every pinned FluidInference file
+and atomically import it into local storage. See the
+[Parakeet setup guide](docs/models/parakeet.md).
 
 Development checkouts can install the same pinned model directly with:
 

@@ -12,6 +12,7 @@ cd "$repo_root"
 ./scripts/ci/test-podman-cli.sh
 ./scripts/ci/test-app-stamp.sh
 ./scripts/ci/test-ci-app-artifact.sh
+./scripts/ci/test-parakeet-model-pack.sh
 ./scripts/ci/test-release-ci-provenance.sh
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \

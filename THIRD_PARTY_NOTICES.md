@@ -14,6 +14,16 @@ Runtime Swift package dependencies and their licenses are recorded by
 The assembled app includes the complete dependency licenses in
 `Contents/Resources/Licenses`.
 
+Record separately publishes an optional Parakeet v3 Core ML model pack for
+local transcription. The model is not stored in Git or bundled into
+`Record.app`. Its 17 model files are redistributed unmodified from
+`FluidInference/parakeet-tdt-0.6b-v3-coreml` at immutable revision
+`aed02740059203c4a87495924f685de3722ae9ce`; packaging removes unneeded model
+repository files and adds the upstream model card and license notices. The
+pinned Hugging Face metadata declares CC-BY-4.0, while the model card also
+contains an Apache License 2.0 statement. The downloadable pack includes both
+license texts and the attribution in `docs/models/PARAKEET_MODEL_ATTRIBUTION.md`.
+
 The bundled screenshot shutter is the high-quality Freesound preview of
 “camera shutter.wav” by mywhats, published under the Creative Commons CC0 1.0
 public-domain dedication:
