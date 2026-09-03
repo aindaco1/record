@@ -15,7 +15,7 @@ All notable changes to Record are documented here. Record follows
 - Replaced the vinyl-record app icon with a simple 1980s shoulder-mounted VHS
   camcorder, retaining the black artwork and rounded white app-icon canvas.
 - The menu bar now uses the same camcorder artwork on a transparent canvas.
-  A prominent red dot blinks at its upper-right corner during screen or audio
+  A prominent red dot blinks at its lower-right corner during screen or audio
   recording; the camera stays steady and adapts to light/dark menu bars. The
   dot is hidden while paused and steady red with Reduce Motion enabled.
 

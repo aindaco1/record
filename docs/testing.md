@@ -107,7 +107,7 @@ Use synthetic or non-sensitive content for development recordings:
    command once. On first use, also approve Desktop in the export-folder picker.
 3. Move a test window, speak into the selected microphone, and play a known
    local audio clip for at least 15 seconds. Confirm the camera stays steady
-   while a large red dot blinks at its upper right (or remains steady red when
+   while a large red dot blinks at its lower right (or remains steady red when
    Reduce Motion is enabled), the menu shows an
    increasing elapsed time, and the command becomes **Stop recording**.
 4. Choose **Pause screen recording**, wait several seconds, then resume. Repeat

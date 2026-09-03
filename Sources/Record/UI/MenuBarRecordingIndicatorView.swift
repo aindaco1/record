@@ -36,7 +36,7 @@ final class MenuBarRecordingIndicatorView: NSView {
         CATransaction.setDisableActions(true)
         dotLayer.frame = CGRect(
             x: bounds.maxX - Self.dotDiameter,
-            y: bounds.maxY - Self.dotDiameter,
+            y: bounds.minY,
             width: Self.dotDiameter,
             height: Self.dotDiameter
         )

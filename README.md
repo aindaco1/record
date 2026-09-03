@@ -33,7 +33,7 @@ The current release is [Record 1.3.2](https://github.com/aindaco1/record/release
 build 16, published September 2, 2026.
 
 Record has no Dock icon. Open it from the camera in the menu bar. During
-screen or audio recording, a red dot blinks at the camera's upper-right corner.
+screen or audio recording, a red dot blinks at the camera's lower-right corner.
 The dot is steady when Reduce Motion is enabled and disappears while paused.
 
 To uninstall, turn off **Settings… → General → Open Record at Login**, quit
