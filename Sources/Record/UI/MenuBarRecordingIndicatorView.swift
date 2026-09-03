@@ -34,9 +34,10 @@ final class MenuBarRecordingIndicatorView: NSView {
         super.layout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        // Inset from the artwork canvas so the dot sits on the camera body.
         dotLayer.frame = CGRect(
-            x: bounds.maxX - Self.dotDiameter,
-            y: bounds.minY,
+            x: bounds.maxX - Self.dotDiameter - 6,
+            y: bounds.minY + 1,
             width: Self.dotDiameter,
             height: Self.dotDiameter
         )
