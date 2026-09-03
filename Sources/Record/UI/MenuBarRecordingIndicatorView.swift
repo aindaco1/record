@@ -5,7 +5,7 @@ import QuartzCore
 /// status button's hit target intact. Only the red dot changes opacity.
 @MainActor
 final class MenuBarRecordingIndicatorView: NSView {
-    static let dotDiameter: CGFloat = 6
+    static let dotDiameter: CGFloat = 5
     let dotLayer = CAShapeLayer()
     private var recording = false
     private var reduceMotion = false
@@ -34,10 +34,10 @@ final class MenuBarRecordingIndicatorView: NSView {
         super.layout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        // Inset from the artwork canvas so the dot sits on the camera body.
+        // Anchor the dot's center within the lower-right camera body.
         dotLayer.frame = CGRect(
-            x: bounds.maxX - Self.dotDiameter - 6,
-            y: bounds.minY + 1,
+            x: bounds.maxX - 9 - Self.dotDiameter / 2,
+            y: bounds.minY + 5 - Self.dotDiameter / 2,
             width: Self.dotDiameter,
             height: Self.dotDiameter
         )

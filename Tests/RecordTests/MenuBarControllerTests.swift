@@ -104,14 +104,14 @@ final class MenuBarControllerTests: XCTestCase {
         let indicator = MenuBarRecordingIndicatorView()
         indicator.layoutSubtreeIfNeeded()
         indicator.layout()
-        XCTAssertEqual(indicator.dotLayer.frame, CGRect(x: 12, y: 1, width: 6, height: 6))
+        XCTAssertEqual(indicator.dotLayer.frame, CGRect(x: 12.5, y: 2.5, width: 5, height: 5))
         XCTAssertTrue(indicator.bounds.contains(indicator.dotLayer.frame))
         let color = try XCTUnwrap(
             NSColor(cgColor: try XCTUnwrap(indicator.dotLayer.fillColor))?.usingColorSpace(.sRGB))
         XCTAssertGreaterThan(color.redComponent, 0.8)
         XCTAssertLessThan(color.greenComponent, 0.5)
         XCTAssertLessThan(color.blueComponent, 0.5)
-        XCTAssertNil(indicator.hitTest(NSPoint(x: 15, y: 4)))
+        XCTAssertNil(indicator.hitTest(NSPoint(x: 15, y: 5)))
     }
 
     func testOnlyDotAnimatesWithoutRestartingOnElapsedUpdates() throws {
