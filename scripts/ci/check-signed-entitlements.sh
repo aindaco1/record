@@ -16,6 +16,7 @@ fi
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/record-entitlements.XXXXXX")"
 trap 'rm -rf "$temporary_root"' EXIT
 embedded="$temporary_root/embedded.plist"
+model_downloader_embedded="$temporary_root/model-downloader.plist"
 verification_app="$temporary_root/Record.app"
 
 # File Provider can immediately reapply Finder metadata inside an iCloud-backed
@@ -25,3 +26,8 @@ ditto --norsrc --noextattr "$app_path" "$verification_app"
 codesign --verify --deep --strict "$verification_app"
 codesign --display --entitlements "$embedded" --xml "$verification_app"
 "$repo_root/scripts/ci/check-entitlements.sh" "$embedded"
+model_downloader="$verification_app/Contents/XPCServices/RecordModelDownloader.xpc"
+codesign --display --entitlements "$model_downloader_embedded" --xml \
+    "$model_downloader"
+"$repo_root/scripts/ci/check-model-downloader-entitlements.sh" \
+    "$model_downloader_embedded"

@@ -68,11 +68,12 @@ if [[ ! -f "$metadata" || -L "$metadata" ]] || ! jq -e \
     --argjson runAttempt "$ci_run_attempt" '
       (keys | sort) == [
         "appVersion", "buildAppSHA256", "buildNumber", "bundleCheckSHA256",
-        "commit", "executableSHA256", "packageResolvedSHA256", "repository",
+        "commit", "executableSHA256", "modelDownloaderExecutableSHA256",
+        "modelDownloaderInfoPlistSHA256", "packageResolvedSHA256", "repository",
         "runAttempt", "runID", "runner", "schema", "sourceInfoPlistSHA256",
         "stampAppSHA256", "workflow", "xcodeVersion"
       ] and
-      .schema == "record-ci-app-v1" and
+      .schema == "record-ci-app-v2" and
       .repository == $repository and .commit == $commit and
       .workflow == ".github/workflows/ci.yml" and
       .runID == $runID and .runAttempt == $runAttempt and
@@ -81,7 +82,8 @@ if [[ ! -f "$metadata" || -L "$metadata" ]] || ! jq -e \
       (.buildNumber | test("^[1-9][0-9]*$")) and
       ([
         .packageResolvedSHA256, .buildAppSHA256, .stampAppSHA256,
-        .bundleCheckSHA256, .sourceInfoPlistSHA256, .executableSHA256
+        .bundleCheckSHA256, .sourceInfoPlistSHA256, .executableSHA256,
+        .modelDownloaderInfoPlistSHA256, .modelDownloaderExecutableSHA256
       ] | all(type == "string" and test("^[a-f0-9]{64}$")))
     ' "$metadata" >/dev/null; then
     echo "CI app provenance metadata is invalid" >&2
@@ -104,11 +106,23 @@ assert_source_hash buildAppSHA256 "$repo_root/scripts/release/build-app.sh"
 assert_source_hash stampAppSHA256 "$repo_root/scripts/release/stamp-app.sh"
 assert_source_hash bundleCheckSHA256 "$repo_root/scripts/ci/check-app-bundle.sh"
 assert_source_hash sourceInfoPlistSHA256 "$repo_root/Sources/Record/Info.plist"
+assert_source_hash modelDownloaderInfoPlistSHA256 \
+    "$repo_root/Sources/RecordModelDownloaderService/Info.plist"
 restored_executable_hash="$(
     shasum -a 256 "$restored_app/Contents/MacOS/record" | awk '{print $1}'
 )"
 if [[ "$restored_executable_hash" != "$(jq -r '.executableSHA256' "$metadata")" ]]; then
     echo "restored CI app executable does not match its provenance" >&2
+    exit 1
+fi
+restored_model_downloader_hash="$(
+    shasum -a 256 \
+        "$restored_app/Contents/XPCServices/RecordModelDownloader.xpc/Contents/MacOS/record-model-downloader" \
+        | awk '{print $1}'
+)"
+if [[ "$restored_model_downloader_hash" != \
+      "$(jq -r '.modelDownloaderExecutableSHA256' "$metadata")" ]]; then
+    echo "restored model downloader does not match its provenance" >&2
     exit 1
 fi
 "$repo_root/scripts/ci/check-app-bundle.sh" "$restored_app"

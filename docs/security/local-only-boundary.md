@@ -2,29 +2,38 @@
 
 Record treats screenshots, recordings, transcripts, clipboard content and
 clipboard-derived names, plugin state, diagnostics, and file metadata as
-private local data. The product has no
-accounts, telemetry, cloud transcription, upload, or model download path.
-Its only in-app network operation is a signed software-update check at launch
-or after the explicit manual command.
+private local data. The product has no accounts, telemetry, cloud
+transcription, upload, or capture-data network path. Network access is confined
+to sandboxed helpers: Sparkle checks and installs signed application updates,
+and the Parakeet downloader fetches one pinned GitHub model asset only after an
+explicit user request.
 
 ## Defense in depth
 
 1. Product-source CI rejects common Apple networking frameworks, client APIs,
    raw sockets, remote URL construction, telemetry SDKs, and network command
-   execution. The guard has its own positive and negative fixture tests.
+   execution outside the dedicated model downloader. A separate helper guard
+   permits Foundation `URLSession` but rejects configurable remote URLs, raw
+   sockets, command-line download tools, and additional entitlements. Both
+   guards have positive and negative fixture tests.
 2. The distributed main app is sandboxed and intentionally omits both outgoing
    and incoming network entitlements. Sparkle's separately sandboxed downloader
-   and installer XPC services are the narrow exception for the launch and
-   manual update requests; the appcast and archive both require Ed25519
-   signatures.
+   and installer XPC services are the narrow exception for launch and manual
+   update requests; the appcast and archive both require Ed25519 signatures.
+   `RecordModelDownloader.xpc` is the separate, outbound-only exception for the
+   explicit Parakeet setup action.
 3. Record enables FluidAudio's offline mode at every executable entry point
    and immediately before model preparation. A test calls FluidAudio's public
    download surface and requires its typed `networkDisabled` failure.
-4. Release signing embeds the reviewed entitlement file, and CI extracts the
-   signed entitlements to verify the actual artifact rather than trusting only
-   source configuration.
-5. Models enter through a user-selected local-file import. A missing model
-   fails closed and is never fetched by the application.
+4. Release signing embeds the reviewed entitlement files, and CI extracts both
+   the main-app and model-helper entitlements from the signed artifact rather
+   than trusting only source configuration.
+5. Models enter through either a user-selected local folder or the explicit
+   **Download and Install** action. The helper selects the fixed asset itself,
+   receives only an open private-file descriptor, and verifies the archive
+   before writing. The main app independently verifies it again, expands it in
+   private temporary storage, and accepts only the pinned per-file manifest
+   through the same atomic importer.
 6. Plugin capabilities do not include networking. Future plugin helpers must
    use the same network-denying sandbox policy.
 7. The optional MacWhisper adapter uses Apple's `NSUserUnixTask` mechanism and
@@ -40,9 +49,9 @@ or after the explicit manual command.
    signatures match the public key embedded in Record.
 9. Optional readability refinement uses only Apple's on-device
    `SystemLanguageModel`. Record submits bounded, escaped classification records
-   and accepts only revalidated keep/remove decisions. It adds no networking
-   API or entitlement, never downloads a model, and preserves the raw local
-   transcript whenever output changes.
+   and accepts only revalidated keep/remove decisions. It uses no networking
+   API or entitlement and preserves the raw local transcript whenever output
+   changes.
 10. Screenshot capture uses native ScreenCaptureKit and ImageIO only. Pixels
     are written directly to the approved local export root and the local
     pasteboard; no screenshot history, preview database, OCR, upload, or editor
@@ -83,13 +92,14 @@ the notification.
 - CI and release hosts use the network to fetch reviewed source dependencies,
   actions, signing/notarization services, and publish artifacts. They never
   receive user recordings or application diagnostics.
-- A launch or explicit update check discloses the ordinary connection metadata
-  of a request to GitHub but never includes recording data, transcript text,
-  clipboard content, session metadata, diagnostics, local paths, or a Record
-  account identifier.
-- The developer-only Parakeet setup script downloads one immutable model
-  revision outside the app sandbox. The model is installed into Record's local
-  container; the shipping app neither contains nor calls the downloader.
+- A launch/explicit update check or an explicit Parakeet model request discloses
+  the ordinary connection metadata of a request to GitHub and its release-asset
+  host. Neither path includes recording data, transcript text, clipboard
+  content, session metadata, diagnostics, local paths, or a Record account
+  identifier.
+- The developer-only Parakeet setup script remains available outside the app
+  sandbox. The shipping app uses a different, fixed-asset XPC path and does not
+  enable FluidAudio's downloader.
 - Enabling MacWhisper expands the trust boundary to the separately installed
   MacWhisper app. Record retains no network entitlement, but cannot enforce
   MacWhisper's behavior from outside its sandbox; use only an installed local
@@ -110,6 +120,7 @@ Run the same checks as CI:
 ```sh
 ./scripts/ci/check-local-only.sh
 ./scripts/ci/test-local-only-guard.sh
+./scripts/ci/test-model-downloader-boundary.sh
 ./scripts/ci/validate.sh
 ```
 
@@ -117,5 +128,7 @@ For a signed artifact, inspect and validate the embedded policy:
 
 ```sh
 codesign --display --entitlements - --xml Record.app
+codesign --display --entitlements - --xml \
+  Record.app/Contents/XPCServices/RecordModelDownloader.xpc
 ./scripts/ci/check-signed-entitlements.sh Record.app
 ```

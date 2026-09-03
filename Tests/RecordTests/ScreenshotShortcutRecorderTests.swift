@@ -100,6 +100,16 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
         )
         XCTAssertTrue(controller.isMacWhisperOptionVisible)
 
+        controller.updateTranscriptionEngine(
+            .parakeet,
+            macWhisperAvailable: true,
+            parakeetModelAvailable: false,
+            parakeetSetupInProgress: true
+        )
+        XCTAssertEqual(controller.parakeetStatus, "Downloading and verifying…")
+        XCTAssertEqual(controller.parakeetSetupButtonTitle, "Downloading…")
+        XCTAssertFalse(controller.isParakeetSetupButtonEnabled)
+
         controller.updateTranscriptRefinement(
             enabled: true,
             available: false,

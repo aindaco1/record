@@ -34,6 +34,11 @@ context; the **Next** and **Parked ideas** sections describe current direction.
 - One Settings window for the shared export destination, capture privacy,
   screenshot options, login behavior, recording names, and transcription.
 
+### 1.3.1
+
+- One-click Parakeet model download and verified atomic installation from
+  Settings through a dedicated, outbound-only sandboxed XPC helper.
+
 ## Next
 
 - First-class microphone and frame-rate selection.

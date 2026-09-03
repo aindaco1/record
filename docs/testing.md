@@ -61,7 +61,8 @@ regressions run on every pull request.
 - exact DMG layout enforcement for one real `Record.app` plus an Applications
   shortcut to `/Applications`, including rejection of missing, redirected,
   extra, directory, and symlinked entries
-- local-only source/entitlement guards and FluidAudio network denial
+- main-app local-only guards, model-helper boundary/entitlement checks, and
+  FluidAudio network denial
 - debug tests plus an arm64 release build and architecture check
 - the complete suite under ThreadSanitizer and AddressSanitizer
 - exact-commit CI app handoff checks covering successful CI and CodeQL evidence,
@@ -241,12 +242,17 @@ transcription; selecting an engine affects whichever finalized session is
 queued next.
 
 For the first-run path, temporarily move the sandbox's Parakeet v3 cache aside,
-launch Record, and confirm the setup prompt appears without blocking recording.
-Download the exact pinned revision from `docs/models/parakeet.md`, import it,
-and confirm pending transcription resumes. Modify one byte in a disposable
-download and confirm Record rejects it without changing an existing installed
-model. The MacWhisper menu choice must be absent when either MacWhisper, its
-bundled `mw`, or Record's user-script bridge is missing.
+launch the signed app, and confirm the setup prompt appears without blocking
+recording. Choose **Download and Install**, confirm Settings reports the active
+download, and verify the model installs and pending transcription resumes.
+Interrupt the network once and confirm bounded retry/resume either completes or
+returns an actionable retry/manual-import error without leaving a partial model.
+Inspect the signed bundle to confirm the main app has no network entitlement and
+`RecordModelDownloader.xpc` has exactly sandbox plus outbound-network access.
+Repeat with a manually downloaded pack; modify one byte in a disposable copy
+and confirm Record rejects it without changing an existing installed model. The
+MacWhisper menu choice must be absent when either MacWhisper, its bundled `mw`,
+or Record's user-script bridge is missing.
 
 On an eligible macOS 26+ test Mac, enable Apple Intelligence and choose
 **Settings → Recording → Improve Transcript Readability**. Record synthetic speech

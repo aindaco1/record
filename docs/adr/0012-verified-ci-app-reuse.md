@@ -64,4 +64,6 @@ gate; they are accepted by release only from the exact successful commit.
   locked Sparkle tool without rebuilding the application and fails closed if
   the expected executable is unavailable.
 - No product data, recording content, transcript, model, credential, signing
-  material, or network entitlement enters the CI handoff.
+  material, or unreviewed/main-app network entitlement enters the CI handoff.
+  ADR 0017's fixed model helper and its audited outbound-only entitlement are
+  part of the verified application bundle contract.

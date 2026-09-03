@@ -21,5 +21,6 @@ artifacts, and macOS Finder metadata. Model contents are not modified. Record
 is not affiliated with or endorsed by FluidInference or NVIDIA.
 
 Record verifies the size and SHA-256 digest of every accepted model file before
-installing it. The downloadable archive is separate from `Record.app`; the app
-does not download models or have a general network entitlement.
+installing it. The downloadable archive is separate from `Record.app`. Record
+1.3.1 can fetch it only through a dedicated outbound-only sandboxed helper; the
+main app has no general network entitlement.

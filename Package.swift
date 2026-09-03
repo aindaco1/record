@@ -10,6 +10,10 @@ let package = Package(
         .library(name: "RecordMedia", targets: ["RecordMedia"]),
         .library(name: "RecordSpeech", targets: ["RecordSpeech"]),
         .executable(name: "record", targets: ["Record"]),
+        .executable(
+            name: "record-model-downloader",
+            targets: ["RecordModelDownloaderService"]
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
@@ -32,6 +36,15 @@ let package = Package(
                 "RecordCore",
                 .product(name: "FluidAudio", package: "FluidAudio"),
             ]
+        ),
+        .target(
+            name: "RecordModelDownload",
+            dependencies: ["RecordCore"]
+        ),
+        .executableTarget(
+            name: "RecordModelDownloaderService",
+            dependencies: ["RecordCore", "RecordModelDownload"],
+            exclude: ["Info.plist"]
         ),
         .executableTarget(
             name: "Record",
@@ -62,6 +75,10 @@ let package = Package(
         .testTarget(
             name: "RecordCoreTests",
             dependencies: ["RecordCore"]
+        ),
+        .testTarget(
+            name: "RecordModelDownloadTests",
+            dependencies: ["RecordCore", "RecordModelDownload"]
         ),
         .testTarget(
             name: "RecordTests",

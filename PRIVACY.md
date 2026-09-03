@@ -21,17 +21,21 @@ enabled recording-name template explicitly contains the `{clipboard}` token.
 
 ## Network access
 
-The main Record app has no network entitlement. At each launch, Sparkle's
-sandboxed downloader silently checks Record's public GitHub release feed. The
-same signed check remains available through **Check for Updates…**. A check
-includes ordinary network connection metadata but does not contain recording
-content, transcripts, clipboard content, session metadata, diagnostics, local
-paths, or a Record account identifier. Automatic installation and Sparkle
-system profiling are disabled.
+The main Record app has no network entitlement. Sandboxed helper services make
+two narrowly scoped GitHub connections. At each launch, Sparkle's downloader
+checks Record's signed release feed; the same check remains available through
+**Check for Updates…**. When the user explicitly chooses **Download and
+Install** for Parakeet, a separate model helper downloads only Record's fixed,
+pinned model-pack URL. It receives no caller-provided URL, recording content,
+transcript, clipboard content, session metadata, diagnostic, local path, or
+Record account identifier. These requests disclose ordinary network connection
+metadata to GitHub and its release-asset host. Automatic update installation
+and Sparkle system profiling are disabled.
 
-Record does not download transcription models. If the user explicitly selects
-MacWhisper, audio is passed locally to the separately installed MacWhisper app;
-MacWhisper's own privacy policy and settings then apply.
+The downloaded model is verified before local installation. If the user
+explicitly selects MacWhisper, audio is passed locally to the separately
+installed MacWhisper app; MacWhisper's own privacy policy and settings then
+apply.
 
 If the user enables **Improve Transcript Readability**, bounded transcript
 snippets are processed by Apple's on-device Foundation Models framework. They
