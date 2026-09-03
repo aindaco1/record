@@ -20,8 +20,9 @@ Dependency changes require an explicit review for network clients, telemetry,
 process launching, file access, and implicit model downloads. Product targets
 must pass `scripts/ci/check-local-only.sh`; do not weaken its patterns or add a
 main-app network entitlement without a user-approved replacement for ADR 0002.
-Sparkle is a reviewed exception whose network access remains isolated in its
-sandboxed downloader service under ADR 0004.
+Sparkle is a reviewed exception under ADR 0004. ADR 0017 separately permits the
+fixed-asset Parakeet XPC downloader; changes to its URL, allowed hosts, protocol,
+or exact entitlement set require renewed privacy review.
 
 Run the fast source and test gate:
 

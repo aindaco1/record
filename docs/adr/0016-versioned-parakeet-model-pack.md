@@ -1,6 +1,6 @@
 # ADR 0016: Publish a versioned Parakeet model pack outside the app
 
-- Status: accepted
+- Status: accepted; in-app acquisition amended by ADR 0017
 - Date: 2026-09-02
 
 ## Context
@@ -49,3 +49,5 @@ no model-download code or network entitlement.
   without changing the signed 1.3.0 application artifacts or appcast.
 - A future model revision requires a reviewed manifest and a new immutable asset
   name. The existing asset must never be replaced or silently retargeted.
+- Record 1.3.1 later consumes this same immutable asset through the explicit,
+  sandboxed download flow defined by ADR 0017.

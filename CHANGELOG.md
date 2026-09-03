@@ -6,15 +6,32 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-02
+
+### Added
+
+- Added **Download and Install** to Parakeet setup in Settings. A dedicated,
+  sandboxed XPC helper downloads only the pinned v3 model pack from Record's
+  GitHub release and supports bounded retry/resume after transient connection
+  loss.
+
 ### Changed
 
-- Added a direct, versioned GitHub release download for the verified Parakeet
-  v3 model pack, while retaining explicit local import and the main app's
-  no-network boundary.
+- Reused the existing size/SHA-256 manifest and atomic local importer after
+  independently verifying the downloaded archive. Manual folder import remains
+  available.
 - Refreshed current-state, privacy, security, architecture, testing, release,
   roadmap, and support documentation after the 1.3.0 publication and updater
   acceptance pass. Historical triage snapshots are now clearly separated from
   the live tracker.
+
+### Security
+
+- Kept the main Record process network-denied. The model helper receives no
+  caller-provided URL or path and has only App Sandbox plus outbound-network
+  entitlements; it writes through a file descriptor created in Record's private
+  container and sends no recording, transcript, clipboard, diagnostic, or
+  identifier data.
 
 ## [1.3.0] - 2026-09-02
 
@@ -336,7 +353,8 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/aindaco1/record/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/aindaco1/record/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/aindaco1/record/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/aindaco1/record/compare/v1.2.1...v1.2.2

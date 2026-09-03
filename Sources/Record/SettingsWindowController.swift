@@ -209,6 +209,9 @@ final class SettingsWindowController: NSWindowController {
         transcriptRefinementCheckbox.isEnabled
     }
     var isDestinationSelectionEnabled: Bool { chooseDestinationButton.isEnabled }
+    var parakeetSetupButtonTitle: String { parakeetSetupButton.title }
+    var isParakeetSetupButtonEnabled: Bool { parakeetSetupButton.isEnabled }
+    var parakeetStatus: String { parakeetStatusLabel.stringValue }
     var areCapturePrivacyControlsEnabled: Bool {
         hideNotificationsCheckbox.isEnabled
             && hideMenuBarCheckbox.isEnabled
@@ -301,7 +304,8 @@ final class SettingsWindowController: NSWindowController {
     func updateTranscriptionEngine(
         _ engine: TranscriptionEngineOption,
         macWhisperAvailable: Bool,
-        parakeetModelAvailable: Bool
+        parakeetModelAvailable: Bool,
+        parakeetSetupInProgress: Bool = false
     ) {
         for item in transcriptionPopup.itemArray {
             let option = item.representedObject as? String
@@ -315,10 +319,19 @@ final class SettingsWindowController: NSWindowController {
             transcriptionPopup.select(item)
         }
         parakeetStatusLabel.stringValue =
-            parakeetModelAvailable ? "Installed" : "Setup required"
+            if parakeetModelAvailable {
+                "Installed"
+            } else if parakeetSetupInProgress {
+                "Downloading and verifying…"
+            } else {
+                "Setup required"
+            }
         parakeetStatusLabel.textColor =
             parakeetModelAvailable ? .secondaryLabelColor : .systemOrange
         parakeetSetupButton.isHidden = parakeetModelAvailable
+        parakeetSetupButton.isEnabled = !parakeetSetupInProgress
+        parakeetSetupButton.title =
+            parakeetSetupInProgress ? "Downloading…" : "Set Up Parakeet Model…"
     }
 
     func updateTranscriptRefinement(enabled: Bool, available: Bool, detail: String) {

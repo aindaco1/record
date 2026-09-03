@@ -9,9 +9,11 @@ enum ParakeetModelInstaller {
         case installed
     }
 
-    enum InstallerError: Error, CustomStringConvertible {
+    enum InstallerError: Error, LocalizedError, CustomStringConvertible {
         case modelDirectoryNotFound
         case insufficientDiskSpace(required: Int64, available: Int64)
+        case downloadFileCreationFailed
+        case archiveExtractionFailed(String)
 
         var description: String {
             switch self {
@@ -19,8 +21,14 @@ enum ParakeetModelInstaller {
                 "The selected folder does not contain the pinned Parakeet v3 model."
             case .insufficientDiskSpace(let required, let available):
                 "Installing the model needs \(required) bytes, but only \(available) are available."
+            case .downloadFileCreationFailed:
+                "Record couldn’t create a private temporary file for the model download."
+            case .archiveExtractionFailed(let detail):
+                "Record couldn’t expand the verified model archive. \(detail)"
             }
         }
+
+        var errorDescription: String? { description }
     }
 
     static let verifiedSource = URL(
@@ -50,6 +58,95 @@ enum ParakeetModelInstaller {
             from: selectedDirectory,
             destination: destination,
             manifest: .v3,
+            fileManager: fileManager
+        )
+    }
+
+    static func downloadAndInstallV3(
+        downloader: any ParakeetModelArchiveDownloading =
+            XPCParakeetModelArchiveDownloader(),
+        destination: URL = cacheDirectory(for: .v3),
+        fileManager: FileManager = .default
+    ) async throws -> InstallResult {
+        let descriptor = ParakeetModelDownloadDescriptor.v3
+        let temporaryRoot = fileManager.temporaryDirectory.appendingPathComponent(
+            "Record-Parakeet-Setup-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: temporaryRoot,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? fileManager.removeItem(at: temporaryRoot) }
+
+        let requiredCapacity = descriptor.byteCount + (ParakeetModelManifest.v3.byteCount * 3)
+        let available = try temporaryRoot.resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+        ).volumeAvailableCapacityForImportantUsage
+        if let available, available < requiredCapacity {
+            throw InstallerError.insufficientDiskSpace(
+                required: requiredCapacity,
+                available: available
+            )
+        }
+
+        let archive = temporaryRoot.appendingPathComponent(descriptor.assetName)
+        guard
+            fileManager.createFile(
+                atPath: archive.path,
+                contents: nil,
+                attributes: [.posixPermissions: 0o600]
+            )
+        else {
+            throw InstallerError.downloadFileCreationFailed
+        }
+        let outputFile = try FileHandle(forWritingTo: archive)
+        do {
+            try await downloader.downloadV3Archive(to: outputFile)
+            try outputFile.close()
+        } catch {
+            try? outputFile.close()
+            throw error
+        }
+
+        return try installArchive(
+            from: archive,
+            descriptor: descriptor,
+            destination: destination,
+            manifest: .v3,
+            fileManager: fileManager,
+            extract: ParakeetModelArchiveExtractor.extract
+        )
+    }
+
+    static func installArchive(
+        from archive: URL,
+        descriptor: ParakeetModelDownloadDescriptor,
+        destination: URL,
+        manifest: ParakeetModelManifest,
+        fileManager: FileManager = .default,
+        extract: (URL, URL) throws -> Void
+    ) throws -> InstallResult {
+        try ParakeetModelDownloadVerifier.validate(
+            fileAt: archive,
+            descriptor: descriptor
+        )
+        let extractionRoot = archive.deletingLastPathComponent().appendingPathComponent(
+            "expanded-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: extractionRoot,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? fileManager.removeItem(at: extractionRoot) }
+        try extract(archive, extractionRoot)
+        return try install(
+            from: extractionRoot,
+            destination: destination,
+            manifest: manifest,
             fileManager: fileManager
         )
     }

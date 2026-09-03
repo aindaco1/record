@@ -1,6 +1,6 @@
 # ADR 0015: Unify durable settings and keep the menu action-oriented
 
-- Status: accepted
+- Status: accepted; Parakeet setup action amended by ADR 0017
 - Date: 2026-09-02
 
 ## Context
@@ -49,3 +49,5 @@ to disable settings controls while their underlying configuration is locked.
   to manual inspection of the signed app.
 - This change adds no external plugin host, account, analytics, upload client,
   cloud transcription, model downloader, or network entitlement.
+- ADR 0017 later adds the explicit Parakeet download action to this same
+  Recording settings surface through a separate sandboxed helper.

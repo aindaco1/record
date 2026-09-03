@@ -87,7 +87,11 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
 6. Confirm the previous version's microphone, screen/system-audio, and
    system-audio-only grants remain enabled and neither recording path repeats
    an approved prompt. Compare both apps with `scripts/ci/check-tcc-identity.sh`.
-7. After every public and updater check passes, delete the merged release
+7. On a clean model cache, exercise **Settings… → Recording → Set Up Parakeet
+   Model… → Download and Install**. Confirm the public model asset downloads,
+   verifies, installs, and resumes pending transcription. Inspect the signed
+   main app and `RecordModelDownloader.xpc` entitlements separately.
+8. After every public, updater, and model-setup check passes, delete the merged release
    branch and short-lived CI app artifacts. Keep signed tags, GitHub release
    assets, the current installed app, and only the dependency caches and test
    builds still needed for development.

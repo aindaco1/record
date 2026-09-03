@@ -67,6 +67,16 @@ stamp_app_hash="$(shasum -a 256 "$repo_root/scripts/release/stamp-app.sh" | awk 
 bundle_check_hash="$(shasum -a 256 "$repo_root/scripts/ci/check-app-bundle.sh" | awk '{print $1}')"
 source_plist_hash="$(shasum -a 256 "$repo_root/Sources/Record/Info.plist" | awk '{print $1}')"
 executable_hash="$(shasum -a 256 "$bundle_root/Record.app/Contents/MacOS/record" | awk '{print $1}')"
+model_downloader_info_hash="$(
+    shasum -a 256 \
+        "$repo_root/Sources/RecordModelDownloaderService/Info.plist" \
+        | awk '{print $1}'
+)"
+model_downloader_executable_hash="$(
+    shasum -a 256 \
+        "$bundle_root/Record.app/Contents/XPCServices/RecordModelDownloader.xpc/Contents/MacOS/record-model-downloader" \
+        | awk '{print $1}'
+)"
 jq -n \
     --arg repository "$repository" \
     --arg commit "$commit" \
@@ -79,10 +89,12 @@ jq -n \
     --arg bundleCheckSHA256 "$bundle_check_hash" \
     --arg sourceInfoPlistSHA256 "$source_plist_hash" \
     --arg executableSHA256 "$executable_hash" \
+    --arg modelDownloaderInfoPlistSHA256 "$model_downloader_info_hash" \
+    --arg modelDownloaderExecutableSHA256 "$model_downloader_executable_hash" \
     --arg appVersion "$app_version" \
     --arg buildNumber "$build_number" \
     '{
-      schema: "record-ci-app-v1",
+      schema: "record-ci-app-v2",
       repository: $repository,
       commit: $commit,
       workflow: ".github/workflows/ci.yml",
@@ -96,6 +108,8 @@ jq -n \
       bundleCheckSHA256: $bundleCheckSHA256,
       sourceInfoPlistSHA256: $sourceInfoPlistSHA256,
       executableSHA256: $executableSHA256,
+      modelDownloaderInfoPlistSHA256: $modelDownloaderInfoPlistSHA256,
+      modelDownloaderExecutableSHA256: $modelDownloaderExecutableSHA256,
       appVersion: $appVersion,
       buildNumber: $buildNumber
     }' > "$bundle_root/metadata.json"

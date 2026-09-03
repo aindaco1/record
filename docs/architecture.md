@@ -33,6 +33,9 @@ flowchart LR
   cursor/click settings, and the future camera adapter.
 - `RecordMedia`: bounded queues, Metal composition, hardware encoding,
   segmentation, muxing, and non-destructive export.
+- `RecordModelDownload`: the fixed GitHub endpoint, redirect restriction,
+  bounded retry/resume, and archive verification used only by the bundled
+  model-downloader XPC service.
 - `Record` application target: AppKit menu-bar and unified settings UI, local
   transcription adapters, screenshot hotkeys/export/clipboard feedback,
   built-in capability services, signed updates, and login registration.
@@ -54,6 +57,16 @@ in the framework's sandboxed XPC services, while the main Record process retains
 no network entitlement. Automatic installation and system profiling remain
 disabled. `SMAppService.mainApp` owns optional login registration, so Record
 does not install a custom LaunchAgent.
+
+Parakeet setup uses a second, independent sandboxed XPC service. The main app
+creates a private temporary file and passes only its open file descriptor. The
+helper chooses the compile-time-pinned GitHub asset itself, follows HTTPS
+redirects only within GitHub-controlled hosts, verifies its exact byte count
+and SHA-256, and writes the verified bytes through that descriptor. It receives
+no URL, local path, recording data, transcript, or diagnostic. The main app
+then repeats archive verification, expands into private temporary storage, and
+reuses the existing per-file manifest validation and atomic installer. The
+main app retains no network entitlement, and FluidAudio remains forced offline.
 
 ## Session format
 

@@ -12,9 +12,10 @@ timestamp_mode="${3:-none}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 framework="$app_path/Contents/Frameworks/Sparkle.framework"
 current="$framework/Versions/Current"
+model_downloader="$app_path/Contents/XPCServices/RecordModelDownloader.xpc"
 
-if [[ ! -d "$app_path" || ! -d "$framework" ]]; then
-    echo "missing Record app or Sparkle framework" >&2
+if [[ ! -d "$app_path" || ! -d "$framework" || ! -d "$model_downloader" ]]; then
+    echo "missing Record app, model downloader, or Sparkle framework" >&2
     exit 1
 fi
 
@@ -37,6 +38,9 @@ common_flags=(
 
 # Sparkle's sandbox services and helper tools must be signed inside-out. Keep
 # Downloader's upstream entitlements intact and never use codesign --deep.
+codesign "${common_flags[@]}" \
+    --entitlements "$repo_root/Configuration/RecordModelDownloader.entitlements" \
+    "$model_downloader"
 codesign "${common_flags[@]}" "$current/XPCServices/Installer.xpc"
 codesign "${common_flags[@]}" --preserve-metadata=entitlements \
     "$current/XPCServices/Downloader.xpc"

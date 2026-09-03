@@ -7,10 +7,13 @@ repository.
 
 - Keep screenshots, recording content, transcripts, clipboard content and
   clipboard-derived names, diagnostics, and session metadata local.
-- Do not add accounts, analytics, upload clients, cloud transcription, or model
-  downloads.
+- Do not add accounts, analytics, upload clients, cloud transcription, or
+  unreviewed/general-purpose download paths.
 - The main app must retain no incoming or outgoing network entitlement. The
-  reviewed Sparkle downloader XPC service is the only update network path.
+  reviewed Sparkle downloader XPC service is the only update network path. The
+  dedicated model-downloader XPC service may fetch only the pinned Parakeet
+  release asset after explicit user action; it must receive no URL, user data,
+  recording metadata, or general file-system access.
 - Never invoke configured completion hooks through a shell. Require absolute
   executable paths and pass arguments directly.
 - Preserve raw media until a complete exported session has been validated.

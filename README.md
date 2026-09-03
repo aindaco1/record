@@ -29,8 +29,8 @@ required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
-The current release is [Record 1.3.0](https://github.com/aindaco1/record/releases/tag/v1.3.0),
-build 14, published September 2, 2026.
+The current release is [Record 1.3.1](https://github.com/aindaco1/record/releases/tag/v1.3.1),
+build 15, published September 2, 2026.
 
 Record has no Dock icon. Open it from the ring in the menu bar.
 
@@ -90,12 +90,12 @@ capture, and transcription copies.
 
 ## Local transcription
 
-Parakeet v3 is the default transcription engine. Record never downloads a
-model itself. If the verified model is missing, Record offers a setup prompt
-and **Settings… → Recording → Set Up Parakeet Model…**. Download Record's
-versioned model pack, then let Record verify every pinned FluidInference file
-and atomically import it into local storage. See the
-[Parakeet setup guide](docs/models/parakeet.md).
+Parakeet v3 is the default transcription engine. If the verified model is
+missing, open **Settings… → Recording → Set Up Parakeet Model…** and choose
+**Download and Install**. A dedicated sandboxed helper downloads only Record's
+pinned GitHub release asset; Record independently verifies the archive and
+every FluidInference model file before atomic local installation. Manual import
+remains available. See the [Parakeet setup guide](docs/models/parakeet.md).
 
 Development checkouts can install the same pinned model directly with:
 
@@ -158,11 +158,13 @@ content or clipboard-derived names, diagnostics, or identifiers. It has no
 accounts, analytics, cloud transcription, or capture network client. The
 sandboxed main app has no incoming or outgoing network entitlement.
 
-The launch update check and explicit update command are the narrow exception:
-Sparkle's sandboxed downloader service contacts the public GitHub release feed
-and accepts only an Ed25519-signed update archive. Automatic installation and
-system profiling are disabled. Enabling MacWhisper extends the local trust
-boundary to the separately installed MacWhisper app.
+Network access is confined to sandboxed services. Sparkle's downloader contacts
+the signed GitHub update feed. Only after **Download and Install** is selected,
+the separate model helper fetches the fixed Parakeet asset; it receives no URL,
+recording data, transcript, identifier, diagnostic, or general file-system
+access. The main process retains no incoming or outgoing network entitlement.
+Enabling MacWhisper extends the local trust boundary to the separately installed
+MacWhisper app.
 
 See [Security](SECURITY.md) and the [local-only boundary](docs/security/local-only-boundary.md)
 for the enforceable invariants and limitations.
@@ -208,7 +210,7 @@ boundaries.
 - [Advanced configuration](docs/configuration.md)
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
-- [Record 1.3.0 release notes](docs/releases/1.3.0.md)
+- [Record 1.3.1 release notes](docs/releases/1.3.1.md)
 - [Quill migration record](docs/migration/quill-triage.md)
 - [Current GitHub issue triage](docs/project/issue-triage-1.3.0.md)
 - [Support](SUPPORT.md)

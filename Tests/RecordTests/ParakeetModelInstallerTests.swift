@@ -99,6 +99,63 @@ final class ParakeetModelInstallerTests: XCTestCase {
         }
     }
 
+    func testVerifiedArchiveUsesExistingAtomicInstaller() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let archive = fixture.root.appendingPathComponent("model.zip")
+        try write("archive", to: archive)
+        let descriptor = ParakeetModelDownloadDescriptor(
+            assetName: "model.zip",
+            downloadURLString: "https://github.com/example/model.zip",
+            byteCount: 7,
+            sha256: digest("archive")
+        )
+
+        XCTAssertEqual(
+            try ParakeetModelInstaller.installArchive(
+                from: archive,
+                descriptor: descriptor,
+                destination: fixture.destination,
+                manifest: fixture.manifest
+            ) { _, extractionRoot in
+                let model = extractionRoot.appendingPathComponent("model", isDirectory: true)
+                try self.write("alpha", to: model.appendingPathComponent("A/model.bin"))
+                try self.write("beta", to: model.appendingPathComponent("vocab.json"))
+            },
+            .installed
+        )
+        try ParakeetModelInstaller.validate(
+            modelAt: fixture.destination,
+            manifest: fixture.manifest
+        )
+    }
+
+    func testCorruptArchiveIsRejectedBeforeExtraction() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let archive = fixture.root.appendingPathComponent("model.zip")
+        try write("corrupt", to: archive)
+        var extracted = false
+
+        XCTAssertThrowsError(
+            try ParakeetModelInstaller.installArchive(
+                from: archive,
+                descriptor: .init(
+                    assetName: "model.zip",
+                    downloadURLString: "https://github.com/example/model.zip",
+                    byteCount: 7,
+                    sha256: String(repeating: "0", count: 64)
+                ),
+                destination: fixture.destination,
+                manifest: fixture.manifest
+            ) { _, _ in
+                extracted = true
+            }
+        )
+        XCTAssertFalse(extracted)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: fixture.destination.path))
+    }
+
     private func makeFixture() throws -> (
         root: URL,
         source: URL,

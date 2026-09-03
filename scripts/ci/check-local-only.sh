@@ -18,7 +18,10 @@ done < <(
         -name '*.swift' -o \
         -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o \
         -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \
-    \) -print0
+    \) \
+        ! -path "$source_root/RecordModelDownload/*" \
+        ! -path "$source_root/RecordModelDownloaderService/*" \
+        -print0
 )
 
 forbidden_imports='^[[:space:]]*(import|@import)[[:space:]]+(CFNetwork|FoundationNetworking|Network|NetworkExtension|WebKit)([;.[:space:]]|$)'
@@ -58,3 +61,9 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 "$repo_root/scripts/ci/check-entitlements.sh" "$entitlements"
+if [[ -d "$source_root/RecordModelDownload" && \
+      -d "$source_root/RecordModelDownloaderService" ]]; then
+    "$repo_root/scripts/ci/check-model-downloader-source.sh" \
+        "$source_root/RecordModelDownload" \
+        "$source_root/RecordModelDownloaderService"
+fi

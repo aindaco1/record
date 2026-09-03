@@ -1,6 +1,6 @@
 # ADR 0005: Verified local model import
 
-- Status: accepted
+- Status: accepted; acquisition flow amended by ADR 0017
 - Date: 2026-08-07
 
 ## Context
@@ -19,13 +19,16 @@ then explicitly selects the downloaded directory.
 
 ADR 0015 later consolidates model selection and setup into
 **Settings → Recording** without changing this import boundary.
+ADR 0017 later adds an explicit-download path through a dedicated sandboxed
+helper while retaining this verifier and atomic importer.
 
-Record has no model-download code or network entitlement. Its importer accepts
-only the Parakeet v3 allowlist, rejects symbolic-link traversal, verifies exact
-sizes and pinned SHA-256 hashes with bounded-memory streaming, copies into a
-same-volume staging directory, re-verifies the staged files, and atomically
-swaps the model into FluidAudio's cache. An existing model remains recoverable
-if validation or installation fails.
+The importer itself has no model-download code or network entitlement. It
+accepts only the Parakeet v3 allowlist, rejects symbolic-link traversal,
+verifies exact sizes and pinned SHA-256 hashes with bounded-memory streaming,
+copies into a same-volume staging directory, re-verifies the staged files, and
+atomically swaps the model into FluidAudio's cache. An existing model remains
+recoverable if validation or installation fails. ADR 0017's separate helper
+provides verified archive bytes to this unchanged boundary.
 
 ## Consequences
 
@@ -33,7 +36,7 @@ if validation or installation fails.
   delayed until setup succeeds.
 - Updating the approved model revision or hashes is a reviewed source change,
   not runtime remote configuration.
-- Record cannot provide one-click in-process download without a separately
-  sandboxed, narrowly reviewed downloader design.
+- Record 1.3.1 provides one-click setup through the separately sandboxed,
+  narrowly reviewed downloader specified by ADR 0017.
 - Parakeet v2 remains a configuration-compatible engine for existing local
   installations; the guided importer currently provisions the v3 default.

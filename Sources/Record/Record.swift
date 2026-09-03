@@ -185,7 +185,7 @@ final class AppController {
     private var lastFinishedVideoURL: URL?
     private var lastFinishedRecordingDirectory: URL?
     private var presentedMissingModelPrompt = false
-    private var modelImportInProgress = false
+    private var modelSetupInProgress = false
 
     init(
         root: URL,
@@ -1316,7 +1316,8 @@ final class AppController {
         settingsController.updateTranscriptionEngine(
             engine,
             macWhisperAvailable: macWhisperAvailable,
-            parakeetModelAvailable: ParakeetModelInstaller.isInstalled(parakeetModel)
+            parakeetModelAvailable: ParakeetModelInstaller.isInstalled(parakeetModel),
+            parakeetSetupInProgress: modelSetupInProgress
         )
         let refinementCapability = OnDeviceTranscriptRefinementAdviser.currentCapability(
             language: Config.transcriptionLanguage()
@@ -1345,15 +1346,15 @@ final class AppController {
         alert.messageText = "Set Up Local Parakeet Transcription"
         alert.informativeText =
             "Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. "
-            + "Download the pinned model from FluidInference, then import its folder. "
-            + "Recording continues to work without the model."
-        alert.addButton(withTitle: "Open Verified Download Guide")
-        alert.addButton(withTitle: "Import Downloaded Model…")
+            + "Record can download the pinned model from its GitHub release and verify it "
+            + "before local installation. Recording continues to work without the model."
+        alert.addButton(withTitle: "Download and Install")
+        alert.addButton(withTitle: "Import Existing Model…")
         alert.addButton(withTitle: "Later")
         NSApp.activate(ignoringOtherApps: true)
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            NSWorkspace.shared.open(ParakeetModelInstaller.downloadGuide)
+            downloadAndInstallParakeetModel()
         case .alertSecondButtonReturn:
             chooseAndImportParakeetModel()
         default:
@@ -1361,8 +1362,51 @@ final class AppController {
         }
     }
 
+    private func downloadAndInstallParakeetModel() {
+        guard !modelSetupInProgress else { return }
+        modelSetupInProgress = true
+        refreshTranscriptionSettings()
+        menuBar.updateTranscription("downloading Parakeet model…")
+        Task { [weak self, transcription, root] in
+            let result: Result<ParakeetModelInstaller.InstallResult, Error>
+            do {
+                result = .success(try await ParakeetModelInstaller.downloadAndInstallV3())
+            } catch {
+                result = .failure(error)
+            }
+            guard let self else { return }
+            self.modelSetupInProgress = false
+            self.menuBar.updateTranscription(nil)
+            self.refreshTranscriptionSettings()
+            switch result {
+            case .success:
+                self.presentParakeetModelReady()
+                await transcription.resumePending(root: root)
+            case .failure(let error):
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "Record Couldn’t Download the Parakeet Model"
+                alert.informativeText =
+                    (error as NSError).localizedDescription
+                    + " You can retry or use the manual import option."
+                alert.addButton(withTitle: "Retry")
+                alert.addButton(withTitle: "Manual Setup…")
+                alert.addButton(withTitle: "Cancel")
+                NSApp.activate(ignoringOtherApps: true)
+                switch alert.runModal() {
+                case .alertFirstButtonReturn:
+                    self.downloadAndInstallParakeetModel()
+                case .alertSecondButtonReturn:
+                    NSWorkspace.shared.open(ParakeetModelInstaller.downloadGuide)
+                default:
+                    break
+                }
+            }
+        }
+    }
+
     private func chooseAndImportParakeetModel() {
-        guard !modelImportInProgress else { return }
+        guard !modelSetupInProgress else { return }
         let panel = NSOpenPanel()
         panel.title = "Choose the Downloaded Parakeet v3 Model Folder"
         panel.prompt = "Import Model"
@@ -1371,7 +1415,8 @@ final class AppController {
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let source = panel.url else { return }
 
-        modelImportInProgress = true
+        modelSetupInProgress = true
+        refreshTranscriptionSettings()
         let accessed = source.startAccessingSecurityScopedResource()
         menuBar.updateTranscription("verifying Parakeet model…")
         Task { [weak self, transcription, root] in
@@ -1380,18 +1425,12 @@ final class AppController {
             }.value
             if accessed { source.stopAccessingSecurityScopedResource() }
             guard let self else { return }
-            self.modelImportInProgress = false
+            self.modelSetupInProgress = false
             self.menuBar.updateTranscription(nil)
+            self.refreshTranscriptionSettings()
             switch result {
             case .success:
-                self.refreshTranscriptionSettings()
-                let alert = NSAlert()
-                alert.messageText = "Parakeet Is Ready"
-                alert.informativeText =
-                    "The verified model was installed locally. Pending recordings will now be transcribed."
-                alert.addButton(withTitle: "OK")
-                NSApp.activate(ignoringOtherApps: true)
-                alert.runModal()
+                self.presentParakeetModelReady()
                 await transcription.resumePending(root: root)
             case .failure(let error):
                 let alert = NSAlert()
@@ -1408,6 +1447,16 @@ final class AppController {
                 }
             }
         }
+    }
+
+    private func presentParakeetModelReady() {
+        let alert = NSAlert()
+        alert.messageText = "Parakeet Is Ready"
+        alert.informativeText =
+            "The verified model was installed locally. Pending recordings will now be transcribed."
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func tick() {

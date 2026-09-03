@@ -17,7 +17,8 @@ mkdir -p \
     "$app_path/Contents/MacOS" \
     "$app_path/Contents/Resources" \
     "$app_path/Contents/Resources/Licenses" \
-    "$app_path/Contents/Frameworks"
+    "$app_path/Contents/Frameworks" \
+    "$app_path/Contents/XPCServices/RecordModelDownloader.xpc/Contents/MacOS"
 
 cd "$repo_root"
 swift build -c release --arch arm64 --disable-automatic-resolution
@@ -26,12 +27,22 @@ binary_path="$(
         --show-bin-path
 )/record"
 binary_root="$(dirname "$binary_path")"
+model_downloader_binary="$binary_root/record-model-downloader"
 sparkle_framework="$binary_root/Sparkle.framework"
 if [[ ! -d "$sparkle_framework" ]]; then
     echo "missing Sparkle framework: $sparkle_framework" >&2
     exit 1
 fi
 install -m 0755 "$binary_path" "$app_path/Contents/MacOS/record"
+if [[ ! -x "$model_downloader_binary" ]]; then
+    echo "missing model downloader service: $model_downloader_binary" >&2
+    exit 1
+fi
+model_downloader_bundle="$app_path/Contents/XPCServices/RecordModelDownloader.xpc"
+install -m 0755 "$model_downloader_binary" \
+    "$model_downloader_bundle/Contents/MacOS/record-model-downloader"
+install -m 0644 Sources/RecordModelDownloaderService/Info.plist \
+    "$model_downloader_bundle/Contents/Info.plist"
 ditto --norsrc --noextattr \
     "$sparkle_framework" \
     "$app_path/Contents/Frameworks/Sparkle.framework"
@@ -57,6 +68,8 @@ install -m 0644 .build/checkouts/Sparkle/LICENSE \
 # the executable moves into a bundle; the release workflow signs the complete
 # app after assembly.
 codesign --remove-signature "$app_path/Contents/MacOS/record"
+codesign --remove-signature \
+    "$model_downloader_bundle/Contents/MacOS/record-model-downloader"
 
 "$repo_root/scripts/release/stamp-app.sh" "$app_path" "$version" "$build_number"
 

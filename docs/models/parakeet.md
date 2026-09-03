@@ -4,7 +4,20 @@ Record uses Parakeet TDT v3 by default for on-device transcription. The model
 is about 460 MB and is not bundled with Record. Recording remains available
 when the model is absent; only transcription waits for setup.
 
-## Download the Record model pack
+## Set up in Record 1.3.1 or newer
+
+1. Open **Settings → Recording → Set Up Parakeet Model…**.
+2. Choose **Download and Install**.
+3. Keep Record open while it downloads and verifies about 466 MB. Pending local
+   transcription resumes automatically after installation.
+
+The dedicated sandboxed downloader can request only the fixed GitHub release
+asset below. It supports bounded retry/resume after a transient connection
+loss. Record verifies the archive's exact size and SHA-256 in both the helper
+and main process, expands it in private temporary storage, verifies all 17
+pinned model files, and atomically installs only those allowlisted files.
+
+## Manual download and import
 
 Download the
 [Record Parakeet v3 model pack](https://github.com/aindaco1/record/releases/download/v1.3.0/Record-Parakeet-v3-aed0274.zip)
@@ -22,10 +35,8 @@ plus the upstream model card and attribution/license documents. The model files
 come unmodified from the immutable publisher revision below. The pack is a
 separate release asset; it is not stored in Git or bundled into `Record.app`.
 
-## Import into Record
-
 1. Open **Settings → Recording → Set Up Parakeet Model…**.
-2. Choose **Import Downloaded Model…**.
+2. Choose **Import Existing Model…**.
 3. Select either the expanded `Record-Parakeet-v3-aed0274` folder or its
    `parakeet-tdt-0.6b-v3` folder.
 
@@ -58,8 +69,8 @@ hf download FluidInference/parakeet-tdt-0.6b-v3-coreml \
 ```
 
 Do not download a similarly named model from another account or omit the
-revision. Record deliberately does not run a model downloader or receive a
-network entitlement.
+revision. FluidAudio remains offline; only Record's narrowly scoped XPC helper
+has an outbound-network entitlement, and only after explicit user action.
 
 Developers may instead run `./scripts/setup/install-parakeet-model.sh`, which
 uses the same publisher and pinned revision.

@@ -20,10 +20,13 @@ arbitrary code execution, permissions, signing, plugins, or recording data.
 - Core product code does not contain analytics, cloud transcription, or upload
   clients.
 - Completion hooks never invoke a shell and require absolute executables.
-- Model inference requires verified local assets; missing assets must fail
-  closed rather than silently downloading.
-- Signed app artifacts use App Sandbox without incoming or outgoing network
-  entitlements; CI checks both source calls and embedded entitlements.
+- Model inference requires verified local assets. A missing Parakeet model is
+  downloaded only after explicit user action and must pass the pinned outer
+  archive and per-file manifests before installation.
+- Signed app artifacts keep the main process in App Sandbox without incoming
+  or outgoing network entitlements. The dedicated model-downloader XPC has only
+  sandbox and outbound-network entitlements, accepts no URL or path from the
+  main process, and is independently checked by CI.
 - A silent update check at launch and the explicit manual fallback use only
   Sparkle's sandboxed downloader service. Both the appcast and archive require
   Ed25519 signatures, and the archive also requires Developer ID signing and
