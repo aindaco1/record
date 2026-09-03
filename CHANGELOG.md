@@ -6,7 +6,9 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
-### Changed — planned for 1.4.0
+## [1.4.0] - 2026-09-03
+
+### Changed
 
 - New installations use Option-Command-Shift-4 for **Capture Area…**, avoiding
   Apple's Command-Shift-4 screenshot shortcut. Existing bindings and Off states
@@ -375,7 +377,9 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/aindaco1/record/compare/v1.3.2...v1.4.0
+[1.3.2]: https://github.com/aindaco1/record/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/aindaco1/record/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/aindaco1/record/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/aindaco1/record/compare/v1.2.2...v1.2.3

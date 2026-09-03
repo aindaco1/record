@@ -29,8 +29,8 @@ required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
-The current release is [Record 1.3.2](https://github.com/aindaco1/record/releases/tag/v1.3.2),
-build 16, published September 2, 2026.
+The current release is [Record 1.4.0](https://github.com/aindaco1/record/releases/tag/v1.4.0),
+build 17, published September 3, 2026.
 
 Record has no Dock icon. Open it from the camera in the menu bar. During
 screen or audio recording, a red dot blinks at the camera's lower-right corner.
@@ -218,7 +218,7 @@ boundaries.
 - [Advanced configuration](docs/configuration.md)
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
-- [Record 1.3.2 release notes](docs/releases/1.3.2.md)
+- [Record 1.4.0 release notes](docs/releases/1.4.0.md)
 - [Quill migration record](docs/migration/quill-triage.md)
 - [Current GitHub issue triage](docs/project/issue-triage-1.3.0.md)
 - [Support](SUPPORT.md)
