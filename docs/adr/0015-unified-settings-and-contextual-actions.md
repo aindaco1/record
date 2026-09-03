@@ -39,6 +39,14 @@ to disable settings controls while their underlying configuration is locked.
 
 ## Consequences
 
+From 1.4, generate the embedded menu-bar camera from the same canonical SVG as
+the app icon. Keep the camera an adaptive AppKit template. A separate,
+noninteractive Core Animation layer provides a visible red recording dot;
+only that dot animates. The existing recording presentation controls its
+lifecycle, including pause, stop, and screenshot feedback. Reduce Motion uses
+a steady dot. This changes presentation without adding a timer or a second
+recording state machine.
+
 - Record exposes one destination choice and one settings surface without
   migrating or duplicating persisted state.
 - The menu is shorter while operational capture and recovery actions remain

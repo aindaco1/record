@@ -88,35 +88,102 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertFalse(menu.isRecoveryFolderMenuItemVisible)
     }
 
-    func testNewKapMenuBarImageIsAProperlySizedTemplate() throws {
+    func testCameraMenuBarImageIsWideRetinaTemplateWithTransparentBackground() throws {
         let image = try XCTUnwrap(MenuBarController.menuBarImage())
 
         XCTAssertTrue(image.isTemplate)
-        XCTAssertEqual(image.size.width, 16)
-        XCTAssertEqual(image.size.height, 16)
+        XCTAssertEqual(image.size, NSSize(width: 24, height: 18))
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(image.tiffRepresentation)))
+        XCTAssertEqual(bitmap.pixelsWide, 48)
+        XCTAssertEqual(bitmap.pixelsHigh, 36)
+        XCTAssertEqual(bitmap.colorAt(x: 0, y: 0)?.alphaComponent, 0)
+        XCTAssertGreaterThan(bitmap.colorAt(x: 16, y: 15)?.alphaComponent ?? 0, 0.9)
     }
 
-    func testRecordingImageIsWhitePresentationRatherThanAdaptiveTemplate() throws {
-        let image = try XCTUnwrap(MenuBarController.recordingMenuBarImage())
+    func testRecordingDotIsRedLargeEnoughAndInsideTheUpperRightCorner() throws {
+        let indicator = MenuBarRecordingIndicatorView()
+        indicator.layoutSubtreeIfNeeded()
+        indicator.layout()
+        XCTAssertEqual(indicator.dotLayer.frame, CGRect(x: 18, y: 12, width: 6, height: 6))
+        XCTAssertTrue(indicator.bounds.contains(indicator.dotLayer.frame))
+        let color = try XCTUnwrap(
+            NSColor(cgColor: try XCTUnwrap(indicator.dotLayer.fillColor))?.usingColorSpace(.sRGB))
+        XCTAssertGreaterThan(color.redComponent, 0.8)
+        XCTAssertLessThan(color.greenComponent, 0.5)
+        XCTAssertLessThan(color.blueComponent, 0.5)
+        XCTAssertNil(indicator.hitTest(NSPoint(x: 21, y: 15)))
+    }
 
-        XCTAssertFalse(image.isTemplate)
-        XCTAssertEqual(image.size.width, 16)
-        XCTAssertEqual(image.size.height, 16)
+    func testOnlyDotAnimatesWithoutRestartingOnElapsedUpdates() throws {
+        let menu = MenuBarController()
+        let indicator = menu.recordingIndicator
+        indicator.update(recording: true, reduceMotion: false)
+        let key = MenuBarController.recordingPulseAnimationKey
+        let first = try XCTUnwrap(indicator.dotLayer.animation(forKey: key))
+        indicator.update(recording: true, reduceMotion: false)
+        XCTAssertEqual(indicator.dotLayer.animation(forKey: key)?.beginTime, first.beginTime)
+        XCTAssertNil(indicator.layer?.animation(forKey: key))
+        XCTAssertNil(indicator.superview?.layer?.animation(forKey: key))
+        XCTAssertFalse(indicator.isHidden)
+    }
 
-        let data = try XCTUnwrap(image.tiffRepresentation)
-        let bitmap = try XCTUnwrap(NSBitmapImageRep(data: data))
-        let visibleColors = (0..<bitmap.pixelsHigh).flatMap { y in
-            (0..<bitmap.pixelsWide).compactMap { x in
-                bitmap.colorAt(x: x, y: y)
-            }
-        }.filter { $0.alphaComponent > 0.05 }
-        XCTAssertFalse(visibleColors.isEmpty)
-        for color in visibleColors {
-            let rgb = try XCTUnwrap(color.usingColorSpace(.sRGB))
-            XCTAssertGreaterThan(rgb.redComponent, 0.95)
-            XCTAssertGreaterThan(rgb.greenComponent, 0.95)
-            XCTAssertGreaterThan(rgb.blueComponent, 0.95)
+    func testReduceMotionUsesSteadyDotAndCanChangeDuringRecording() {
+        let indicator = MenuBarRecordingIndicatorView()
+        let key = MenuBarController.recordingPulseAnimationKey
+        indicator.update(recording: true, reduceMotion: false)
+        XCTAssertNotNil(indicator.dotLayer.animation(forKey: key))
+        indicator.update(recording: true, reduceMotion: true)
+        XCTAssertFalse(indicator.isHidden)
+        XCTAssertNil(indicator.dotLayer.animation(forKey: key))
+        XCTAssertEqual(indicator.dotLayer.opacity, 1)
+        indicator.update(recording: true, reduceMotion: false)
+        XCTAssertNotNil(indicator.dotLayer.animation(forKey: key))
+    }
+
+    func testRecordingDotFollowsScreenAudioPauseResumeAndStopStates() {
+        let menu = MenuBarController()
+        XCTAssertTrue(menu.recordingIndicator.isHidden)
+        for mode in [RecordingMode.screen, .audioOnly] {
+            menu.update(recording: true, elapsed: "0:01", mode: mode)
+            XCTAssertFalse(menu.recordingIndicator.isHidden)
+            menu.update(recording: true, elapsed: "0:02", mode: mode)
+            XCTAssertFalse(menu.recordingIndicator.isHidden)
+            menu.updateSavingRecording()
+            XCTAssertTrue(menu.recordingIndicator.isHidden)
+            XCTAssertNil(
+                menu.recordingIndicator.dotLayer.animation(
+                    forKey: MenuBarController.recordingPulseAnimationKey))
         }
+        menu.update(recording: true, elapsed: "0:03")
+        menu.updatePausedScreenRecording(elapsed: "0:03")
+        XCTAssertTrue(menu.recordingIndicator.isHidden)
+        menu.updateRotatingScreenRecording(resuming: true)
+        XCTAssertTrue(menu.recordingIndicator.isHidden)
+        menu.update(recording: true, elapsed: "0:04")
+        XCTAssertFalse(menu.recordingIndicator.isHidden)
+        menu.updateStoppingScreenRecording(captureStarted: true, indicatorActive: true)
+        XCTAssertFalse(menu.recordingIndicator.isHidden)
+        menu.update(recording: false, elapsed: nil)
+        XCTAssertTrue(menu.recordingIndicator.isHidden)
+    }
+
+    func testScreenshotFeedbackKeepsTheRecordingDotAndRestoresTemplateCamera() async throws {
+        let menu = MenuBarController()
+        menu.update(recording: true, elapsed: "0:01")
+        let button = try XCTUnwrap(menu.recordingIndicator.superview as? NSButton)
+        let pulseStart = menu.recordingIndicator.dotLayer.animation(
+            forKey: MenuBarController.recordingPulseAnimationKey)?.beginTime
+        menu.flashScreenshotSuccess(duration: 0)
+        XCTAssertFalse(menu.recordingIndicator.isHidden)
+        let restored = expectation(description: "screenshot feedback restored")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { restored.fulfill() }
+        await fulfillment(of: [restored], timeout: 1)
+        XCTAssertTrue(try XCTUnwrap(button.image).isTemplate)
+        XCTAssertEqual(button.image?.size, MenuBarController.menuBarImageSize)
+        XCTAssertFalse(menu.recordingIndicator.isHidden)
+        XCTAssertEqual(
+            menu.recordingIndicator.dotLayer.animation(
+                forKey: MenuBarController.recordingPulseAnimationKey)?.beginTime, pulseStart)
     }
 
     func testRecordingPulseIsBoundedAndRepeating() {
@@ -124,7 +191,7 @@ final class MenuBarControllerTests: XCTestCase {
 
         XCTAssertEqual(animation.keyPath, "opacity")
         XCTAssertEqual(animation.fromValue as? Double, 1)
-        XCTAssertEqual(animation.toValue as? Double, 0.35)
+        XCTAssertEqual(animation.toValue as? Double, 0.1)
         XCTAssertEqual(animation.duration, 0.65)
         XCTAssertTrue(animation.autoreverses)
         XCTAssertEqual(animation.repeatCount, .infinity)
@@ -134,7 +201,7 @@ final class MenuBarControllerTests: XCTestCase {
         let image = try XCTUnwrap(MenuBarController.screenshotFlashImage())
 
         XCTAssertTrue(image.isTemplate)
-        XCTAssertEqual(image.size, NSSize(width: 16, height: 16))
+        XCTAssertEqual(image.size, MenuBarController.menuBarImageSize)
     }
 
     func testScreenshotCaptureLocksOnlySharedDestinationAndRestoresRecordingPolicy() {

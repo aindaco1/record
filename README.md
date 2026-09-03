@@ -32,7 +32,9 @@ SHA-256 checksums and build provenance on the
 The current release is [Record 1.3.2](https://github.com/aindaco1/record/releases/tag/v1.3.2),
 build 16, published September 2, 2026.
 
-Record has no Dock icon. Open it from the ring in the menu bar.
+Record has no Dock icon. Open it from the camera in the menu bar. During
+screen or audio recording, a red dot blinks at the camera's upper-right corner.
+The dot is steady when Reduce Motion is enabled and disappears while paused.
 
 To uninstall, turn off **Settings… → General → Open Record at Login**, quit
 Record, and move Record.app to the Trash. Remove Record's container only if you
