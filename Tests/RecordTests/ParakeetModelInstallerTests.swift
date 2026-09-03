@@ -130,6 +130,47 @@ final class ParakeetModelInstallerTests: XCTestCase {
         )
     }
 
+    func testVerifiedArchiveFindsModelInsidePublishedDistributionWrapper() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let archive = fixture.root.appendingPathComponent(
+            "Record-Parakeet-v3-aed0274.zip"
+        )
+        try write("archive", to: archive)
+        let descriptor = ParakeetModelDownloadDescriptor(
+            assetName: archive.lastPathComponent,
+            downloadURLString: "https://github.com/example/model.zip",
+            byteCount: 7,
+            sha256: digest("archive")
+        )
+
+        XCTAssertEqual(
+            try ParakeetModelInstaller.installArchive(
+                from: archive,
+                descriptor: descriptor,
+                destination: fixture.destination,
+                manifest: fixture.manifest
+            ) { _, extractionRoot in
+                let wrapper = extractionRoot.appendingPathComponent(
+                    "Record-Parakeet-v3-aed0274",
+                    isDirectory: true
+                )
+                try self.write(
+                    "license",
+                    to: wrapper.appendingPathComponent("LICENSE.txt")
+                )
+                let model = wrapper.appendingPathComponent("model", isDirectory: true)
+                try self.write("alpha", to: model.appendingPathComponent("A/model.bin"))
+                try self.write("beta", to: model.appendingPathComponent("vocab.json"))
+            },
+            .installed
+        )
+        try ParakeetModelInstaller.validate(
+            modelAt: fixture.destination,
+            manifest: fixture.manifest
+        )
+    }
+
     func testCorruptArchiveIsRejectedBeforeExtraction() throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }

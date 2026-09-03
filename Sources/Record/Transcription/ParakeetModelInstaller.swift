@@ -143,8 +143,27 @@ enum ParakeetModelInstaller {
         )
         defer { try? fileManager.removeItem(at: extractionRoot) }
         try extract(archive, extractionRoot)
+
+        // The published model pack keeps attribution and license files beside
+        // the model directory inside a distribution wrapper named after the
+        // archive. Manual import already accepts that wrapper; select it here
+        // after extraction so the same installer sees the same layout.
+        let archiveFolderName = URL(fileURLWithPath: descriptor.assetName)
+            .deletingPathExtension()
+            .lastPathComponent
+        let packagedRoot = extractionRoot.appendingPathComponent(
+            archiveFolderName,
+            isDirectory: true
+        )
+        var packagedRootIsDirectory: ObjCBool = false
+        let installRoot =
+            fileManager.fileExists(
+                atPath: packagedRoot.path,
+                isDirectory: &packagedRootIsDirectory
+            ) && packagedRootIsDirectory.boolValue
+            ? packagedRoot : extractionRoot
         return try install(
-            from: extractionRoot,
+            from: installRoot,
             destination: destination,
             manifest: manifest,
             fileManager: fileManager

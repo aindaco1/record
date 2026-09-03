@@ -34,6 +34,11 @@ absolute `/usr/bin/ditto` invocation and direct arguments, and reuses ADR 0005's
 Manual folder import remains available. FluidAudio's own download surface
 remains disabled.
 
+Record 1.3.2 corrects the post-extraction lookup to enter the immutable model
+pack's fixed `Record-Parakeet-v3-aed0274` distribution wrapper before invoking
+the same allowlisted installer. Record 1.3.1 verified and expanded the archive
+but could not discover the nested model folder through the automatic path.
+
 CI keeps general product source and the main-app entitlements network-denied,
 audits the helper source separately, rejects configurable remote URLs and raw
 network/tool paths, verifies the helper's exact entitlement set, and inspects
