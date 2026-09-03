@@ -6,6 +6,15 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-02
+
+### Fixed
+
+- Fixed **Download and Install** so the verified Parakeet model is discovered
+  inside the published pack's attribution-and-license wrapper directory after
+  extraction. Manual import and all archive and per-file verification remain
+  unchanged.
+
 ## [1.3.1] - 2026-09-02
 
 ### Added

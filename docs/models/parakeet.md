@@ -4,7 +4,7 @@ Record uses Parakeet TDT v3 by default for on-device transcription. The model
 is about 460 MB and is not bundled with Record. Recording remains available
 when the model is absent; only transcription waits for setup.
 
-## Set up in Record 1.3.1 or newer
+## Set up in Record 1.3.2 or newer
 
 1. Open **Settings → Recording → Set Up Parakeet Model…**.
 2. Choose **Download and Install**.
