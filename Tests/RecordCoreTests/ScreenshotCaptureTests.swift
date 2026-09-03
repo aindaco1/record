@@ -19,12 +19,19 @@ final class ScreenshotCaptureTests: XCTestCase {
         XCTAssertThrowsError(try ScreenshotPixelSize(width: 0, height: 1))
     }
 
-    func testDefaultShortcutsMatchTheRecordOneThreeContract() {
+    func testOnlyAreaDefaultChangesToAvoidApplesScreenshotShortcut() {
         let shortcuts = ScreenshotShortcutSet.defaults
 
         XCTAssertEqual(shortcuts[.display]?.displayString, "⇧⌘1")
         XCTAssertEqual(shortcuts[.windowOrApplication]?.displayString, "⇧⌘2")
-        XCTAssertEqual(shortcuts[.area]?.displayString, "⇧⌘4")
+        XCTAssertEqual(shortcuts[.area]?.displayString, "⌥⇧⌘4")
+        XCTAssertEqual(shortcuts.area?.keyCode, 21)
+        XCTAssertEqual(shortcuts.area?.modifiers, [.option, .shift, .command])
+        XCTAssertEqual(shortcuts.display, ScreenshotShortcutSet.legacyDefaults.display)
+        XCTAssertEqual(
+            shortcuts.windowOrApplication, ScreenshotShortcutSet.legacyDefaults.windowOrApplication
+        )
+        XCTAssertEqual(ScreenshotShortcutSet.legacyDefaults.area?.displayString, "⇧⌘4")
     }
 
     func testShortcutsRequireAModifierAndRejectDuplicates() throws {

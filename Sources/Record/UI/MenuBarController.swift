@@ -18,6 +18,7 @@ final class MenuBarController {
     static let captureAreaMenuTitle = "Capture Area…"
 
     private let statusItem: NSStatusItem
+    let recordingIndicator = MenuBarRecordingIndicatorView()
     private let stateLabel: NSMenuItem
     private let transcriptionLabel: NSMenuItem
     private let toggleItem: NSMenuItem
@@ -259,13 +260,23 @@ final class MenuBarController {
 
         if let button = statusItem.button {
             button.image = Self.menuBarImage()
-            button.imagePosition = .imageLeft
+            button.imagePosition = .imageOnly
+            recordingIndicator.translatesAutoresizingMaskIntoConstraints = false
+            button.addSubview(recordingIndicator)
+            NSLayoutConstraint.activate([
+                recordingIndicator.widthAnchor.constraint(
+                    equalToConstant: Self.menuBarImageSize.width),
+                recordingIndicator.heightAnchor.constraint(
+                    equalToConstant: Self.menuBarImageSize.height),
+                recordingIndicator.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+                recordingIndicator.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            ])
         }
     }
 
     /// Reflect recording state in the icon and menu item titles. The menu bar
-    /// shows a pulsing white Record ring while recording; the elapsed counter
-    /// lives in the menu's state label. Call once a second while recording.
+    /// keeps the camera steady and blinks only its red recording dot; the
+    /// elapsed counter lives in the menu's state label. Call once a second.
     func update(recording: Bool, elapsed: String?, mode: RecordingMode = .screen) {
         apply(
             recording
@@ -311,10 +322,7 @@ final class MenuBarController {
         statusItem.button?.image = Self.screenshotFlashImage()
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             guard let self, self.screenshotFlashGeneration == generation else { return }
-            self.statusItem.button?.image =
-                self.recordingIndicatorIsActive
-                ? Self.recordingMenuBarImage()
-                : Self.menuBarImage()
+            self.statusItem.button?.image = Self.menuBarImage()
         }
     }
 
@@ -407,61 +415,29 @@ final class MenuBarController {
         recoveryFolderItem.isEnabled = available
     }
 
-    // NewKap's MIT-licensed 2x menu-bar ring is embedded so the signed app has
-    // no mutable external status-image dependency. Provenance lives in
-    // THIRD_PARTY_NOTICES.md.
-    private static let menuBarImageBase64 = """
-        iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAzNJREFU
-        WAnFl89rE0EUx+fNJqkYCYgetPYSEAVBwYNQKaUpUWgqiEVz0Xv+AK8WD6JX/4Dc7SWViqDx
-        kNJUKRZ66EEoCEIvMXpQhNAU82N3fN/ZTEhrYiZZSwJp0sl738/bmdk33yVh+Uqn05HSj1+z
-        5InbisQlUmJcEL/xUqLMY2Ue21FSvJ44fXItl8vVbaSpX1AiMX+mTvXHyqMHTIr1i/d/pwpJ
-        9SKiIk+Kxbff/5XTs4BUKjVW+d185CnxUCgVhQgHb5OkV0LKDyScryE3WsZ406mOK+GeE543
-        rTx1RwlxFeOCqCpJPI8dCz3L5/M1PXboT9cC9FWLxopSatLXoWUiZ3Fj7d3nQ/ld/52anbu
-        olPuU8++18jcjIrzQbTb+KmA6OXel6bpv+Kon+BJ2Jan7G8XCZldSn8GpxI1JT9ESL12cZ6
-        MUDqn594XCp860AwXgymuisaXhROvHnRN3V1dXfnYmDPo9mVw4te/uvWTNGRQxJsLXOmdCGk
-        GseZ2n3cAvX4jfDAqHNjSgxfB1aIMBluG2C8CG89ecdnHl2Wy2YYKCfkILmlhSMMAymnoJWl
-        P/hSuM8q69PuyaG9Fen/6eEB9xd/BSnMdS6BnAfQ44ES0fFRxFQRsMsDSTxyQ6nN9kcNs6i
-        72q/1/jhgEm2BLtFR2O12Lb9j4PUgwYYIEJtkRvh6DucEGUB8g1LLAlDhady+11AI1goS0W
-        2Nzo/BMNvT2Yqn22YYEtzZFqDhZ7meEj2yw+ztuNqBGr6Z4wvKx9ZpulBNsHNhNIpWrzrL1
-        EsMgO1jdsQl2APs+D6VpnGxbY2IQ7OpPNhLVC0MAWC2wJDwc9OJmgurb5hgW2hIHkHVCBjY
-        KTsRUZNk67JW3ZqAK2hHuFgYQgbNSwwrZ5hgEm2Po2hHvFEQkPhyPTVmzQOGiDAZZmsoAuQ
-        J/L7F4hCA8HGzWoeL94aPr+kKHMMras3YhgnfmsZvOp4vBwmUwm3E/U9ndoaV/I2mCAZXIP
-        dL+RmlJUhGkJOc4tXqMS78iZ/ebeVpA9gVxoQAuasOVm6rvOgBkc6YOJKWKkj2amCHzq2Rj
-        Fw2lnEfh+VI/nfwA+auCbxANjCwAAAABJRU5ErkJggg==
-        """
-
     static func menuBarImage() -> NSImage? {
         guard
             let data = Data(
-                base64Encoded: menuBarImageBase64,
+                base64Encoded: MenuBarCameraArtwork.pngBase64,
                 options: .ignoreUnknownCharacters
             ),
             let image = NSImage(data: data)
         else { return nil }
         image.isTemplate = true
-        image.size = NSSize(width: 16, height: 16)
+        image.size = menuBarImageSize
         return image
     }
 
-    /// Template status-item images deliberately adapt between black and white.
-    /// Recording state must remain conspicuous on every menu-bar appearance,
-    /// so render the same NewKap ring as an explicit white, non-template image.
-    static func recordingMenuBarImage() -> NSImage? {
-        guard let source = menuBarImage() else { return nil }
-        let image = NSImage(size: source.size, flipped: false) { rect in
-            source.draw(in: rect)
-            NSColor.white.setFill()
-            rect.fill(using: .sourceIn)
-            return true
-        }
-        image.isTemplate = false
-        return image
+    static var menuBarImageSize: NSSize {
+        NSSize(
+            width: CGFloat(MenuBarCameraArtwork.pointWidth),
+            height: CGFloat(MenuBarCameraArtwork.pointHeight))
     }
 
     static func recordingPulseAnimation() -> CABasicAnimation {
         let animation = CABasicAnimation(keyPath: "opacity")
         animation.fromValue = 1.0
-        animation.toValue = 0.35
+        animation.toValue = 0.1
         animation.duration = 0.65
         animation.autoreverses = true
         animation.repeatCount = .infinity
@@ -473,7 +449,7 @@ final class MenuBarController {
         let image = NSImage(
             systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot saved")
         image?.isTemplate = true
-        image?.size = NSSize(width: 16, height: 16)
+        image?.size = menuBarImageSize
         return image
     }
 
@@ -523,23 +499,13 @@ final class MenuBarController {
     }
 
     private func setRecordingIndicatorActive(_ active: Bool) {
+        recordingIndicator.update(
+            recording: active,
+            reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )
         guard recordingIndicatorIsActive != active else { return }
         recordingIndicatorIsActive = active
-        guard let button = statusItem.button else { return }
-
-        button.layer?.removeAnimation(forKey: Self.recordingPulseAnimationKey)
-        button.alphaValue = 1
-        button.contentTintColor = nil
-        button.image = active ? Self.recordingMenuBarImage() : Self.menuBarImage()
-
-        guard active, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
-            return
-        }
-        button.wantsLayer = true
-        button.layer?.add(
-            Self.recordingPulseAnimation(),
-            forKey: Self.recordingPulseAnimationKey
-        )
+        statusItem.button?.image = Self.menuBarImage()
     }
 
     @objc private func toggleClicked() { onToggle?() }

@@ -29,10 +29,12 @@ required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
-The current release is [Record 1.3.2](https://github.com/aindaco1/record/releases/tag/v1.3.2),
-build 16, published September 2, 2026.
+The current release is [Record 1.4.0](https://github.com/aindaco1/record/releases/tag/v1.4.0),
+build 17, published September 3, 2026.
 
-Record has no Dock icon. Open it from the ring in the menu bar.
+Record has no Dock icon. Open it from the camera in the menu bar. During
+screen or audio recording, a red dot blinks at the camera's lower-right corner.
+The dot is steady when Reduce Motion is enabled and disappears while paused.
 
 To uninstall, turn off **Settings… → General → Open Record at Login**, quit
 Record, and move Record.app to the Trash. Remove Record's container only if you
@@ -46,8 +48,8 @@ transcription model.
 - **Capture Window or Application…** (Command-Shift-2) opens Apple's selector.
   A window captures that window; an application captures its visible windows.
   This selection-scoped path does not request broad Screen Recording access.
-- **Capture Area…** (Command-Shift-4) reuses Record's display-local drag
-  overlay. Full-display and area capture request Screen Recording access on
+- **Capture Area…** (Option-Command-Shift-4 for new installations) reuses
+  Record's display-local drag overlay. Full-display and area capture request Screen Recording access on
   first use. Screenshots can include Record's own windows, exclude the cursor,
   and run during a recording; the area overlay is removed before capture.
 - Screenshots save immediately to the approved export folder and independently
@@ -55,6 +57,12 @@ transcription model.
   lossless PNG; **Settings… → Screenshots** can select 95%-quality JPEG, adjust
   quality and sound, edit a shortcut, or turn one Off. JPEG transparency is
   flattened onto white.
+
+Record 1.4 preserves existing screenshot shortcuts, including Off and the
+original Command-Shift-4 Area shortcut for users who never customized it.
+Choose **Settings… → Screenshots → Restore Defaults** to adopt the new Area
+shortcut explicitly. Full Display and Window/Application defaults remain
+Command-Shift-1 and Command-Shift-2.
 
 - **Start screen recording** records the main display to a video-only
   `recording.mov` and writes `mic.wav` and `system.wav` independently as
@@ -210,7 +218,7 @@ boundaries.
 - [Advanced configuration](docs/configuration.md)
 - [Parakeet model setup](docs/models/parakeet.md)
 - [Release runbook](docs/runbooks/release.md)
-- [Record 1.3.2 release notes](docs/releases/1.3.2.md)
+- [Record 1.4.0 release notes](docs/releases/1.4.0.md)
 - [Quill migration record](docs/migration/quill-triage.md)
 - [Current GitHub issue triage](docs/project/issue-triage-1.3.0.md)
 - [Support](SUPPORT.md)

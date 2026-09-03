@@ -93,7 +93,7 @@ Use synthetic or non-sensitive content for development recordings:
    `~/Applications/Record.app` running. Set `RECORD_CODESIGN_IDENTITY` to
    override the selection. With no Apple identity it falls back to ad hoc
    signing and warns that TCC grants will not survive a rebuild. The Record
-   ring should appear in the menu bar. On first launch, allow notifications;
+   camera should appear in the menu bar. On first launch, allow notifications;
    Record requests access before the first completion event so recording and
    transcript banners cannot be lost to a late authorization prompt.
 2. Choose **Start screen recording**. Record should request microphone access
@@ -106,13 +106,18 @@ Use synthetic or non-sensitive content for development recordings:
    should terminate the old process; Record should reopen and resume the Start
    command once. On first use, also approve Desktop in the export-folder picker.
 3. Move a test window, speak into the selected microphone, and play a known
-   local audio clip for at least 15 seconds. Confirm the ring pulses white (or
-   remains steady white when Reduce Motion is enabled), the menu shows an
+   local audio clip for at least 15 seconds. Confirm the camera stays steady
+   while a large red dot blinks at its lower right (or remains steady red when
+   Reduce Motion is enabled), the menu shows an
    increasing elapsed time, and the command becomes **Stop recording**.
 4. Choose **Pause screen recording**, wait several seconds, then resume. Repeat
-   twice. The white pulse must stop while paused, the captured-time counter must
+   twice. The red dot must disappear while paused, the captured-time counter must
    not advance, and the menu must disable conflicting actions during each
    rotation. Stop once while paused in a second disposable recording.
+   Check the same indicator during audio-only recording. Inspect the camera
+   and dot at actual menu-bar size in light and dark appearances, with the
+   menu open, and during screenshot feedback. The overlay must not intercept
+   menu clicks or restart its blink on every elapsed-time update.
 5. Stop recording and wait for **saving recording…** to return to idle. Confirm
    recording mode, source, destination, and capture-privacy configuration stay
    disabled until idle returns. Then confirm
@@ -276,11 +281,18 @@ notifications, private Desktop items, credentials, or other personal content.
 1. Open **Settings…**, then select **Screenshots**. Confirm PNG is the default,
    JPEG quality is 95%, shutter sound is on, and the shortcuts are
    Command-Shift-1 for full display, Command-Shift-2 for window/application,
-   and Command-Shift-4 for area. Edit each shortcut, verify a duplicate is
-   rejected, turn one Off with
+   and Option-Command-Shift-4 for area on a fresh installation. Edit each
+   shortcut, verify a duplicate is rejected, turn one Off with
    Delete, restore defaults, then resolve any macOS shortcut conflict through
    the linked Keyboard Shortcuts pane. Confirm **Window or Application** is not
    clipped and every footer control remains inside the settings window.
+   Confirm the new Area binding invokes Record while Apple's Command-Shift-4
+   remains available. In an isolated upgrade profile, launch 1.3.2 without
+   editing shortcuts, then 1.4.0: Area must remain Command-Shift-4. Repeat with
+   custom bindings and Off, and verify the saved values survive unchanged.
+   Choose **Restore Defaults**, quit, and relaunch: Area must now remain
+   Option-Command-Shift-4. Inspect the new camcorder icon in Finder at small
+   and large sizes against light and dark backgrounds.
 2. Put the pointer on each attached display and invoke full-display capture.
    Confirm only the display under the pointer is captured at native pixel
    dimensions, with no cursor. Confirm the first direct capture requests Screen

@@ -40,11 +40,11 @@ commercial use, without permission or attribution. The source and checksum are
 retained here so the immutable bundled asset remains auditable.
 
 [NewKap](https://github.com/MuntasirMalek/NewKap) and the locally installed Kap
-plugins informed product behavior and architecture research. Record embeds
-NewKap's `static/menubarDefaultTemplate@2x.png` from commit
-`33571acc90a1982acc125a669769adcbef8aa0de`. Record's application icon comes
-from its own canonical `AppIcon.svg`. NewKap is distributed under the following
-MIT license:
+plugins informed product behavior and architecture research. Before 1.4, Record
+embedded NewKap's `static/menubarDefaultTemplate@2x.png` from commit
+`33571acc90a1982acc125a669769adcbef8aa0de`. From 1.4, Record's application and
+menu-bar icons both come from its own canonical `AppIcon.svg`. NewKap is
+distributed under the following MIT license:
 
 Copyright (c) Wulkano hello@wulkano.com (https://wulkano.com)
 

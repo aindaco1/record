@@ -6,11 +6,48 @@ final class ScreenshotPreferences {
     static let formatKey = "screenshots.imageFormat"
     static let jpegQualityKey = "screenshots.jpegQuality"
     static let shutterSoundKey = "screenshots.playShutterSound"
+    static let shortcutDefaultsVersionKey = "screenshots.shortcutDefaultsVersion"
 
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+    }
+
+    /// Call before startup checks create private storage or other services
+    /// write preferences. Never inspect recordings or bookmark contents.
+    func prepareForLaunch(
+        recordingsRoot: URL,
+        home: URL = FileManager.default.homeDirectoryForCurrentUser,
+        preferencesDomainName: String = "com.aindaco.record"
+    ) {
+        guard defaults.object(forKey: Self.shortcutDefaultsVersionKey) == nil else { return }
+        let priorPaths = [
+            recordingsRoot,
+            RecordPaths.defaultRecordingsDirectory(home: home),
+            RecordPaths.configurationFile(home: home),
+        ]
+        let hasPriorState =
+            defaults.persistentDomain(forName: preferencesDomainName)?.isEmpty == false
+            || priorPaths.contains(where: Self.mayAlreadyExist)
+        let baseline: ScreenshotShortcutSet = hasPriorState ? .legacyDefaults : .defaults
+        for kind in ScreenshotCaptureKind.allCases {
+            if defaults.object(forKey: "\(shortcutPrefix(for: kind)).enabled") == nil {
+                store(baseline[kind], for: kind)
+            }
+        }
+        defaults.set(hasPriorState ? 1 : 2, forKey: Self.shortcutDefaultsVersionKey)
+    }
+
+    private static func mayAlreadyExist(_ url: URL) -> Bool {
+        do {
+            return try url.checkResourceIsReachable()
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile {
+            return false
+        } catch {
+            // Inaccessible or ambiguous old state must not change a shortcut.
+            return true
+        }
     }
 
     var format: ScreenshotImageFormat {
@@ -44,7 +81,9 @@ final class ScreenshotPreferences {
 
     var shortcuts: ScreenshotShortcutSet {
         get {
-            let defaultsSet = ScreenshotShortcutSet.defaults
+            let defaultsSet: ScreenshotShortcutSet =
+                defaults.integer(forKey: Self.shortcutDefaultsVersionKey) == 1
+                ? .legacyDefaults : .defaults
             return
                 (try? ScreenshotShortcutSet(
                     display: shortcut(for: .display, fallback: defaultsSet.display),
@@ -75,6 +114,7 @@ final class ScreenshotPreferences {
 
     func restoreDefaultShortcuts() {
         shortcuts = .defaults
+        defaults.set(2, forKey: Self.shortcutDefaultsVersionKey)
     }
 
     private func shortcut(

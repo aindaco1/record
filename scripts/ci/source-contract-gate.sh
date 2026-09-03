@@ -30,6 +30,8 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/RecordingMode.swift Sources/Record/RecordingPermission.swift \
     Sources/Record/SessionMediaInspector.swift \
     Sources/Record/UI/MenuBarController.swift \
+    Sources/Record/UI/MenuBarCameraArtwork.swift \
+    Sources/Record/UI/MenuBarRecordingIndicatorView.swift \
     Sources/Record/UI/RecordingMenuPresentation.swift \
     Sources/Record/RecordingNamePreferences.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \

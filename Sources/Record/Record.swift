@@ -36,6 +36,8 @@ struct Run: ParsableCommand {
     @MainActor
     private func runMain() throws {
         let root = Config.resolveRoot(cliOverride: out)
+        let screenshotPreferences = ScreenshotPreferences()
+        screenshotPreferences.prepareForLaunch(recordingsRoot: root)
 
         // Non-blocking: permissions prompt on first recording, so warnings at
         // startup are informational, not fatal.
@@ -49,7 +51,7 @@ struct Run: ParsableCommand {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
-        let controller = AppController(root: root)
+        let controller = AppController(root: root, screenshotPreferences: screenshotPreferences)
         let applicationDelegate = RecordApplicationDelegate(controller: controller)
         app.delegate = applicationDelegate
 
@@ -155,7 +157,7 @@ final class AppController {
     private let screenCaptureSourcePreferences = ScreenCaptureSourcePreferences()
     private let systemScreenCapturePicker = SystemScreenCapturePicker()
     private let regionSelectionController = RegionSelectionController()
-    private let screenshotPreferences = ScreenshotPreferences()
+    private let screenshotPreferences: ScreenshotPreferences
     private let screenshotShortcutRegistrar = GlobalScreenshotShortcutRegistrar()
     private lazy var screenshotCaptureCoordinator = ScreenshotCaptureCoordinator(
         picker: systemScreenCapturePicker,
@@ -189,6 +191,7 @@ final class AppController {
 
     init(
         root: URL,
+        screenshotPreferences: ScreenshotPreferences,
         recordingPermission: RecordingPermissionController =
             RecordingPermissionController(),
         pendingRecordingIntentStore: PendingRecordingIntentStore =
@@ -197,6 +200,7 @@ final class AppController {
             PendingScreenshotIntentStore()
     ) {
         self.root = root
+        self.screenshotPreferences = screenshotPreferences
         self.recordingPermission = recordingPermission
         self.pendingRecordingIntentStore = pendingRecordingIntentStore
         self.pendingScreenshotIntentStore = pendingScreenshotIntentStore
