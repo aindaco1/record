@@ -50,6 +50,30 @@ but an operation may run alongside a stable recording.
 
 ## Consequences
 
+### Shortcut defaults from 1.4
+
+New installations use Option-Command-Shift-4 for Area to avoid Apple's
+Command-Shift-4 binding. The other defaults are unchanged. Preserve saved
+bindings and Off states, and also preserve the effective legacy defaults for
+users who never opened shortcut settings.
+
+Before startup creates private storage or initializes other preference-writing
+services, inspect only the existence of Record's configured/default private
+recordings root, its configuration file, and its own persistent preferences
+domain. Prior state or an ambiguous filesystem error selects the legacy
+baseline. No prior state selects the new baseline. This is conservative:
+leftover local state counts as an upgrade; removing all local state is a reset.
+The app does not inspect media, configuration contents, or bookmark values.
+
+Seed only missing shortcut entries through the existing preference store and
+persist a baseline version after the entries. Repeated launches do not
+reclassify the installation. Existing saved entries remain authoritative;
+malformed entries on a migrated installation retain the legacy fallback.
+**Restore Defaults** explicitly saves the current defaults and advances the
+baseline. The migration adds no separate shortcut registration or settings UI.
+
+### Capture boundaries
+
 - Recording and screenshot selection/privacy behavior stay DRY while native
   screenshot dimensions remain independent from video encoder bounds.
 - Record can capture its own settings without weakening the recording

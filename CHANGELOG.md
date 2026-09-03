@@ -6,6 +6,15 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Changed — planned for 1.4.0
+
+- New installations use Option-Command-Shift-4 for **Capture Area…**, avoiding
+  Apple's Command-Shift-4 screenshot shortcut. Existing bindings and Off states
+  are preserved, including the original default on untouched installations.
+  **Restore Defaults** explicitly adopts the new binding.
+- Replaced the vinyl-record app icon with a simple 1980s shoulder-mounted VHS
+  camcorder, retaining the black artwork and rounded white app-icon canvas.
+
 ## [1.3.2] - 2026-09-02
 
 ### Fixed

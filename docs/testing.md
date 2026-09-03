@@ -276,11 +276,18 @@ notifications, private Desktop items, credentials, or other personal content.
 1. Open **Settings…**, then select **Screenshots**. Confirm PNG is the default,
    JPEG quality is 95%, shutter sound is on, and the shortcuts are
    Command-Shift-1 for full display, Command-Shift-2 for window/application,
-   and Command-Shift-4 for area. Edit each shortcut, verify a duplicate is
-   rejected, turn one Off with
+   and Option-Command-Shift-4 for area on a fresh installation. Edit each
+   shortcut, verify a duplicate is rejected, turn one Off with
    Delete, restore defaults, then resolve any macOS shortcut conflict through
    the linked Keyboard Shortcuts pane. Confirm **Window or Application** is not
    clipped and every footer control remains inside the settings window.
+   Confirm the new Area binding invokes Record while Apple's Command-Shift-4
+   remains available. In an isolated upgrade profile, launch 1.3.2 without
+   editing shortcuts, then 1.4.0: Area must remain Command-Shift-4. Repeat with
+   custom bindings and Off, and verify the saved values survive unchanged.
+   Choose **Restore Defaults**, quit, and relaunch: Area must now remain
+   Option-Command-Shift-4. Inspect the new camcorder icon in Finder at small
+   and large sizes against light and dark backgrounds.
 2. Put the pointer on each attached display and invoke full-display capture.
    Confirm only the display under the pointer is captured at native pixel
    dimensions, with no cursor. Confirm the first direct capture requests Screen

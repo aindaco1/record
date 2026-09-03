@@ -139,10 +139,22 @@ public struct ScreenshotShortcutSet: Equatable, Sendable {
             ),
             area: ScreenshotShortcut(
                 keyCode: 21,
-                modifiers: [.command, .shift],
+                modifiers: [.command, .shift, .option],
                 keyLabel: "4"
             )
         )
+    }
+
+    /// Preserve the effective shortcuts of installations predating 1.4,
+    /// including users who never explicitly saved their original defaults.
+    public static var legacyDefaults: Self {
+        var shortcuts = defaults
+        shortcuts.area = try! ScreenshotShortcut(
+            keyCode: 21,
+            modifiers: [.command, .shift],
+            keyLabel: "4"
+        )
+        return shortcuts
     }
 
     public subscript(kind: ScreenshotCaptureKind) -> ScreenshotShortcut? {

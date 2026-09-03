@@ -46,8 +46,8 @@ transcription model.
 - **Capture Window or Application…** (Command-Shift-2) opens Apple's selector.
   A window captures that window; an application captures its visible windows.
   This selection-scoped path does not request broad Screen Recording access.
-- **Capture Area…** (Command-Shift-4) reuses Record's display-local drag
-  overlay. Full-display and area capture request Screen Recording access on
+- **Capture Area…** (Option-Command-Shift-4 for new installations) reuses
+  Record's display-local drag overlay. Full-display and area capture request Screen Recording access on
   first use. Screenshots can include Record's own windows, exclude the cursor,
   and run during a recording; the area overlay is removed before capture.
 - Screenshots save immediately to the approved export folder and independently
@@ -55,6 +55,12 @@ transcription model.
   lossless PNG; **Settings… → Screenshots** can select 95%-quality JPEG, adjust
   quality and sound, edit a shortcut, or turn one Off. JPEG transparency is
   flattened onto white.
+
+Record 1.4 preserves existing screenshot shortcuts, including Off and the
+original Command-Shift-4 Area shortcut for users who never customized it.
+Choose **Settings… → Screenshots → Restore Defaults** to adopt the new Area
+shortcut explicitly. Full Display and Window/Application defaults remain
+Command-Shift-1 and Command-Shift-2.
 
 - **Start screen recording** records the main display to a video-only
   `recording.mov` and writes `mic.wav` and `system.wav` independently as
