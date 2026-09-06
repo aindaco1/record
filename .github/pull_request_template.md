@@ -6,7 +6,7 @@
 
 ## Verification
 
-- [ ] `./scripts/ci/validate.sh`
+- [ ] `./scripts/ci/validate.sh` (report documentation-only or full validation)
 - [ ] Added or updated deterministic tests
 - [ ] Completed applicable hardware checks from `docs/testing.md`
 - [ ] No recording data, transcript content, credentials, or model assets added

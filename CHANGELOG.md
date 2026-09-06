@@ -8,6 +8,11 @@ All notable changes to Record are documented here. Record follows
 
 ### Changed
 
+- Added lightweight local and hosted validation for documentation-only changes,
+  checking Markdown and local links without rebuilding Record. Full checks
+  remain required for code, packaged content, and releases; manual CI/CodeQL
+  runs can supply exact-commit release evidence after a docs-only merge.
+
 - Consolidated documentation under `docs/` with a navigation index and user
   guide, shorter repository overview, and dedicated contributor, support,
   privacy, security, and roadmap pages. Kept release history, automation

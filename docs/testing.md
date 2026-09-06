@@ -1,9 +1,23 @@
 # Testing strategy
 
-Record separates deterministic logic from hardware/TCC behavior so most
-regressions run on every pull request.
+Record separates deterministic logic from hardware/TCC behavior. Documentation
+changes run a small offline gate; changes to code or build inputs run the full
+suite below.
 
-## Automated on every pull request
+## Documentation validation
+
+Run `./scripts/ci/validate.sh`. For an eligible documentation-only range it
+checks Markdown fences, local link targets and heading anchors, and whitespace.
+The [contributor guide](CONTRIBUTING.md#build-and-validate) defines the scope and
+how to force full validation. Hosted CI also runs deterministic fixtures for
+change classification, broken links, and required-check aggregation.
+
+Tests cover mixed and multi-commit ranges, staged/unstaged/untracked files,
+renames, executable modes, symlinks, missing history, manual/scheduled events,
+and a docs-only invocation that never enters the build gate. Release fixtures
+reject skipped or missing build/security jobs even when a workflow is green.
+
+## Automated for changes to code or build inputs
 
 - typed configuration defaults and validation
 - capture configuration limits and lifecycle command/effect transitions

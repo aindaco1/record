@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
+python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
 ./scripts/ci/check-local-only.sh
 ./scripts/ci/test-local-only-guard.sh
 ./scripts/ci/test-model-downloader-boundary.sh

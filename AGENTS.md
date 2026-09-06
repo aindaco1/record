@@ -48,7 +48,14 @@ Run the smallest relevant test while iterating, then:
 ./scripts/ci/validate.sh
 ```
 
-Before a release or high-risk capture/signing change, also run:
+For documentation-only changes, this command checks Markdown structure, local
+links, and whitespace without building the app. It compares the working tree
+with the merge base of `origin/main`; use `--base <revision>` for another range.
+Unknown or mixed changes use full validation. Use `--full` to force it.
+Bundled licenses/notices and model-pack attribution always require full checks.
+
+Before a release or high-risk capture/signing change, also run the full gate
+(regardless of change scope):
 
 ```sh
 ./scripts/ci/local-gate.sh

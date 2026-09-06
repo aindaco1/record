@@ -2,6 +2,10 @@
 
 - Status: accepted
 - Date: 2026-08-26
+- Amended by: [ADR 0018](0018-documentation-only-validation.md), which limits
+  automatic builds to source-affecting changes and permits exact-commit manual
+  CI/CodeQL runs for release evidence. The original decision below records the
+  push-only policy before that amendment.
 
 ## Context
 

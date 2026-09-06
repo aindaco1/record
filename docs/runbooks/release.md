@@ -25,9 +25,23 @@ cleanup; the temporary keychain is deleted even after failure.
    explicitly future camera, editor, 60-fps, and extension-host rows not
    applicable.
 3. Add `docs/releases/MAJOR.MINOR.PATCH.md` and finalize `CHANGELOG.md`.
-4. Merge the candidate to `main` and wait for all hosted checks.
-5. Within seven days of the successful `main` CI run, create and push a signed
-   annotated `vMAJOR.MINOR.PATCH` tag on that exact commit.
+4. Merge the candidate to `main` and wait for full hosted CI and CodeQL on the
+   exact commit. A documentation-only merge skips the build and scan; when
+   either full run or the retained app artifact is missing, dispatch both:
+
+   ```sh
+   gh workflow run ci.yml --ref main
+   gh workflow run security.yml --ref main
+   ```
+
+   Manual runs always perform full validation. Wait for both workflows to
+   succeed, including **Build and package app** and **Analyze Swift**. Confirm
+   `main` still points to the candidate before proceeding.
+5. From the clean candidate checkout, run
+   `./scripts/release/required-ci-runs.sh aindaco1/record "$(git rev-parse HEAD)"`
+   to verify the exact successful jobs. Within seven days of that full `main`
+   CI run, create and push a signed annotated `vMAJOR.MINOR.PATCH` tag on the
+   same commit.
 6. Approve the protected `release` environment after confirming the candidate
    commit and tag.
 
@@ -38,13 +52,15 @@ SSH tag verification is pinned to `.github/allowed_signers`; changing that
 trust root requires the same security review as changing release credentials.
 
 The release workflow revalidates the tag and fast shared source contract and
-requires successful `CI` and `CodeQL` push runs for that exact `main` commit. It
-verifies GitHub-hosted provenance and bounded extraction for the CI-assembled,
+requires successful full `CI` and `CodeQL` runs, triggered by a push or manual
+dispatch, for that exact `main` commit. Skipped jobs do not qualify. It verifies
+GitHub-hosted provenance and bounded extraction for the CI-assembled,
 package-tested unsigned arm64 app, matches its executable, dependency lock,
 Xcode 26.3 version, source plist, and release-script hashes, then stamps only the
 release version and build number. This is the same plist operation used by a
 fresh local assembly; the app code is the exact production binary already
-exercised by CI. See ADR 0012.
+exercised by CI. See [ADR 0012](../adr/0012-verified-ci-app-reuse.md) and its
+[documentation-only amendment](../adr/0018-documentation-only-validation.md).
 
 The CI app handoff deliberately excludes release-only package tools. Before
 signed-feed generation, the release restores Sparkle's `generate_appcast`
