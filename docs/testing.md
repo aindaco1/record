@@ -401,12 +401,15 @@ implemented. They are not acceptance claims for the current app.
 Use signposts and Instruments rather than wall-clock guesses. On the reference
 Mac, release candidates must demonstrate:
 
-- no sustained dropped frames during a 30-minute 4K60 capture
+- no sustained dropped frames during a 30-minute 4K30 capture
 - less than 50 ms A/V drift over one hour
 - bounded memory across a one-hour recording
 - no unbounded capture queue growth
 - bounded-memory WAV finalization whose measured throughput remains faster than
   real time for representative short and long recordings
+
+Repeat the 30-minute capture at 4K60 when 60-fps controls are implemented; that
+future criterion is not a release gate for the current 30-fps capture profile.
 
 Performance captures contain only generated test patterns and synthetic audio.
 They are never uploaded automatically.

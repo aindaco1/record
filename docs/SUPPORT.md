@@ -12,7 +12,7 @@ containing private paths, or anything from Record's app container.
 
 For a failed session, describe the manifest state and sanitized log messages;
 do not publish the session itself. The inspection commands in
-[`docs/testing.md`](docs/testing.md) can collect structural information without
+[testing guide](testing.md) can collect structural information without
 uploading content.
 
 ## Security issues

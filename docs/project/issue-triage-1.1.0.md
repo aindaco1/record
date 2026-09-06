@@ -24,6 +24,6 @@ availability. See `docs/testing/macos-27-readiness.md` for the evidence and
 promotion criteria.
 
 Recording history and configurable global shortcuts remain possible future
-features in `ROADMAP.md`; they are not part of 1.1.0. A Homebrew Cask is no
+features in the [roadmap](roadmap.md); they are not part of 1.1.0. A Homebrew Cask is no
 longer planned. Camera, editing, cloud services, accounts, analytics, uploads,
 and in-process third-party plugins remain outside this release.

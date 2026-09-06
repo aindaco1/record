@@ -53,6 +53,6 @@ automatically delete exported screenshots or sessions.
 
 ## Changes
 
-Material changes to this policy are documented in the repository changelog.
-Questions may be opened through the public support process, but security or
-privacy vulnerabilities must use GitHub's private vulnerability reporting.
+Material changes to this policy are documented in the [changelog](../CHANGELOG.md).
+Questions may be opened through the [support process](SUPPORT.md), but security
+or privacy vulnerabilities must use [private vulnerability reporting](SECURITY.md).

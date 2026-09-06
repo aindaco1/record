@@ -43,7 +43,7 @@ of system speech are omitted from `transcript.json` and `transcript.md`, while
 modifies the finalized `mic.wav` or `system.wav` tracks or their private CAF
 recovery sources.
 
-`refine_with_apple_intelligence` is an opt-in baseline for the same menu toggle
+`refine_with_apple_intelligence` is an opt-in baseline for the same Recording setting
 and defaults to `false`. On macOS 26+, Record checks the local Foundation Models
 capability, selected language, device eligibility, Apple Intelligence setting,
 and model readiness before enabling it. The model can advise only whether
