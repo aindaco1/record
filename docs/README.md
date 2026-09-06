@@ -86,3 +86,7 @@ directory so GitHub can discover them.
 Update relative links whenever a document moves. The repository root retains
 its overview, license, repository-wide agent instructions, changelog linked by
 the updater, and notices copied into the app bundle.
+
+Run `./scripts/ci/validate.sh` after documentation edits. Eligible changes use
+the offline documentation gate; the [contributor guide](CONTRIBUTING.md#build-and-validate)
+explains the scope and full-validation overrides.
