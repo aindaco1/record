@@ -11,13 +11,30 @@ permissions:
   contents: read
   security-events: write
 
-concurrency:
-  group: codeql-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  changes:
+    name: CodeQL change scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Classify complete change range
+        id: scope
+        run: python3 scripts/ci/change-scope.py --github-event --github-output
+
   analyze-swift:
     name: Analyze Swift
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    # A skipped documentation push must not cancel an active source scan.
+    concurrency:
+      group: codeql-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: macos-15
     timeout-minutes: 45
     steps:

@@ -4,6 +4,28 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
+scope_arguments=(--value)
+force_full=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --full) force_full=1; shift ;;
+        --base)
+            if [[ $# -lt 2 ]]; then
+                echo "--base requires a git revision" >&2
+                exit 64
+            fi
+            scope_arguments+=(--base "$2"); shift 2 ;;
+        *) echo "usage: $0 [--full] [--base <revision>]" >&2; exit 64 ;;
+    esac
+done
+
+./scripts/ci/validate-docs.sh
+if [[ "$force_full" == 0 && \
+      "$(python3 scripts/ci/change-scope.py "${scope_arguments[@]}")" == docs ]]; then
+    echo "documentation-only change: skipped Swift tests, build, and package assembly"
+    exit 0
+fi
+
 swift_build_system="${RECORD_SWIFT_BUILD_SYSTEM:-native}"
 case "$swift_build_system" in
     native | swiftbuild)

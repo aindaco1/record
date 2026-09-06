@@ -170,7 +170,10 @@ that developers can run locally; workflow YAML does not duplicate build or
 packaging commands. Release accepts full build/test/package evidence only from
 the exact successful `main` commit, then reuses the provenance-attested unsigned
 app that CI already exercised instead of compiling the same production binary
-twice.
+twice. Documentation-only changes use the shared offline validation path in
+[ADR 0018](adr/0018-documentation-only-validation.md); they produce no app
+artifact. Release still requires full build and security jobs on its exact
+commit, including manual runs when needed.
 
 `RecordCore` also owns the canonical capture/finalized media layout and the
 shared real-file metadata policy. Capture, media, recovery, inspection,

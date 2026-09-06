@@ -14,15 +14,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Change scope and documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Test documentation validation policy
+        run: python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
+      - name: Classify complete change range
+        id: scope
+        run: python3 scripts/ci/change-scope.py --github-event --github-output
+      - name: Validate documentation
+        run: ./scripts/ci/validate-docs.sh
+
   portable-lint:
     name: Workflow and shell lint
+    needs: changes
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Require successful scope and documentation checks
+        env:
+          SCOPE_RESULT: ${{ needs.changes.result }}
+        run: test "$SCOPE_RESULT" = success
+      - name: Documentation-only change
+        if: needs.changes.outputs.docs_only == 'true'
+        run: echo "Documentation checks passed; workflow and shell inputs are unchanged."
       - name: Ensure Podman is available
+        if: needs.changes.outputs.docs_only != 'true'
         run: |
           if ! command -v podman >/dev/null; then
             sudo apt-get update
@@ -30,10 +59,31 @@ jobs:
           fi
           podman --version
       - name: Lint in pinned containers
+        if: needs.changes.outputs.docs_only != 'true'
         run: ./scripts/ci/container-lint.sh
 
   swift:
+    # Preserve the branch-protection context, even when the macOS job is skipped.
     name: Swift tests and arm64 build
+    needs: [changes, swift-build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Check required validation result
+        env:
+          SCOPE_RESULT: ${{ needs.changes.result }}
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          BUILD_RESULT: ${{ needs.swift-build.result }}
+        run: ./scripts/ci/check-validation-result.sh "$SCOPE_RESULT" "$DOCS_ONLY" "$BUILD_RESULT"
+
+  swift-build:
+    name: Build and package app
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: macos-15
     timeout-minutes: 30
     permissions:
@@ -51,7 +101,7 @@ jobs:
 
       # This script is also the supported local validation entry point.
       - name: Validate
-        run: ./scripts/ci/validate.sh
+        run: ./scripts/ci/validate.sh --full
 
       - name: Build and verify distributable structure
         env:
@@ -60,7 +110,7 @@ jobs:
         run: ./scripts/ci/package-gate.sh
 
       - name: Package exact-commit app for trusted release reuse
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         env:
           RECORD_CI_APP_ARTIFACT: ${{ runner.temp }}/record-ci-app-${{ github.sha }}.tar.gz
         run: |
@@ -70,13 +120,13 @@ jobs:
             "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
 
       - name: Attest exact-commit app
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: ${{ runner.temp }}/record-ci-app-${{ github.sha }}.tar.gz
 
       - name: Retain exact-commit app for release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: record-verified-app-${{ github.sha }}
@@ -87,6 +137,8 @@ jobs:
 
   xcode-27-compatibility:
     name: Xcode 27 compatibility (preview)
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: xcode-27
     continue-on-error: true
     timeout-minutes: 30
@@ -116,10 +168,12 @@ jobs:
           # Swift Build compilation.
           # https://github.com/swiftlang/swift-package-manager/issues/10384
           RECORD_SWIFT_BUILD_SYSTEM: native
-        run: ./scripts/ci/validate.sh
+        run: ./scripts/ci/validate.sh --full
 
   sanitizers:
     name: Swift sanitizer tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: macos-15
     timeout-minutes: 40
     steps:

@@ -32,16 +32,40 @@ or exact entitlement set require renewed privacy review. The
 ## Build and validate
 
 ```sh
-swift build
-swift test
 ./scripts/ci/validate.sh
 ```
 
-The validation script runs the shared source checks and tests, verifies the
-resolved dependency lock, and builds the release CLI for arm64.
+This entry point selects the smallest safe gate. Documentation-only changes
+check Markdown fences, local links and heading anchors, and whitespace. It uses
+Python 3.9+ and Git, with no network calls, Swift build, or package assembly.
+External URLs are not checked. The supported Markdown link forms are inline and
+reference links; raw HTML links are outside this check.
 
-Before handing off a branch, run the complete local equivalent of the hosted
-CI jobs. It checks the toolchain, uses rootless Podman for pinned workflow and
+The comparison includes committed, staged, unstaged, and untracked changes
+against the merge base with `origin/main`. Keep that ref current with
+`git fetch origin`; use `--base <revision>` to choose another comparison base.
+Missing history, unknown files, and mixed changes use full validation. The
+allowlist covers ordinary Markdown in `docs/`, the root overview/changelog/agent
+instructions, community guides, the PR template, and `containers/README.md`.
+`LICENSE`, `THIRD_PARTY_NOTICES.md`, and model-pack attribution remain full-gate
+inputs because they are distributed with the app or model. Executable files
+and symbolic links cannot take the lightweight path.
+
+Full validation runs the shared source checks and tests, verifies the resolved
+dependency lock, and builds the release CLI for arm64. Force it when needed:
+
+```sh
+./scripts/ci/validate.sh --full
+```
+
+Hosted CI uses the same classifier for the complete PR or push range. Docs-only
+changes keep the required status checks green through documentation validation;
+macOS builds, sanitizers, packaging, and push-triggered CodeQL are skipped.
+Manual workflow runs and scheduled CodeQL always run in full. See
+[ADR 0018](adr/0018-documentation-only-validation.md) for the release boundary.
+
+Before handing off a branch with changes outside that allowlist, run the
+complete local equivalent of the hosted CI jobs. It checks the toolchain, uses rootless Podman for pinned workflow and
 shell linting, runs normal and sanitizer tests, builds arm64, assembles the
 sandboxed app, and mounts both release packages:
 

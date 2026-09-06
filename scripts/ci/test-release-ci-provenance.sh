@@ -50,7 +50,7 @@ fi
 for required_fragment in \
     'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8' \
     'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' \
-    "github.event_name == 'push' && github.ref == 'refs/heads/main'" \
+    "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')" \
     './scripts/tools/package-ci-app.sh'; do
     if ! grep -Fq "$required_fragment" "$ci_workflow"; then
         echo "CI workflow is missing trusted app handoff control: $required_fragment" >&2
@@ -80,55 +80,78 @@ cleanup() {
 }
 trap cleanup EXIT
 mkdir "$test_root/bin"
-cat > "$test_root/bin/gh" <<'SH'
-#!/usr/bin/env bash
-set -euo pipefail
-if [[ "$1 $2" != "run list" ]]; then
-    exit 64
-fi
-workflow=""
-commit=""
-repository=""
-branch=""
-event=""
-status=""
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --workflow) workflow="$2"; shift 2 ;;
-        --commit) commit="$2"; shift 2 ;;
-        --repo) repository="$2"; shift 2 ;;
-        --branch) branch="$2"; shift 2 ;;
-        --event) event="$2"; shift 2 ;;
-        --status) status="$2"; shift 2 ;;
-        *) shift ;;
-    esac
-done
-if [[ "$commit" != "$FAKE_COMMIT" || "$repository" != "aindaco1/record" || \
-      "$branch" != main || "$event" != push || "$status" != success ]]; then
-    exit 64
-fi
-if [[ "$workflow" == CI ]]; then
-    printf '[{"databaseId":40,"attempt":1,"conclusion":"success","event":"push","headBranch":"other","headSha":"%s","status":"completed"},{"databaseId":42,"attempt":2,"conclusion":"success","event":"push","headBranch":"main","headSha":"%s","status":"completed"}]\n' "$commit" "$commit"
-elif [[ "$workflow" == CodeQL && "${FAKE_MISSING_CODEQL:-0}" != 1 ]]; then
-    printf '[{"databaseId":51,"attempt":1,"conclusion":"success","event":"push","headBranch":"main","headSha":"%s","status":"completed"}]\n' "$commit"
-else
-    printf '[]\n'
-fi
-SH
+cat > "$test_root/bin/gh" <<'PYTHON'
+#!/usr/bin/env python3
+import json
+import os
+import sys
+
+args = sys.argv[1:]
+mode = os.environ.get("FAKE_MODE", "push")
+commit = os.environ["FAKE_COMMIT"]
+if args[:2] == ["run", "list"]:
+    def option(name):
+        return args[args.index(name) + 1]
+    assert option("--commit") == commit
+    assert option("--repo") == "aindaco1/record"
+    assert option("--branch") == "main"
+    assert option("--status") == "success"
+    assert "--event" not in args
+    workflow = option("--workflow")
+    if workflow == "CodeQL" and mode == "missing-codeql":
+        print("[]")
+        sys.exit()
+    run = dict(databaseId=42 if workflow == "CI" else 51,
+               attempt=2 if workflow == "CI" else 1, conclusion="success",
+               event="workflow_dispatch" if mode == "manual" else "push",
+               headBranch="main", headSha=commit, status="completed")
+    if mode == "invalid-event":
+        run["event"] = "pull_request"
+    elif mode == "invalid-branch":
+        run["headBranch"] = "other"
+    elif mode == "invalid-head":
+        run["headSha"] = "0" * 40
+    elif mode == "invalid-attempt":
+        run["attempt"] = 0
+    print(json.dumps([run]))
+elif args[:2] == ["api", "--paginate"]:
+    endpoint = args[2]
+    is_ci = endpoint == "repos/aindaco1/record/actions/runs/42/attempts/2/jobs?per_page=100"
+    assert is_ci or endpoint == "repos/aindaco1/record/actions/runs/51/attempts/1/jobs?per_page=100"
+    job = dict(name="Build and package app" if is_ci else "Analyze Swift",
+               status="completed", conclusion="success")
+    if mode == "skipped-ci" and is_ci or mode == "skipped-codeql" and not is_ci:
+        job["conclusion"] = "skipped"
+    elif mode == "failed-job":
+        job["conclusion"] = "failure"
+    jobs = [] if mode == "missing-job" else [job]
+    if mode == "duplicate-job":
+        jobs.append(job)
+    # Exercise the paginated response stream and ignore unrelated green jobs.
+    print(json.dumps({"jobs": [dict(name="Swift tests and arm64 build", status="completed", conclusion="success")]}))
+    print(json.dumps({"jobs": jobs}))
+else:
+    sys.exit(64)
+PYTHON
 chmod +x "$test_root/bin/gh"
 commit="$(git -C "$repo_root" rev-parse HEAD)"
-actual="$(
-    PATH="$test_root/bin:$PATH" FAKE_COMMIT="$commit" \
-        "$required_runs_script" aindaco1/record "$commit"
-)"
-if [[ "$actual" != $'42\t2\t51' ]]; then
-    echo "exact-commit CI run selection returned: $actual" >&2
-    exit 1
-fi
-if PATH="$test_root/bin:$PATH" FAKE_COMMIT="$commit" FAKE_MISSING_CODEQL=1 \
-    "$required_runs_script" aindaco1/record "$commit" >/dev/null 2>&1; then
-    echo "CI evidence gate accepted a missing CodeQL run" >&2
-    exit 1
-fi
+for mode in push manual; do
+    actual="$(
+        PATH="$test_root/bin:$PATH" FAKE_COMMIT="$commit" FAKE_MODE="$mode" \
+            "$required_runs_script" aindaco1/record "$commit"
+    )"
+    if [[ "$actual" != $'42\t2\t51' ]]; then
+        echo "exact-commit CI run selection returned: $actual" >&2
+        exit 1
+    fi
+done
+for mode in missing-codeql skipped-ci skipped-codeql missing-job duplicate-job \
+    failed-job invalid-event invalid-branch invalid-head invalid-attempt; do
+    if PATH="$test_root/bin:$PATH" FAKE_COMMIT="$commit" FAKE_MODE="$mode" \
+        "$required_runs_script" aindaco1/record "$commit" >/dev/null 2>&1; then
+        echo "CI evidence gate accepted invalid evidence: $mode" >&2
+        exit 1
+    fi
+done
 
 echo "release CI provenance tests passed"
