@@ -5,8 +5,9 @@ items remain untouched because Record is a standalone repository and the
 Record owner does not have write access to `digimata/quill`.
 
 This is a historical migration record, not the current roadmap. Later shipped
-behavior and scope decisions are documented in `CHANGELOG.md`, `ROADMAP.md`,
-and the current Record issue-triage snapshot.
+behavior and scope decisions are documented in the [changelog](../../CHANGELOG.md),
+[roadmap](../project/roadmap.md), and
+[live Record tracker](https://github.com/aindaco1/record/issues).
 
 ## Issues
 

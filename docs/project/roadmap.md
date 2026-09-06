@@ -1,43 +1,10 @@
 # Roadmap
 
-Record prioritizes dependable local capture. Shipped work is retained here for
-context; the **Next** and **Parked ideas** sections describe current direction.
-
-## Shipped
-
-### 1.0.3 reliability
-
-- Bounded off-callback microphone and system-audio writers with persistent,
-  content-free per-track health events.
-- Default-input route recovery with debounce, bounded retry, and timeline gaps
-  represented by silence rather than compressed time.
-- Media-aware interrupted-session recovery and byte-preserving quarantine.
-- Reversible high-confidence transcript echo suppression while separate raw
-  microphone and system tracks remain unchanged.
-
-### 1.1.0
-
-- Display, window, application, and region source selection.
-- Pause and resume with lossless segment concatenation.
-- macOS 27 / Xcode 27 compatibility validation without raising the macOS 15
-  deployment target or moving signed releases onto a beta toolchain.
-
-### 1.3.0
-
-- Native-resolution PNG/JPEG screenshots for full display, Apple-selected
-  window/application, and custom area.
-- Immediate save to the shared approved export folder plus independent
-  lossless-PNG clipboard publication.
-- Editable global screenshot shortcuts with conflict reporting and Off states,
-  plus screenshot controls in the unified Settings window and a recording-safe
-  shutter cue.
-- One Settings window for the shared export destination, capture privacy,
-  screenshot options, login behavior, recording names, and transcription.
-
-### 1.3.1
-
-- One-click Parakeet model download and verified atomic installation from
-  Settings through a dedicated, outbound-only sandboxed XPC helper.
+Record prioritizes dependable local capture. This page describes current
+direction and deferred ideas. See the [changelog](../../CHANGELOG.md) and
+[release notes](../releases/) for shipped work. The
+[GitHub tracker](https://github.com/aindaco1/record/issues) holds live issue
+status; versioned issue-triage files are historical planning snapshots.
 
 ## Next
 

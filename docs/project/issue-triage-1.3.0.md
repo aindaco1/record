@@ -2,14 +2,14 @@
 
 Reviewed September 2, 2026 against the shipped
 [`v1.3.0`](https://github.com/aindaco1/record/releases/tag/v1.3.0) source,
-public artifacts, hosted checks, and live GitHub tracker. This is the current
-repository snapshot; older files in this directory are retained as historical
-release-planning records.
+public artifacts, hosted checks, and live GitHub tracker. This is a historical
+1.3.0 snapshot. See the [roadmap](roadmap.md) for current direction and the
+[GitHub tracker](https://github.com/aindaco1/record/issues) for live issue status.
 
-No open issue describes an unimplemented software defect. The four open issues
-track physical-hardware or pre-release-platform acceptance for behavior already
-implemented and deterministically tested. Their live GitHub descriptions remain
-canonical.
+At that review, no open issue described an unimplemented software defect. The
+four open issues tracked physical-hardware or pre-release-platform acceptance
+for behavior already implemented and deterministically tested. The table
+preserves the acceptance still outstanding at that time.
 
 | Issue | Implemented state | Remaining acceptance |
 |---|---|---|

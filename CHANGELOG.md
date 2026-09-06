@@ -6,6 +6,20 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Changed
+
+- Consolidated documentation under `docs/` with a navigation index and user
+  guide, shorter repository overview, and dedicated contributor, support,
+  privacy, security, and roadmap pages. Kept release history, automation
+  instructions, and bundled notices at their existing root paths.
+- Updated the security-support table for 1.4.x, labeled the 1.3.0 issue triage
+  as historical, and aligned current performance acceptance with the shipped
+  30-fps capture profile while retaining 4K60 as a future criterion.
+
+### Removed
+
+- Removed the standalone code of conduct and its documentation links.
+
 ## [1.4.0] - 2026-09-03
 
 ### Changed

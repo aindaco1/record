@@ -8,6 +8,10 @@ to sandboxed helpers: Sparkle checks and installs signed application updates,
 and the Parakeet downloader fetches one pinned GitHub model asset only after an
 explicit user request.
 
+This is the reference for Record's enforceable security invariants. See the
+[security policy](../SECURITY.md) for supported versions and private reporting,
+and the [privacy policy](../PRIVACY.md) for user-facing data handling.
+
 ## Defense in depth
 
 1. Product-source CI rejects common Apple networking frameworks, client APIs,
@@ -34,8 +38,9 @@ explicit user request.
    before writing. The main app independently verifies it again, expands it in
    private temporary storage, and accepts only the pinned per-file manifest
    through the same atomic importer.
-6. Plugin capabilities do not include networking. Future plugin helpers must
-   use the same network-denying sandbox policy.
+6. Plugin capabilities do not include networking. Third-party extensions do
+   not execute inside the capture process. Future plugin helpers must use the
+   same network-denying sandbox policy.
 7. The optional MacWhisper adapter uses Apple's `NSUserUnixTask` mechanism and
    a fixed wrapper in Record's Application Scripts directory. The wrapper
    validates MacWhisper's Developer ID on every run and forwards exact
@@ -63,6 +68,28 @@ only its local existence and loading APIs. This is why the sandbox boundary is
 required in addition to source scanning. Dependency updates must be reviewed
 for new network, telemetry, process-launch, file-access, and model-loading
 behavior before merge.
+
+## Local execution and metadata
+
+Configured completion hooks require absolute executable paths and pass
+arguments directly, never through a shell. See
+[advanced configuration](../configuration.md) for the hook's timing,
+at-most-once claim, and sandbox limitations.
+
+Session metadata and derived artifacts use atomic writes. Recovery, inspection,
+export, recent-video, and Gifski handoff boundaries accept only real,
+non-symlink local media files. Session filenames and speaker defaults use the
+shared contract described in the [architecture guide](../architecture.md).
+
+Application permissions must be explained at the point of use. Do not log
+captured content, transcript text, clipboard contents, credentials, or
+security-scoped bookmark data.
+
+Release workflows use least-privilege permissions, protected environments,
+pinned action commits, Developer ID signing, notarization, signed update
+feeds, checksums, and provenance attestations. The
+[release runbook](../runbooks/release.md) defines preparation and public-asset
+verification.
 
 ## Required capabilities
 
