@@ -29,8 +29,8 @@ required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
-The current release is [Record 1.4.0](https://github.com/aindaco1/record/releases/tag/v1.4.0),
-build 17, published September 3, 2026.
+The current release is [Record 1.4.1](https://github.com/aindaco1/record/releases/tag/v1.4.1),
+build 18, published September 7, 2026.
 
 Record has no Dock icon. Open it from the camera in the menu bar.
 
@@ -80,7 +80,7 @@ security, testing, releases, and historical records. Useful starting points:
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/project/roadmap.md)
 - [Changelog](CHANGELOG.md)
-- [Record 1.4.0 release notes](docs/releases/1.4.0.md)
+- [Record 1.4.1 release notes](docs/releases/1.4.1.md)
 
 ## Provenance and license
 
