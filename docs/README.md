@@ -66,6 +66,8 @@ verification, and installed-app or hardware acceptance remain separate claims.
 
 - [Record 1.4.0 candidate validation](testing/1.4.0-candidate.md): pre-publication
   local evidence and the acceptance still outstanding at that review.
+- [Source selection and pause/recovery review](testing/source-and-recovery-2026-09-07.md):
+  September 7 checks and the live acceptance still outstanding for issues #9 and #26.
 - Issue-triage snapshots: [1.3.0](project/issue-triage-1.3.0.md),
   [1.1.3](project/issue-triage-1.1.3.md), [1.1.0](project/issue-triage-1.1.0.md),
   [1.0.3](project/issue-triage-1.0.3.md), [1.0.2](project/issue-triage-1.0.2.md),

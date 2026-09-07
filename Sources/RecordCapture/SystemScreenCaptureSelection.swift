@@ -80,20 +80,46 @@ public final class SystemScreenCaptureSelection: @unchecked Sendable {
     public let plan: SystemScreenCaptureSelectionPlan
     public let selectedDisplayID: UInt32?
     let contentFilter: SCContentFilter
+    let selectedApplicationProcessIDs: Set<Int32>
 
     public init(contentFilter: SCContentFilter, region: CaptureRect? = nil) throws {
-        let style: CaptureSelectionStyle
+        let reportedStyle: CaptureSelectionStyle
         switch contentFilter.style {
         case .display:
-            style = .display
+            reportedStyle = .display
         case .application:
-            style = .application
+            reportedStyle = .application
         case .window:
-            style = .window
+            reportedStyle = .window
         case .none:
             throw ScreenCaptureAdapterError.invalidSystemSelection
         @unknown default:
             throw ScreenCaptureAdapterError.invalidSystemSelection
+        }
+
+        let includesApplications: Bool?
+        let includesWindows: Bool?
+        if #available(macOS 15.2, *) {
+            includesApplications = !contentFilter.includedApplications.isEmpty
+            includesWindows = !contentFilter.includedWindows.isEmpty
+        } else {
+            includesApplications = nil
+            includesWindows = nil
+        }
+        guard
+            let style = CaptureSelectionScope.resolve(
+                reportedStyle: reportedStyle,
+                includesApplications: includesApplications,
+                includesWindows: includesWindows
+            )
+        else {
+            throw ScreenCaptureAdapterError.captureFailed(
+                CaptureFailure(
+                    code: .sourceUnavailable,
+                    summary:
+                        "this source cannot be safely identified on this macOS version; use Main Display or update macOS"
+                )
+            )
         }
 
         let rect = contentFilter.contentRect
@@ -112,6 +138,24 @@ public final class SystemScreenCaptureSelection: @unchecked Sendable {
             selectedDisplayID = contentFilter.includedDisplays.first?.displayID
         } else {
             selectedDisplayID = nil
+        }
+        if #available(macOS 15.2, *) {
+            switch style {
+            case .application:
+                selectedApplicationProcessIDs = Set(
+                    contentFilter.includedApplications.map(\.processID)
+                )
+            case .window:
+                selectedApplicationProcessIDs = Set(
+                    contentFilter.includedWindows.compactMap { $0.owningApplication?.processID }
+                )
+            case .display:
+                selectedApplicationProcessIDs = []
+            }
+        } else {
+            // Earlier systems do not expose the opaque picker's identities.
+            // Keep relying on SCStream's own source-loss errors there.
+            selectedApplicationProcessIDs = []
         }
         self.contentFilter = contentFilter
     }

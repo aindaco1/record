@@ -44,22 +44,36 @@ flowchart LR
   waits for start to finish, stops exactly once, and releases all outputs.
 - The macOS native stop-sharing control emits a typed stop request so the
   command layer finalizes normally; it is not misclassified as source failure.
+- A scoped `NSWorkspace` observer detects termination of the selected
+  application's processes even when `SCStream` continues delivering audio.
+  `CaptureSourceLifetime` makes the source-unavailable decision once, and the
+  existing failure path stops capture and preserves recoverable media. Process
+  identifiers stay in memory; stop, cancellation, and release remove the
+  observer. Display and region streams do not depend on application lifetimes.
+  See [ADR 0019](../adr/0019-selected-source-lifetime.md).
 - Record uses Apple's shared content picker for display, application, and
   independent-window choice. Only the picker mode is persisted; its opaque
   filter, source identifiers, application names, and window titles remain in
   memory for the pending or active recording.
-- Custom-region recording first selects a display through the system picker,
-  then uses a noncapturing overlay to produce display-local geometry. Area
+- Custom-region recording uses noncapturing overlays on the connected displays;
+  the display where the user drags becomes the source of display-local geometry. Area
   screenshots reuse the overlay, but it orders out before the separate
   one-shot capture. The overlay itself never takes or stores a screenshot.
 - Picker-selected displays are resolved again immediately before capture so
   the existing notification, menu-bar, desktop-item, and own-app exclusion
   policy remains the one canonical display-filter implementation.
+- A display-bound filter can still include only selected applications or
+  windows. `CaptureSelectionScope` checks the public inclusion lists before
+  classifying it as a full display. Narrow filters stay intact in both recording
+  and screenshot resolution; an ambiguous filter is never widened.
 - Still images use `SCScreenshotManager` through the same resolver. Full-display
   and area captures apply the existing notification, menu-bar, and Desktop-item
   privacy policy but include Record's own windows after the noncapturing area
   overlay has ordered out. Explicit application/window capture permits Record
   as a source and includes only the selected content.
+- Area overlays use a screen-local origin during AppKit initialization, then
+  set their exact global display frame. Passing the global origin twice would
+  move an overlay off a secondary display, including left/above arrangements.
 - Full-display and area commands request Screen Recording permission because
   they build direct display filters. Window/application capture goes directly
   through Apple's private picker and relies on its selection-scoped grant.
@@ -86,6 +100,15 @@ failure event rather than repeated logs containing private source details.
 
 ## Current limits
 
+- System-picker application/window lifetime monitoring uses public filter
+  inspection APIs introduced in macOS 15.2. On 15.0–15.1, those opaque selections
+  with an explicit narrow style still rely on `SCStream` source-loss callbacks;
+  ambiguous display-bound selections fail closed because their inclusion lists
+  cannot be inspected. Main Display and direct region recording remain usable.
+  Explicit application/window
+  configurations derive process identities from their existing source inventory
+  on all supported versions. Closing a window without quitting its owner still
+  relies on ScreenCaptureKit; hidden/minimized/off-Space windows are not failures.
 - The menu captures the main display directly or uses the system picker for a
   display, one application, one independent window, or a custom display-local
   region. Every mode uses the bounded sample handoff, common A/V anchor,

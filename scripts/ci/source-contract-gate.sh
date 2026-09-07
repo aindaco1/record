@@ -35,13 +35,15 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/UI/MenuBarRecordingIndicatorView.swift \
     Sources/Record/UI/RecordingMenuPresentation.swift \
     Sources/Record/RecordingNamePreferences.swift \
+    Sources/Record/RegionSelectionController.swift \
     Sources/Record/Transcription/MacWhisperEngine.swift \
     Sources/Record/Transcription/ParakeetModelDownloadClient.swift \
     Sources/Record/Transcription/ParakeetModelInstaller.swift \
     Sources/Record/Transcription/FoundationModelTranscriptAdviser.swift \
     Sources/Record/Transcription/TranscriptionCoordinator.swift \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
-    Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoRecordingSession.swift \
+    Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoCaptureStartupWaiter.swift \
+    Sources/Record/VideoRecordingSession.swift \
     Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests \
     Tests/RecordModelDownloadTests
 git diff --check

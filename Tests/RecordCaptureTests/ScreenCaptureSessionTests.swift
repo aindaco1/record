@@ -1,7 +1,29 @@
 import RecordCapture
+import RecordCore
 import XCTest
 
 final class ScreenCaptureSessionTests: XCTestCase {
+    func testSourceLostBeforeNativeStartKeepsItsClassificationAndCancelsOnce() async throws {
+        let failure = CaptureFailure(
+            code: .sourceUnavailable,
+            summary: "the selected capture source is no longer available"
+        )
+        let driver = SourceUnavailableStartDriver(failure: failure)
+        let session = ScreenCaptureSession(driver: driver)
+
+        do {
+            try await session.start()
+            XCTFail("Expected the unavailable source to prevent capture")
+        } catch ScreenCaptureAdapterError.captureFailed(let actual) {
+            XCTAssertEqual(actual, failure)
+        }
+        let failedState = await session.state
+        XCTAssertEqual(failedState, .failed)
+        try await session.stop()
+        let cancellations = await driver.cancellations
+        XCTAssertEqual(cancellations, 1)
+    }
+
     func testStartAndStopAreIdempotent() async throws {
         let driver = CountingDriver()
         let session = ScreenCaptureSession(driver: driver)
@@ -83,6 +105,25 @@ final class ScreenCaptureSessionTests: XCTestCase {
         try await session.stop()
         let stateAfterCleanup = await session.state
         XCTAssertEqual(stateAfterCleanup, .stopped)
+    }
+}
+
+private actor SourceUnavailableStartDriver: ScreenCaptureStreamDriving {
+    let failure: CaptureFailure
+    private(set) var cancellations = 0
+
+    init(failure: CaptureFailure) {
+        self.failure = failure
+    }
+
+    func startCapture() throws {
+        throw ScreenCaptureAdapterError.captureFailed(failure)
+    }
+
+    func stopCapture() {}
+
+    func cancelCapture() {
+        cancellations += 1
     }
 }
 
