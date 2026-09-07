@@ -1,7 +1,9 @@
 # macOS 27 readiness
 
-Status: reviewed 2026-09-02. Apple currently publishes macOS 27 Golden Gate
-beta 8 and Xcode 27 beta 6. GitHub's `xcode-27` runner remains a public preview.
+Status: reviewed 2026-09-07 against Record 1.4.0 (build 17) and current main.
+[Apple's release index](https://developer.apple.com/news/releases/) still lists
+macOS 27 Golden Gate beta 8 (`26A5425a`) and Xcode 27 beta 6 (`27A5252f`).
+GitHub's `xcode-27` runner remains a public preview.
 This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45).
 
 ## Current findings
@@ -36,6 +38,16 @@ This gate is tracked by [issue #45](https://github.com/aindaco1/record/issues/45
   unnoticed permanent performance regression.
 
 ## Automated preview gate
+
+The latest executed preview job passed on September 6 in
+[run 34064038708](https://github.com/aindaco1/record/actions/runs/34064038708/job/101569553642),
+alongside stable validation and sanitizers. The exact 1.4.0 release source also
+passed the preview job in
+[run 33803709432](https://github.com/aindaco1/record/actions/runs/33803709432/job/100809007875).
+The later [main CI run 34066097161](https://github.com/aindaco1/record/actions/runs/34066097161)
+passed the documentation path and skipped preview, package, and sanitizer jobs;
+it adds no runtime or toolchain evidence. Neither hosted run closes the physical
+macOS 27 acceptance matrix below.
 
 The `xcode-27-compatibility` CI job uses the same `scripts/ci/validate.sh` entry
 point as stable CI, selecting only SwiftPM's build engine through a validated
