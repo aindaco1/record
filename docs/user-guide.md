@@ -46,12 +46,23 @@ Command-Shift-1 and Command-Shift-2.
 Use **Screen source** in the menu to select a display, window, application, or
 custom region for screen recording. The main display is the default.
 
+Application choices remain restricted to the selected application, including
+when macOS describes that choice as display-bound. On macOS 15.0–15.1, Record
+rejects picker results whose scope cannot be verified; use **Main Display** or
+update macOS. The same scope check protects window/application screenshots.
+
 - **Start screen recording** creates a video-only `recording.mov` and writes
   `mic.wav` and `system.wav` independently as uncompressed 24-bit PCM.
 - **Start audio-only recording** writes the same two independent audio tracks
   without capturing the display.
 - Screen recording supports pause and resume. Pausing closes the active media
   segment; resuming continues from the same in-memory source selection.
+  Start and Resume remain in progress until video and the requested audio
+  tracks are ready. A pending quit waits for this transition before saving.
+- If the selected application quits, Record stops capture and retains its media
+  in recovery storage. For system-picker application/window choices, this
+  independent application-exit check requires macOS 15.2 or later; earlier
+  systems rely on ScreenCaptureKit to report source loss.
 - **Open last recording** reveals the newest finished session from private or
   approved export storage. Record derives this from `session.json` and keeps
   no separate activity database.

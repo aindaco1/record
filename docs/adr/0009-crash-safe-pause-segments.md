@@ -42,3 +42,15 @@ and journaled segment tracks, including recognized hidden partials.
   of segments, but does not spend CPU/GPU time decoding and encoding media.
 - Signed-app testing must still exercise source loss, forced quit, and repeated
   rotations with real ScreenCaptureKit/TCC behavior.
+
+## September 2026 startup readiness refinement
+
+A live quit during Resume showed that `SCStream.startCapture()` can return
+before each requested writer has accepted its first sample. Immediately stopping
+then failed the resumed segment for missing media, despite a valid earlier
+segment. Start and Resume now wait for the existing bounded sink's processed
+sample counters to cover all required tracks. A pure `RecordCore` policy defines
+readiness; the app waits outside capture callbacks and the media worker, polling
+at ten milliseconds for up to five seconds. The existing serialized Stop then
+finalizes a segment with every requested track. Cancellation and missing-track
+failure still flow through capture cleanup and preserve completed raw media.

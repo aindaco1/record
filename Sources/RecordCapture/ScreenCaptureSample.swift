@@ -107,6 +107,9 @@ public enum ScreenCaptureFailureMapper {
     }
 
     public static func failure(for error: Error) -> CaptureFailure {
+        if case .captureFailed(let failure) = error as? ScreenCaptureAdapterError {
+            return failure
+        }
         let nsError = error as NSError
         guard nsError.domain == SCStreamErrorDomain,
             let code = SCStreamError.Code(rawValue: nsError.code)

@@ -9,33 +9,63 @@ struct ResolvedScreenshotContent: @unchecked Sendable {
     let style: CaptureSelectionStyle
 }
 
+struct ResolvedScreenCaptureContent: @unchecked Sendable {
+    let filter: SCContentFilter
+    let selectedApplicationProcessIDs: Set<Int32>
+}
+
 enum ScreenCaptureContentResolver {
-    static func filter(for configuration: CaptureConfiguration) async throws -> SCContentFilter {
+    static func recordingContent(
+        for configuration: CaptureConfiguration
+    ) async throws -> ResolvedScreenCaptureContent {
         let content = try await shareableContent()
         let inventory = inventory(from: content)
         try inventory.resolve(configuration.source)
-        return try filter(for: configuration, in: content)
+        let processIDs: Set<Int32>
+        switch configuration.source {
+        case .application(let bundleIdentifier, _):
+            processIDs = Set(
+                content.applications.filter {
+                    $0.bundleIdentifier == bundleIdentifier
+                }.map(\.processID))
+        case .window(let id):
+            processIDs = Set(
+                content.windows.filter { $0.windowID == id }
+                    .compactMap { $0.owningApplication?.processID })
+        case .display, .region, .systemSelection, .systemRegion:
+            processIDs = []
+        }
+        return ResolvedScreenCaptureContent(
+            filter: try filter(for: configuration, in: content),
+            selectedApplicationProcessIDs: processIDs
+        )
     }
 
-    static func filter(
+    static func recordingContent(
         for selection: SystemScreenCaptureSelection,
         configuration: CaptureConfiguration
-    ) async throws -> SCContentFilter {
+    ) async throws -> ResolvedScreenCaptureContent {
         guard configuration.source == selection.plan.source,
             configuration.outputSize == selection.plan.outputSize
         else {
             throw ScreenCaptureAdapterError.systemSelectionMismatch
         }
         guard selection.plan.style == .display else {
-            return selection.contentFilter
+            return ResolvedScreenCaptureContent(
+                filter: selection.contentFilter,
+                selectedApplicationProcessIDs: selection.selectedApplicationProcessIDs
+            )
         }
 
         let content = try await shareableContent()
         let display = try selectedDisplay(for: selection, in: content, source: configuration.source)
-        return displayFilter(
-            display: display,
-            privacy: configuration.privacy,
-            content: content
+        return ResolvedScreenCaptureContent(
+            filter: displayFilter(
+                display: display,
+                privacy: configuration.privacy,
+                content: content
+            ),
+            selectedApplicationProcessIDs: []
         )
     }
 

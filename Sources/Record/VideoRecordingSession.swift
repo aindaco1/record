@@ -123,7 +123,12 @@ struct ScreenCaptureVideoPipelineBuilder: VideoCapturePipelineBuilding {
                 onEvent: onEvent
             )
         }
-        return ScreenCaptureVideoPipeline(capture: capture, sink: sink, writer: writer)
+        return ScreenCaptureVideoPipeline(
+            capture: capture,
+            sink: sink,
+            writer: writer,
+            readiness: CaptureStartupReadiness(audio: configuration.audio)
+        )
     }
 }
 
@@ -170,20 +175,31 @@ private actor ScreenCaptureVideoPipeline: VideoCapturePipeline {
     private let capture: ScreenCaptureSession
     private let sink: BoundedScreenCaptureSink
     private let writer: AVAssetSegmentWriter
+    private let readiness: CaptureStartupReadiness
     private var stopped: VideoCapturePipelineStopResult?
 
     init(
         capture: ScreenCaptureSession,
         sink: BoundedScreenCaptureSink,
-        writer: AVAssetSegmentWriter
+        writer: AVAssetSegmentWriter,
+        readiness: CaptureStartupReadiness
     ) {
         self.capture = capture
         self.sink = sink
         self.writer = writer
+        self.readiness = readiness
     }
 
     func start() async throws {
         try await capture.start()
+        try await VideoCaptureStartupWaiter.wait(isReady: { [sink, readiness] in
+            let snapshot = sink.snapshot()
+            let processedTracks = Set(
+                ScreenCaptureSampleKind.allCases.filter { snapshot[$0].processed > 0 }
+                    .map(\.manifestTrackKind)
+            )
+            return readiness.isReady(processedTracks: processedTracks)
+        })
     }
 
     func stop() async -> VideoCapturePipelineStopResult {

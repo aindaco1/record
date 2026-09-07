@@ -17,11 +17,12 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void = { _ in }
     ) async throws -> ScreenCaptureSession {
         do {
-            let filter = try await ScreenCaptureContentResolver.filter(for: configuration)
-            return try Self.makeSession(
+            let content = try await ScreenCaptureContentResolver.recordingContent(
+                for: configuration)
+            return try await Self.makeSession(
                 configuration: configuration,
                 queueDepth: queueDepth,
-                filter: filter,
+                content: content,
                 sink: sink,
                 onEvent: onEvent
             )
@@ -43,14 +44,14 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void = { _ in }
     ) async throws -> ScreenCaptureSession {
         do {
-            let filter = try await ScreenCaptureContentResolver.filter(
+            let content = try await ScreenCaptureContentResolver.recordingContent(
                 for: selection,
                 configuration: configuration
             )
-            return try Self.makeSession(
+            return try await Self.makeSession(
                 configuration: configuration,
                 queueDepth: queueDepth,
-                filter: filter,
+                content: content,
                 sink: sink,
                 onEvent: onEvent
             )
@@ -66,10 +67,10 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
     private static func makeSession(
         configuration: CaptureConfiguration,
         queueDepth: Int,
-        filter: SCContentFilter,
+        content: ResolvedScreenCaptureContent,
         sink: any ScreenCaptureSampleSink,
         onEvent: @escaping @Sendable (ScreenCaptureEvent) -> Void
-    ) throws -> ScreenCaptureSession {
+    ) async throws -> ScreenCaptureSession {
         let plan = try ScreenCaptureStreamPlan(
             configuration: configuration,
             queueDepth: queueDepth
@@ -79,7 +80,7 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
         }
         let delegate = ScreenCaptureStreamDelegate(onEvent: onEvent)
         let stream = SCStream(
-            filter: filter,
+            filter: content.filter,
             configuration: plan.makeStreamConfiguration(),
             delegate: delegate
         )
@@ -108,12 +109,17 @@ public struct ScreenCaptureKitStreamBuilder: Sendable {
             outputTypes.append(.microphone)
         }
 
+        let sourceLifetime = await ScreenCaptureSourceLifetimeMonitor(
+            processIDs: content.selectedApplicationProcessIDs,
+            onFailure: { onEvent(.failed($0)) }
+        )
         let driver = ScreenCaptureKitStreamDriver(
             stream: stream,
             router: router,
             delegate: delegate,
             queues: queues,
-            outputTypes: outputTypes
+            outputTypes: outputTypes,
+            sourceLifetime: sourceLifetime
         )
         return ScreenCaptureSession(driver: driver)
     }
@@ -128,31 +134,37 @@ private final class ScreenCaptureKitStreamDriver: ScreenCaptureStreamDriving,
     private let delegate: ScreenCaptureStreamDelegate
     private let queues: ScreenCaptureCallbackQueues
     private let outputTypes: [SCStreamOutputType]
+    private let sourceLifetime: ScreenCaptureSourceLifetimeMonitor
 
     init(
         stream: SCStream,
         router: ScreenCaptureOutputRouter,
         delegate: ScreenCaptureStreamDelegate,
         queues: ScreenCaptureCallbackQueues,
-        outputTypes: [SCStreamOutputType]
+        outputTypes: [SCStreamOutputType],
+        sourceLifetime: ScreenCaptureSourceLifetimeMonitor
     ) {
         self.stream = stream
         self.router = router
         self.delegate = delegate
         self.queues = queues
         self.outputTypes = outputTypes
+        self.sourceLifetime = sourceLifetime
     }
 
     func startCapture() async throws {
+        try await sourceLifetime.start()
         try await stream.startCapture()
     }
 
     func stopCapture() async throws {
+        await sourceLifetime.stop()
         try await stream.stopCapture()
         removeOutputs()
     }
 
-    func cancelCapture() {
+    func cancelCapture() async {
+        await sourceLifetime.stop()
         removeOutputs()
     }
 

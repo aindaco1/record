@@ -6,6 +6,26 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-07
+
+### Fixed
+
+- Position area-selection overlays correctly on secondary displays, including
+  displays with negative or vertically offset origins. The shared overlay fix
+  applies to region recordings and area screenshots.
+- Preserve application-only capture when macOS reports the picker result as
+  display-bound, preventing unrelated windows from appearing in application
+  recordings or screenshots. On macOS 15.0–15.1, ambiguous picker results fail
+  closed; **Main Display** recording remains available.
+- Stop application/window recording with a recoverable source-unavailable
+  failure when the selected application exits, even if ScreenCaptureKit keeps
+  its audio stream alive. System-picker selections support this additional
+  lifetime check on macOS 15.2 and later.
+- Wait for every requested media writer's first accepted sample before
+  completing Start or Resume, so a pending Stop can finalize the new segment
+  instead of failing on an empty audio/video track. Missing tracks fail startup
+  within five seconds and retain existing recovery media.
+
 ### Changed
 
 - Added lightweight local and hosted validation for documentation-only changes,

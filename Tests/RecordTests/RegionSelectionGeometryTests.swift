@@ -1,8 +1,23 @@
-import CoreGraphics
+import AppKit
 @testable import Record
 import XCTest
 
 final class RegionSelectionGeometryTests: XCTestCase {
+    @MainActor
+    func testOverlayCoversTheExactGlobalFrameWithoutAddingTheDisplayOriginAgain() {
+        for frame in [
+            CGRect(x: 1728, y: 397, width: 1280, height: 720),
+            CGRect(x: -1280, y: 0, width: 1280, height: 720),
+            CGRect(x: 0, y: 1117, width: 1280, height: 720),
+        ] {
+            let panel = RegionSelectionPanel(covering: frame, on: NSScreen.screens.first)
+            XCTAssertEqual(panel.frame, frame)
+            XCTAssertEqual(panel.contentView?.bounds.size, frame.size)
+            XCTAssertFalse(panel.hidesOnDeactivate)
+            XCTAssertFalse(panel.isMovable)
+        }
+    }
+
     func testConvertsAppKitBottomLeftCoordinatesToDisplayLocalTopLeftCoordinates() throws {
         let rect = try RegionSelectionGeometry.captureRect(
             from: CGRect(x: 100, y: 200, width: 800, height: 400),

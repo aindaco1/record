@@ -96,13 +96,9 @@ final class RegionSelectionController {
                     }
 
                     let panel = RegionSelectionPanel(
-                        contentRect: display.screen.frame,
-                        styleMask: [.borderless],
-                        backing: .buffered,
-                        defer: false,
-                        screen: display.screen
+                        covering: display.screen.frame,
+                        on: display.screen
                     )
-                    panel.configureForRegionSelection()
                     panel.contentView = view
                     overlays.append((panel, view))
                 }
@@ -159,6 +155,21 @@ final class RegionSelectionController {
 final class RegionSelectionPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
+    convenience init(covering frame: CGRect, on screen: NSScreen? = nil) {
+        // This initializer's origin is relative to `screen`, unlike NSScreen's
+        // global frame. Adding that global origin here would displace a
+        // secondary display's overlay a second time.
+        self.init(
+            contentRect: .init(origin: .zero, size: frame.size),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false,
+            screen: screen
+        )
+        configureForRegionSelection()
+        setFrame(frame, display: false)
+    }
 
     func configureForRegionSelection() {
         level = .screenSaver
