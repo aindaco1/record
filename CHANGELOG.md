@@ -6,6 +6,14 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-09-15
+
+### Fixed
+
+- Keep queued transcription and retry jobs authorized to read and write their
+  original recording folder when the Save to preference changes. Finished
+  audio remains intact, and changing folders no longer interrupts transcription.
+
 ## [1.4.2] - 2026-09-15
 
 ### Changed

@@ -276,7 +276,7 @@ final class AppController {
         restoreExportFolderAccess()
         refreshScreenshotPreferences()
         refreshRecentRecordingMenu()
-        let restoredExportRoot = exportDirectoryLease?.url
+        let restoredExportLease = exportDirectoryLease
 
         Task { [transcription, root, self] in
             await transcription.setStatusHandler { [weak controller = self] status in
@@ -285,10 +285,11 @@ final class AppController {
                 }
             }
             await transcription.resumePending(root: root)
-            if let restoredExportRoot {
+            if let restoredExportLease {
                 await transcription.resumePending(
-                    root: restoredExportRoot,
-                    recoverInterrupted: false
+                    root: restoredExportLease.url,
+                    recoverInterrupted: false,
+                    retaining: restoredExportLease
                 )
             }
             refreshRecentRecordingMenu()
@@ -926,7 +927,7 @@ final class AppController {
                 mode: mode,
                 originalVideoURL: originalVideoURL,
                 originalSessionDirectory: sessionDirectory,
-                exportRoot: exportRoot
+                exportDirectoryLease: exportDirectoryLease
             )
         }
     }
@@ -936,8 +937,9 @@ final class AppController {
         mode: RecordingMode,
         originalVideoURL: URL?,
         originalSessionDirectory: URL,
-        exportRoot: URL
+        exportDirectoryLease: ExportDirectoryLease
     ) {
+        let exportRoot = exportDirectoryLease.url
         sessionPublishTask = nil
         menuBar.update(recording: false, elapsed: nil)
 
@@ -979,7 +981,9 @@ final class AppController {
         setLastFinishedRecordingDirectory(publishedDirectory)
         refreshGifskiMenu()
         refreshRecentRecordingMenu()
-        Task { [transcription] in await transcription.enqueue(publishedDirectory) }
+        Task { [transcription] in
+            await transcription.enqueue(publishedDirectory, retaining: exportDirectoryLease)
+        }
         terminateIfRequested()
     }
 
@@ -1751,7 +1755,8 @@ final class AppController {
             Task { [transcription] in
                 await transcription.resumePending(
                     root: selection.url,
-                    recoverInterrupted: false
+                    recoverInterrupted: false,
+                    retaining: selection
                 )
             }
         } catch {

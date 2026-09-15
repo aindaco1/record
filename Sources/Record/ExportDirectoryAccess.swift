@@ -123,7 +123,7 @@ final class ExportDirectoryAccess {
 }
 
 /// Keeps one security-scoped directory grant balanced for its full lifetime.
-final class ExportDirectoryLease {
+final class ExportDirectoryLease: Sendable {
     let url: URL
 
     private let stopAccessOnRelease: Bool

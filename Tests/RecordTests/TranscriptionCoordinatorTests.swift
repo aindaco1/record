@@ -106,7 +106,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         state.recordFailure(in: latest)
 
         XCTAssertEqual(state.failedDirectory, latest.standardizedFileURL)
-        XCTAssertEqual(state.takeFailure(), latest.standardizedFileURL)
+        XCTAssertEqual(state.takeFailure()?.directory, latest.standardizedFileURL)
         XCTAssertNil(state.takeFailure())
     }
 
@@ -117,6 +117,44 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         state.clear()
 
         XCTAssertNil(state.failedDirectory)
+    }
+
+    func testRetryKeepsOriginalFolderAccessAfterThePreferenceChanges() {
+        let directory = URL(fileURLWithPath: "/tmp/record-retry/original/session")
+        var selectedLease: ExportDirectoryLease? = ExportDirectoryLease(
+            url: directory.deletingLastPathComponent(), stopAccessOnRelease: false
+        )
+        weak var originalAccess = selectedLease
+        var state = TranscriptionRetryState()
+        state.recordFailure(in: directory, retaining: selectedLease)
+
+        selectedLease = ExportDirectoryLease(
+            url: URL(fileURLWithPath: "/tmp/record-retry/new"), stopAccessOnRelease: false
+        )
+        XCTAssertNotNil(originalAccess)
+        var retry = state.takeFailure()
+        XCTAssertEqual(retry?.directory, directory)
+        XCTAssertTrue(retry?.directoryLease === originalAccess)
+        XCTAssertNil(state.failedDirectory)
+        XCTAssertNotNil(originalAccess)
+        retry = nil
+        XCTAssertNil(originalAccess)
+    }
+
+    func testReplacingOrClearingAFailureReleasesItsFolderAccess() {
+        var access: ExportDirectoryLease? = ExportDirectoryLease(
+            url: URL(fileURLWithPath: "/tmp/record-retry/original"), stopAccessOnRelease: false
+        )
+        weak var originalAccess = access
+        var state = TranscriptionRetryState()
+        state.recordFailure(in: access!.url.appendingPathComponent("session"), retaining: access)
+        access = nil
+        XCTAssertNotNil(originalAccess)
+
+        state.recordFailure(in: URL(fileURLWithPath: "/tmp/record-private/session"))
+        XCTAssertNil(originalAccess)
+        state.clear()
+        XCTAssertNil(state.takeFailure())
     }
 
     func testCompletionHookClaimIsAtMostOnceAcrossRecoveryAttempts() throws {
