@@ -2,20 +2,31 @@ import Darwin
 import Foundation
 import RecordCore
 
-struct TranscriptionRetryState: Equatable, Sendable {
-    private(set) var failedDirectory: URL?
+struct PendingTranscription: Sendable {
+    let directory: URL
+    let directoryLease: ExportDirectoryLease?
 
-    mutating func recordFailure(in directory: URL) {
-        failedDirectory = directory.standardizedFileURL
+    init(directory: URL, retaining directoryLease: ExportDirectoryLease? = nil) {
+        self.directory = directory.standardizedFileURL
+        self.directoryLease = directoryLease
+    }
+}
+
+struct TranscriptionRetryState: Sendable {
+    private var failedJob: PendingTranscription?
+    var failedDirectory: URL? { failedJob?.directory }
+
+    mutating func recordFailure(
+        in directory: URL, retaining directoryLease: ExportDirectoryLease? = nil
+    ) {
+        failedJob = PendingTranscription(directory: directory, retaining: directoryLease)
     }
 
-    mutating func clear() {
-        failedDirectory = nil
-    }
+    mutating func clear() { failedJob = nil }
 
-    mutating func takeFailure() -> URL? {
-        defer { failedDirectory = nil }
-        return failedDirectory
+    mutating func takeFailure() -> PendingTranscription? {
+        defer { clear() }
+        return failedJob
     }
 }
 
@@ -38,7 +49,7 @@ actor TranscriptionCoordinator {
         case failed(session: String)
     }
 
-    private var queue: [URL] = []
+    private var queue: [PendingTranscription] = []
     private var draining = false
     private var engine: TranscriptionEngine?
     private var engineSelection: TranscriptionSelection?
@@ -62,12 +73,12 @@ actor TranscriptionCoordinator {
 
     /// Queue a finished session. With transcription disabled in config, the
     /// completion hook still fires — it just gets an untranscribed folder.
-    func enqueue(_ sessionDir: URL) {
+    func enqueue(_ sessionDir: URL, retaining directoryLease: ExportDirectoryLease? = nil) {
         guard Config.transcriptionEnabled() else {
             runHook(for: sessionDir)
             return
         }
-        appendIfNeeded(sessionDir)
+        appendIfNeeded(sessionDir, retaining: directoryLease)
         drainIfIdle()
     }
 
@@ -75,16 +86,19 @@ actor TranscriptionCoordinator {
     /// touching the recording. Returns false when there is nothing to retry.
     @discardableResult
     func retryLastFailure() -> Bool {
-        guard Config.transcriptionEnabled(), let failedDirectory = retryState.takeFailure()
+        guard Config.transcriptionEnabled(), let failedJob = retryState.takeFailure()
         else { return false }
-        appendIfNeeded(failedDirectory)
+        appendIfNeeded(failedJob.directory, retaining: failedJob.directoryLease)
         drainIfIdle()
         return true
     }
 
     /// Scan the recordings root for finalized sessions that were never
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
-    func resumePending(root: URL, recoverInterrupted: Bool = true) {
+    func resumePending(
+        root: URL, recoverInterrupted: Bool = true,
+        retaining directoryLease: ExportDirectoryLease? = nil
+    ) {
         if recoverInterrupted {
             let recovery = SessionRecovery.recover(
                 in: root,
@@ -116,7 +130,7 @@ actor TranscriptionCoordinator {
         guard Config.transcriptionEnabled() else { return }
         let pending = Self.pendingSessionDirectories(root: root)
         for dir in pending {
-            appendIfNeeded(dir)
+            appendIfNeeded(dir, retaining: directoryLease)
         }
         if !pending.isEmpty {
             FileHandle.standardError.write(
@@ -205,15 +219,21 @@ actor TranscriptionCoordinator {
         Task { await drain() }
     }
 
-    private func appendIfNeeded(_ directory: URL) {
+    private func appendIfNeeded(
+        _ directory: URL, retaining directoryLease: ExportDirectoryLease? = nil
+    ) {
         let directory = directory.standardizedFileURL
-        guard !queue.contains(directory) else { return }
-        queue.append(directory)
+        guard !queue.contains(where: { $0.directory == directory }) else { return }
+        queue.append(PendingTranscription(directory: directory, retaining: directoryLease))
     }
 
     private func drain() async {
         while !queue.isEmpty {
-            let dir = queue.removeFirst()
+            let job = queue.removeFirst()
+            let dir = job.directory
+            // A new export preference must not revoke access while this job
+            // awaits speech processing, writes its result, or records failure.
+            defer { withExtendedLifetime(job.directoryLease) {} }
             publish(.transcribing(session: dir.lastPathComponent, queued: queue.count))
             do {
                 try await transcribe(dir)
@@ -227,7 +247,7 @@ actor TranscriptionCoordinator {
                 runHook(for: dir)
             } catch {
                 log(dir, "transcription failed: \(error)")
-                retryState.recordFailure(in: dir)
+                retryState.recordFailure(in: dir, retaining: job.directoryLease)
                 notificationHandler(
                     RecordNotification(
                         title: "Transcription couldn’t finish",
