@@ -6,6 +6,18 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-15
+
+### Changed
+
+- Update the local Parakeet runtime to FluidAudio 0.15.7. Validate real signed
+  recording, independent audio tracks, repeated pause/resume and inactive-app
+  transcription on an Apple Silicon Mac running macOS 27.
+- Keep Swift Build packaging working under Xcode 27 / Swift 6.4 and restore
+  pinned release package tools before signed-feed generation.
+- Update reviewed GitHub Actions pins while preserving the complete release
+  and security gates.
+
 ## [1.4.1] - 2026-09-07
 
 ### Fixed
