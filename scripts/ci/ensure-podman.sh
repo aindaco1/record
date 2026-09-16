@@ -29,7 +29,7 @@ if ! launchctl print "$launch_agent_target" >/dev/null 2>&1; then
     exit 1
 fi
 
-launchctl kickstart -k "$launch_agent_target"
+launchctl kickstart "$launch_agent_target"
 for ((attempt = 0; attempt < 12; attempt++)); do
     if "$podman_cli" info >/dev/null 2>&1; then
         printf '%s\n' "$podman_cli"
