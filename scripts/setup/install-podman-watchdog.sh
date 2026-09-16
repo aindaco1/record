@@ -35,7 +35,8 @@ trap cleanup EXIT
 /usr/bin/plutil -insert StartInterval -integer 300 "$temporary_plist"
 /usr/bin/plutil -insert ThrottleInterval -integer 30 "$temporary_plist"
 /usr/bin/plutil -insert AbandonProcessGroup -bool true "$temporary_plist"
-/usr/bin/plutil -insert ProcessType -string Background "$temporary_plist"
+# VM networking and interactive project servers must not inherit background throttling.
+/usr/bin/plutil -insert ProcessType -string Interactive "$temporary_plist"
 /usr/bin/plutil -insert EnvironmentVariables -dictionary "$temporary_plist"
 if [[ -n "$machine_name" ]]; then
     /usr/bin/plutil -insert EnvironmentVariables.RECORD_PODMAN_MACHINE_NAME \

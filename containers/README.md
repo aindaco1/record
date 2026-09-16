@@ -28,6 +28,10 @@ gate:
 
 The user-level launchd service starts the selected shared machine at login and
 checks every five minutes. It keeps VM helper processes alive after startup.
+The service uses `ProcessType=Interactive` because the VM and its network helper
+serve interactive development apps and inherit their launch policy; background
+CPU/I/O throttling is inappropriate for this shared engine. See Apple's
+[launchd process classifications](https://github.com/apple-oss-distributions/launchd/blob/main/man/launchd.plist.5).
 Concurrent gate requests use `launchctl kickstart` without `-k`; launchd
 serializes them instead of interrupting a start already in progress.
 
