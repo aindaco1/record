@@ -55,7 +55,7 @@ cp "$repo_root/scripts/lib/podman-cli.sh" "$watchdog_dir/podman-cli.sh"
 printf '%s\n' \
     '#!/bin/bash' \
     'printf "%s\n" "$*" >> "$RECORD_PODMAN_CALL_LOG"' \
-    '[[ "$*" == "--connection test-machine info" ]]' \
+    '[[ "$*" == "info" ]]' \
     > "$watchdog_cli"
 chmod +x "$watchdog_dir/watchdog.sh" "$watchdog_cli"
 
@@ -63,7 +63,57 @@ RECORD_PODMAN_CALL_LOG="$watchdog_calls" \
     RECORD_PODMAN_CLI="$watchdog_cli" \
     RECORD_PODMAN_MACHINE_NAME=test-machine \
     "$watchdog_dir/watchdog.sh"
-[[ "$(cat "$watchdog_calls")" == "--connection test-machine info" ]] \
+[[ "$(cat "$watchdog_calls")" == "info" ]] \
     || fail "watchdog did not health-check its managed connection"
 
 echo "Podman CLI selection tests passed"
+
+# A transient API failure must never stop an active machine, or start a second.
+cat > "$watchdog_cli" <<'FAKE'
+#!/bin/bash
+printf '%s\n' "$*" >> "$RECORD_PODMAN_CALL_LOG"
+case "$*" in
+  info) exit 1 ;;
+  'machine list --format {{.Name}} {{.Running}} {{.Starting}}')
+    echo 'other-project* true false' ;;
+  *) echo 'unexpected machine mutation' >&2; exit 99 ;;
+esac
+FAKE
+: > "$watchdog_calls"
+if RECORD_PODMAN_CALL_LOG="$watchdog_calls" RECORD_PODMAN_CLI="$watchdog_cli" \
+    "$watchdog_dir/watchdog.sh" > "$watchdog_dir/output" 2>&1; then
+    fail "unreachable active machine should report failure"
+fi
+[[ "$(wc -l < "$watchdog_calls" | tr -d ' ')" == 2 ]] \
+    || fail "watchdog attempted recovery while another machine was active"
+grep -q 'leaving all workloads intact' "$watchdog_dir/output" \
+    || fail "missing non-disruptive diagnostic"
+
+# Operator maintenance must suppress even health probes and startup.
+touch "$watchdog_dir/podman-maintenance"
+: > "$watchdog_calls"
+RECORD_PODMAN_CALL_LOG="$watchdog_calls" RECORD_PODMAN_CLI="$watchdog_cli" \
+    "$watchdog_dir/watchdog.sh"
+[[ ! -s "$watchdog_calls" ]] || fail "watchdog ignored maintenance mode"
+rm "$watchdog_dir/podman-maintenance"
+
+# With no active VM, the selected default is the only allowed startup target.
+cat > "$watchdog_cli" <<'FAKE'
+#!/bin/bash
+printf '%s\n' "$*" >> "$RECORD_PODMAN_CALL_LOG"
+case "$*" in
+  info) [[ -f "$RECORD_PODMAN_CALL_LOG.started" ]] ;;
+  'machine list --format {{.Name}} {{.Running}} {{.Starting}}') echo 'shared* false false' ;;
+  'system connection list --format {{if .Default}}{{.Name}}{{end}}') echo shared ;;
+  'machine inspect shared') exit 0 ;;
+  'machine inspect shared --format {{.State}}') echo stopped ;;
+  'machine start shared') touch "$RECORD_PODMAN_CALL_LOG.started" ;;
+  *) echo 'unexpected machine mutation' >&2; exit 99 ;;
+esac
+FAKE
+: > "$watchdog_calls"
+RECORD_PODMAN_CALL_LOG="$watchdog_calls" RECORD_PODMAN_CLI="$watchdog_cli" \
+    "$watchdog_dir/watchdog.sh" > "$watchdog_dir/output"
+grep -q '^machine start shared$' "$watchdog_calls" || fail "did not start selected machine"
+! grep -Eq '^machine (stop|rm|reset)' "$watchdog_calls" || fail "destructive recovery"
+echo "Shared-machine watchdog tests passed"

@@ -26,23 +26,41 @@ gate:
 ./scripts/setup/install-podman-watchdog.sh
 ```
 
-The watchdog starts the existing Podman machine at login and checks it every
-five minutes. It deliberately runs through launchd with an abandoned process
-group so the VM and `gvproxy` survive the one-shot start command. The local
-gate and watchdog use the active `podman` on `PATH`, then the Homebrew and
-package-installer locations as fallbacks, so one installation owns both the VM
-and its helper processes. Set `RECORD_PODMAN_CLI` to an absolute executable
-path only when an explicit override is required. Recovery never resets
-machines or prunes images, containers, or volumes.
+The user-level launchd service starts the selected shared machine at login and
+checks every five minutes. It keeps VM helper processes alive after startup.
+The service uses `ProcessType=Interactive` because the VM and its network helper
+serve interactive development apps and inherit their launch policy; background
+CPU/I/O throttling is inappropriate for this shared engine. See Apple's
+[launchd process classifications](https://github.com/apple-oss-distributions/launchd/blob/main/man/launchd.plist.5).
+Concurrent gate requests use `launchctl kickstart` without `-k`; launchd
+serializes them instead of interrupting a start already in progress.
 
-The installer defaults to `podman-machine-default` with Libkrun. To dedicate a
-separate AppleHV machine to the gate, initialize it first, then install the
-watchdog with matching settings:
+The watchdog first checks Podman's selected engine. If a VM is already active
+but the API fails, it reports the problem and leaves every workload intact. It
+never restarts, resets, removes, or prunes a VM. If all VMs are stopped, it starts
+the machine matching the default connection. Select that once with
+`podman system connection default <name>`. An explicit
+`RECORD_PODMAN_MACHINE_NAME` remains an optional fallback override; the watchdog
+never changes providers or stops a different active machine.
+
+The installer pins the absolute Podman executable selected from PATH (Homebrew
+then the package installer are fallbacks). `RECORD_PODMAN_CLI` can select an
+explicit executable. Use the same installation for projects and the host
+service, and keep the host/VM major and minor versions aligned with an in-place
+`podman machine os apply` update during an idle maintenance window.
+
+To pause automatic startup for maintenance or an intentional shutdown:
 
 ```sh
-CONTAINERS_MACHINE_PROVIDER=applehv podman machine init record-release-gate
-RECORD_PODMAN_MACHINE_NAME=record-release-gate \
-  RECORD_PODMAN_MACHINE_PROVIDER=applehv \
-  ./scripts/setup/install-podman-watchdog.sh
-podman system connection default record-release-gate
+touch "$HOME/Library/Application Support/RecordDevelopment/podman-maintenance"
 ```
+
+Remove that marker after maintenance and kickstart the service to resume.
+Before stopping the VM, inspect `podman ps` across the shared engine. Pool,
+Store, Record's ephemeral lint containers, and ASCII VJ Remix can share it;
+project launchers must manage only their own containers and use distinct host
+ports. No VM reset or storage prune is part of routine recovery.
+
+Run `./scripts/ci/test-podman-cli.sh` for selection, safe failure, maintenance,
+and stopped-machine startup regressions. Re-run the installer after changing
+watchdog source; installed copies do not update themselves.
