@@ -6,11 +6,13 @@ versions. GitHub has deployed the released Xcode toolchain, but still labels
 its `xcode-27` runner image as **public preview**. Apple toolchain availability
 and GitHub runner GA are separate requirements.
 
-[Issue #80](https://github.com/aindaco1/record/issues/80) owns hosted toolchain
-promotion. [Issue #81](https://github.com/aindaco1/record/issues/81) owns remaining
-signed-app runtime acceptance. The five existing route, Desktop Spaces and
-permission-revocation outcomes remain in
-[issue #6](https://github.com/aindaco1/record/issues/6). The closed
+[Issue #80](https://github.com/aindaco1/record/issues/80) owns authoritative
+toolchain and release promotion. [Issue #6](https://github.com/aindaco1/record/issues/6)
+is the single tracker for signed-app hardware and manual runtime acceptance.
+It retains its five route, Desktop Spaces and permission-revocation outcomes
+and all seven macOS 27 criteria transferred from
+[issue #81](https://github.com/aindaco1/record/issues/81). Issue #81 is superseded;
+consolidation does not establish any additional passing result. The closed
 [issue #45 audit](https://github.com/aindaco1/record/issues/45#issuecomment-5683144299)
 retains the September 15 release evidence with its original scope.
 
