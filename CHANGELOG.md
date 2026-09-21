@@ -6,11 +6,19 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-09-21
+
 ### Changed
 
+- Update the reviewed Sparkle updater to 2.10.0, including its macOS 27
+  installer and file-handling improvements. Keep signed update feeds,
+  notarization, stable privacy identity, and the no-network main app.
 - Run the complete advisory Xcode 27 compatibility gate with Swift Build after
   the hosted default-engine suite passed. Keep Xcode 26.3 authoritative until
   runner GA and signed-release promotion checks are complete.
+- Update the CodeQL action to 4.38.1 and preserve shared Podman workloads
+  during local watchdog recovery. Consolidate outstanding manual acceptance
+  in the existing hardware tracker.
 
 ## [1.4.3] - 2026-09-15
 
@@ -442,7 +450,11 @@ All notable changes to Record are documented here. Record follows
 - Offline model enforcement and fail-closed validation for optional external
   tools.
 
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/aindaco1/record/compare/v1.4.4...HEAD
+[1.4.4]: https://github.com/aindaco1/record/compare/v1.4.3...v1.4.4
+[1.4.3]: https://github.com/aindaco1/record/compare/v1.4.2...v1.4.3
+[1.4.2]: https://github.com/aindaco1/record/compare/v1.4.1...v1.4.2
+[1.4.1]: https://github.com/aindaco1/record/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/aindaco1/record/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/aindaco1/record/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/aindaco1/record/compare/v1.3.0...v1.3.1

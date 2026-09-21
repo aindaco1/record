@@ -55,7 +55,7 @@ unless a procedure says otherwise.
   handling and recovery.
 - [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
 - [Release notes](releases/): user-facing notes for each published version,
-  including [Record 1.4.1](releases/1.4.1.md).
+  including [Record 1.4.4](releases/1.4.4.md).
 
 ## Historical records
 
