@@ -230,9 +230,9 @@ Never paste a recording, transcript, model, or private path into a public issue.
 Report the app commit, macOS version, Mac model, permission state, duration,
 track formats from the inspector, and a description using synthetic content.
 
-For macOS 27 beta/RC acceptance, also follow
-`docs/testing/macos-27-readiness.md`. CI on the `xcode-27` preview image checks
-the new SDK and compiler, but it runs on a macOS 26 host and cannot replace TCC,
+For macOS 27 acceptance, also follow
+`docs/testing/macos-27-readiness.md`. CI on the `xcode-27` preview image now runs
+on macOS 27 and checks the new SDK and compiler, but cannot replace TCC,
 ScreenCaptureKit, audio-route, login-item, notification, update, or inactive-app
 Parakeet tests on a real macOS 27 installation.
 
