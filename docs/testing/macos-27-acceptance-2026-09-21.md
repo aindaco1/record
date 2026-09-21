@@ -1,8 +1,10 @@
 # macOS 27 acceptance — September 21, 2026
 
-This report supplements the September 15 baseline linked from
-[issue #81](https://github.com/aindaco1/record/issues/81). It does not close that
-issue's combined acceptance rows or establish a new release.
+This report supplements the September 15 baseline originally tracked in
+[issue #81](https://github.com/aindaco1/record/issues/81). All remaining manual
+acceptance criteria now continue in [issue #6](https://github.com/aindaco1/record/issues/6).
+Issue #81 was superseded through scope consolidation; none of its unchecked
+rows became a passing result, and this report does not establish a new release.
 
 ## Environment and installed app
 
@@ -35,21 +37,21 @@ result. No capture-related product defect was established by this pass.
 
 ## Remaining acceptance
 
-The user requested that further desktop tests be skipped for now. Keep these
-checks in their existing owning issues:
+The user requested that further desktop tests be skipped for now. All of these
+checks remain open in issue #6:
 
-- **Issue #81:** grant persistence across an actual signed upgrade, with all
-  three TCC services verified separately; full picker-display, application,
+- **Transferred macOS 27 checks:** grant persistence across an actual signed
+  upgrade, with all three TCC services verified separately; full picker-display, application,
   independent-window and controlled custom-region scope checks; selected-source
   loss; forced termination while paused, resuming and rotating/finalizing;
   immutable-media and idempotent recovery checks; notification reveal and
   synthetic-notification exclusion; login approval-state presentation; and
   clean-account first-run, model setup and uninstall acceptance.
-- **Issue #81:** physical multiple-display and cable-disconnect/reconnect
+- **Physical displays:** multiple-display and cable-disconnect/reconnect
   testing. No external display is available, so this cannot be completed on
   the current hardware arrangement.
-- **Issue #6:** USB microphone reconnect, Bluetooth profile changes,
-  call-length route-change recording, ordinary Desktop Spaces, and capture
+- **Existing hardware and recovery checks:** USB microphone reconnect,
+  Bluetooth profile changes, call-length route-change recording, ordinary Desktop Spaces, and capture
   permission revocation classified as `permissionDenied`.
 
 Menu-bar and system-picker accessibility was inconsistent in the desktop
