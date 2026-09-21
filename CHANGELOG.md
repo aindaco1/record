@@ -13,9 +13,12 @@ All notable changes to Record are documented here. Record follows
 - Update the reviewed Sparkle updater to 2.10.0, including its macOS 27
   installer and file-handling improvements. Keep signed update feeds,
   notarization, stable privacy identity, and the no-network main app.
-- Run the complete advisory Xcode 27 compatibility gate with Swift Build after
-  the hosted default-engine suite passed. Keep Xcode 26.3 authoritative until
-  runner GA and signed-release promotion checks are complete.
+- Promote required CI, CodeQL and signed releases to Xcode 27.0 build
+  `27A266a`, using Swift Build and the explicitly approved preview runner.
+  Bind CI app provenance to the exact compiler build while preserving macOS
+  15 support and all signing, notarization and privacy gates.
+- Adopt the current FoundationModels sampling-mode API without changing
+  deterministic transcript refinement or its macOS 26 runtime requirement.
 - Update the CodeQL action to 4.38.1 and preserve shared Podman workloads
   during local watchdog recovery. Consolidate outstanding manual acceptance
   in the existing hardware tracker.

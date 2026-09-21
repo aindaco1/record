@@ -84,7 +84,7 @@ jobs:
     name: Build and package app
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 30
     permissions:
       contents: read
@@ -96,7 +96,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Select stable Xcode
+      - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
 
       # This script is also the supported local validation entry point.
@@ -135,45 +135,17 @@ jobs:
           compression-level: 0
           retention-days: 7
 
-  xcode-27-compatibility:
-    name: Xcode 27 compatibility (preview)
-    needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
-    runs-on: xcode-27
-    continue-on-error: true
-    timeout-minutes: 30
-    steps:
-      # Public-preview runner: compile/test signal only. Stable Xcode remains
-      # authoritative until the runner is GA and signing gates pass.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-
-      - name: Report preview toolchain
-        run: |
-          sw_vers
-          swift --version
-          xcodebuild -version
-          git rev-parse HEAD
-
-      # The complete default-engine trial passed on the hosted image; use the
-      # shared gate with Swift Build instead of splitting compilation and tests.
-      - name: Validate Swift 6.4 and the macOS 27 SDK
-        env:
-          RECORD_SWIFT_BUILD_SYSTEM: swiftbuild
-        run: ./scripts/ci/validate.sh --full
-
   sanitizers:
     name: Swift sanitizer tests
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Select stable Xcode
+      - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
       - name: Run ThreadSanitizer and AddressSanitizer
         run: ./scripts/ci/sanitizers.sh

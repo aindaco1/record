@@ -23,7 +23,7 @@ concurrency:
 jobs:
   release:
     name: Sign, notarize, and publish
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: release
     env:
@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
           ref: ${{ env.RELEASE_TAG }}
 
-      - name: Select stable Xcode
+      - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
 
       - name: Define ephemeral signing paths

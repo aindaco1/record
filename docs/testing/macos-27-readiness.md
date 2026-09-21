@@ -3,8 +3,11 @@
 Status: reviewed September 21, 2026. Apple has released macOS 27.0
 (`26A428`) and Xcode 27.0 (`27A266a`). The physical test host runs those
 versions. GitHub has deployed the released Xcode toolchain, but still labels
-its `xcode-27` runner image as **public preview**. Apple toolchain availability
-and GitHub runner GA are separate requirements.
+its `xcode-27` runner image as **public preview**. On September 21 the repository
+owner explicitly approved using this preview infrastructure for required CI
+and signed releases. This exception does not claim GitHub runner GA. The
+released Xcode version and build are pinned; see
+[ADR 0020](../adr/0020-xcode-27-release-toolchain.md).
 
 [Issue #80](https://github.com/aindaco1/record/issues/80) owns authoritative
 toolchain and release promotion. [Issue #6](https://github.com/aindaco1/record/issues/6)
@@ -36,10 +39,10 @@ not successful release evidence.
 This direct result satisfies the default-engine trial required before removing
 the split-engine workaround for
 [SwiftPM #10384](https://github.com/swiftlang/swift-package-manager/issues/10384).
-The compatibility lane now runs the shared `scripts/ci/validate.sh --full` gate
-with `RECORD_SWIFT_BUILD_SYSTEM=swiftbuild`, covering source contracts, the
-complete tests, the locked dependency graph and the arm64 release build with
-one engine. It logs the OS, compiler, Xcode build and source commit.
+The trial then ran the shared `scripts/ci/validate.sh --full` gate with
+`RECORD_SWIFT_BUILD_SYSTEM=swiftbuild`, covering source contracts, the complete
+tests, the locked dependency graph and the arm64 release build with one engine.
+Swift Build is now the shared gate's default engine.
 
 The resulting shared-gate implementation at
 `fa511cc1cb897397673c319bf79bc793bbf66cf3` passed the
@@ -48,10 +51,12 @@ including the Xcode 27 compatibility job, stable tests, sanitizers and packaging
 The full local gate also passed on the physical macOS 27 host. The stable
 packaging failure in the earlier trial did not recur.
 
-The job remains advisory while the runner is in preview. Authoritative CI,
-CodeQL and signed-release tooling still select Xcode 26.3. The verified CI app
-handoff still requires that exact toolchain; no release attestation, signature,
-entitlement or provenance check is relaxed by this compatibility change.
+Authoritative build/package, sanitizer, CodeQL and signed-release jobs now use
+`xcode-27` and require Xcode 27.0 build `27A266a`. The existing required
+**Swift tests and arm64 build** context propagates a failed build; the redundant
+advisory lane is removed. CI app handoff schema v3 binds both compiler version
+and build, in addition to the existing exact-commit and executable checks.
+Release attestations, signatures, entitlements and provenance remain required.
 
 ## Upstream review
 
@@ -83,21 +88,26 @@ entitlement or provenance check is relaxed by this compatibility change.
 
 ## Promotion gates
 
-1. Confirm GitHub explicitly marks the runner GA, then pin the supported
-   runner/toolchain and require the compatibility check after a green run.
-2. Run the full local and hosted packaging gates under Xcode 27. Verify the
-   embedded entitlements and stable TCC identity, Developer ID signatures,
-   notarization, signed Sparkle feed/archive and downloaded-package readback.
-3. Change the authoritative CI, CodeQL, release selector and exact-commit app
-   provenance contract together. The restored app must remain the exact
-   executable that passed authoritative CI; never substitute a local rebuild.
-4. Update contributor, testing and release guidance and ADR 0012 when that
-   durable toolchain decision is made. Retain the macOS 15 deployment target,
-   Apple Silicon architecture and no-network main app.
+1. Use the owner-approved preview runner with released Xcode 27.0 build
+   `27A266a`, selected by a versioned path and checked by exact version/build.
+   The runner's preview status is an accepted infrastructure risk, not a
+   signature, provenance or test exception.
+2. Run the full local gate and required hosted build/package, sanitizer and
+   CodeQL jobs. Before tagging, require successful full CI and CodeQL on the
+   exact `main` commit and its retained, attested application.
+3. Verify the Xcode 27 release's Developer ID signatures, embedded entitlements,
+   stable TCC identity, notarization, signed Sparkle feed/archive and downloaded
+   package. Reuse the attested CI executable; never substitute a local rebuild.
+4. Maintain contributor, testing and release guidance and
+   [ADR 0020](../adr/0020-xcode-27-release-toolchain.md), which amends ADRs 0010
+   and 0012. Retain the macOS 15 deployment target, Apple Silicon architecture
+   and no-network main app.
 
-No new signed release is required solely to update this tracker. Local package
-checks, hosted compile/test evidence, public artifact verification and hardware
-acceptance are distinct results.
+[Issue #80](https://github.com/aindaco1/record/issues/80) records completion
+with exact workflow and public-release evidence. Local package checks, hosted
+compile/test evidence, public artifact verification and hardware acceptance
+remain distinct results. The owner also requested the 1.4.4 release and local
+deployment; the preview exception does not waive outstanding #6 hardware rows.
 
 ## Signed-app runtime matrix
 

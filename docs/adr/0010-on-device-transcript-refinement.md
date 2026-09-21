@@ -1,5 +1,10 @@
 # ADR 0010: Bounded on-device transcript refinement
 
+- Toolchain policy amended by [ADR 0020](0020-xcode-27-release-toolchain.md):
+  Xcode 27.0 build `27A266a` is authoritative, including exact build identity
+  in the CI app handoff. Historical toolchain references below describe the
+  original decision.
+
 ## Context
 
 Local speech recognition preserves source audio and timing but can leave filled

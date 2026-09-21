@@ -60,7 +60,7 @@ done
 
 for required_fragment in \
     'scripts/release/required-ci-runs.sh' \
-    'record-ci-app-v2' \
+    'scripts/release/ci-app-metadata.jq' \
     'modelDownloaderInfoPlistSHA256' \
     'modelDownloaderExecutableSHA256' \
     "--signer-workflow \"github.com/\$repository/.github/workflows/ci.yml\"" \

@@ -1,12 +1,15 @@
 # Contributing
 
-Record targets macOS 15+ on Apple Silicon with Swift 6 and requires Xcode 26
-or newer for development. Hosted CI and releases select Xcode 26.3 through
-`scripts/ci/select-stable-xcode.sh`; the macOS 15 deployment target is unchanged.
-The advisory Xcode 27 lane now runs the complete shared gate with Swift Build
-following a successful hosted default-engine trial; see the
-[readiness record](testing/macos-27-readiness.md). Its runner remains preview,
-so this does not promote the authoritative release toolchain.
+Record targets macOS 15+ on Apple Silicon with Swift 6 and requires Xcode 27
+or newer for development. Authoritative hosted CI, CodeQL and releases select
+Xcode 27.0 build `27A266a` through `scripts/ci/select-stable-xcode.sh`. The
+shared validation gate uses Swift Build by default following the successful
+hosted default-engine trial. GitHub's `xcode-27` runner is still public preview;
+the repository owner explicitly accepted that infrastructure risk on September
+21, 2026. The released compiler build is pinned and required checks fail closed.
+See [ADR 0020](adr/0020-xcode-27-release-toolchain.md) and the
+[readiness record](testing/macos-27-readiness.md). The macOS 15 deployment
+target, Apple Silicon support and privacy/signing contracts are unchanged.
 Run the commands below from the repository root.
 
 ## Before opening a change

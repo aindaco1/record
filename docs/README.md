@@ -48,7 +48,7 @@ unless a procedure says otherwise.
 - [Testing strategy and acceptance](testing.md): automated gates, manual smoke
   procedures, hardware matrices, and performance criteria.
 - [macOS 27 readiness](testing/macos-27-readiness.md): dated platform findings
-  and criteria for promoting the preview toolchain.
+  and the approved Xcode 27 release-toolchain policy.
 - [Release runbook](runbooks/release.md): candidate preparation, signing,
   publication, and post-release verification.
 - [GitHub Actions outage runbook](runbooks/github-actions-outage.md): incident

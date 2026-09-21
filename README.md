@@ -66,7 +66,7 @@ See the [privacy policy](docs/PRIVACY.md) for data handling, the
 
 ## Development
 
-Development requires Xcode 26 or newer and Swift 6. Start with the
+Development requires Xcode 27 or newer and Swift 6. Start with the
 [contributor guide](docs/CONTRIBUTING.md) for build, validation, local app launch,
 and dependency-review procedures.
 

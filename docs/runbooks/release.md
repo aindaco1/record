@@ -1,7 +1,13 @@
 # Release runbook
 
 Record releases are Apple-Silicon-only, Developer ID signed, notarized, and
-published from a signed semantic-version tag.
+published from a signed semantic-version tag. Authoritative CI, CodeQL and
+release jobs use GitHub's `xcode-27` image with released Xcode 27.0 build
+`27A266a`. The image remains public preview, explicitly approved by the
+repository owner on September 21, 2026; this is not a claim of runner GA.
+[ADR 0020](../adr/0020-xcode-27-release-toolchain.md) records the decision.
+A missing or changed pinned compiler fails the gate; do not silently use the
+runner default or rebuild the application during release.
 
 ## Credentials
 
@@ -56,7 +62,7 @@ requires successful full `CI` and `CodeQL` runs, triggered by a push or manual
 dispatch, for that exact `main` commit. Skipped jobs do not qualify. It verifies
 GitHub-hosted provenance and bounded extraction for the CI-assembled,
 package-tested unsigned arm64 app, matches its executable, dependency lock,
-Xcode 26.3 version, source plist, and release-script hashes, then stamps only the
+Xcode 27.0 version and `27A266a` build, source plist, and release-script hashes, then stamps only the
 release version and build number. This is the same plist operation used by a
 fresh local assembly; the app code is the exact production binary already
 exercised by CI. See [ADR 0012](../adr/0012-verified-ci-app-reuse.md) and its
