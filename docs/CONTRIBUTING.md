@@ -3,6 +3,10 @@
 Record targets macOS 15+ on Apple Silicon with Swift 6 and requires Xcode 26
 or newer for development. Hosted CI and releases select Xcode 26.3 through
 `scripts/ci/select-stable-xcode.sh`; the macOS 15 deployment target is unchanged.
+The advisory Xcode 27 lane now runs the complete shared gate with Swift Build
+following a successful hosted default-engine trial; see the
+[readiness record](testing/macos-27-readiness.md). Its runner remains preview,
+so this does not promote the authoritative release toolchain.
 Run the commands below from the repository root.
 
 ## Before opening a change

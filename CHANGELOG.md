@@ -6,6 +6,12 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Changed
+
+- Run the complete advisory Xcode 27 compatibility gate with Swift Build after
+  the hosted default-engine suite passed. Keep Xcode 26.3 authoritative until
+  runner GA and signed-release promotion checks are complete.
+
 ## [1.4.3] - 2026-09-15
 
 ### Fixed
