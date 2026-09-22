@@ -6,7 +6,7 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
-## [1.4.4] - 2026-09-21
+## [1.4.4] - 2026-09-22
 
 ### Changed
 
