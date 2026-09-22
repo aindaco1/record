@@ -10,6 +10,14 @@ the repository owner explicitly accepted that infrastructure risk on September
 See [ADR 0020](adr/0020-xcode-27-release-toolchain.md) and the
 [readiness record](testing/macos-27-readiness.md). The macOS 15 deployment
 target, Apple Silicon support and privacy/signing contracts are unchanged.
+Keep the development checkout and its `.build` directory on local APFS outside
+an iCloud Drive or other File Provider synced folder. Xcode 27's Swift Build
+test-bundle signing can fail with “resource fork, Finder information, or similar
+detritus not allowed” when File Provider attaches metadata to generated bundles.
+Use a clean local checkout and rerun the failed validation there; do not disable
+signing or weaken the package guards. Keep recording and acceptance evidence
+local and separate from disposable build output.
+
 Run the commands below from the repository root.
 
 ## Before opening a change
