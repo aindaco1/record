@@ -29,8 +29,8 @@ required. Releases are Developer ID signed, notarized, and accompanied by
 SHA-256 checksums and build provenance on the
 [GitHub release page](https://github.com/aindaco1/record/releases/latest).
 
-The current release is [Record 1.4.1](https://github.com/aindaco1/record/releases/tag/v1.4.1),
-build 18, published September 7, 2026.
+The [latest release page](https://github.com/aindaco1/record/releases/latest)
+lists the current version, build, release notes, and verified downloads.
 
 Record has no Dock icon. Open it from the camera in the menu bar.
 
@@ -66,7 +66,7 @@ See the [privacy policy](docs/PRIVACY.md) for data handling, the
 
 ## Development
 
-Development requires Xcode 26 or newer and Swift 6. Start with the
+Development requires Xcode 27 or newer and Swift 6. Start with the
 [contributor guide](docs/CONTRIBUTING.md) for build, validation, local app launch,
 and dependency-review procedures.
 
@@ -80,7 +80,7 @@ security, testing, releases, and historical records. Useful starting points:
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/project/roadmap.md)
 - [Changelog](CHANGELOG.md)
-- [Record 1.4.1 release notes](docs/releases/1.4.1.md)
+- [Record 1.4.4 release notes](docs/releases/1.4.4.md)
 
 ## Provenance and license
 

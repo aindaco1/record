@@ -26,7 +26,7 @@ if [[ "$force_full" == 0 && \
     exit 0
 fi
 
-swift_build_system="${RECORD_SWIFT_BUILD_SYSTEM:-native}"
+swift_build_system="${RECORD_SWIFT_BUILD_SYSTEM:-swiftbuild}"
 case "$swift_build_system" in
     native | swiftbuild)
         swift_build_arguments=(--build-system "$swift_build_system")

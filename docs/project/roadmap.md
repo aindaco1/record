@@ -12,7 +12,7 @@ status; versioned issue-triage files are historical planning snapshots.
 - Representative USB, Bluetooth, and call-length microphone-route acceptance.
 - Direct source-selection and pause/resume acceptance tests on real hardware.
 - macOS 27 runtime/TCC and inactive-app transcription acceptance on physical
-  hardware; the hosted Xcode 27 preview lane remains advisory.
+  hardware; required hosted Xcode 27 builds do not replace those checks.
 
 ## Parked ideas
 

@@ -48,14 +48,14 @@ unless a procedure says otherwise.
 - [Testing strategy and acceptance](testing.md): automated gates, manual smoke
   procedures, hardware matrices, and performance criteria.
 - [macOS 27 readiness](testing/macos-27-readiness.md): dated platform findings
-  and criteria for promoting the preview toolchain.
+  and the approved Xcode 27 release-toolchain policy.
 - [Release runbook](runbooks/release.md): candidate preparation, signing,
   publication, and post-release verification.
 - [GitHub Actions outage runbook](runbooks/github-actions-outage.md): incident
   handling and recovery.
 - [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
 - [Release notes](releases/): user-facing notes for each published version,
-  including [Record 1.4.1](releases/1.4.1.md).
+  including [Record 1.4.4](releases/1.4.4.md).
 
 ## Historical records
 

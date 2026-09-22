@@ -178,7 +178,7 @@ struct OnDeviceTranscriptRefinementAdviser: TranscriptRefinementAdvising {
             to: prompt,
             generating: GeneratedTranscriptRefinementBatch.self,
             options: GenerationOptions(
-                sampling: .greedy,
+                samplingMode: .greedy,
                 maximumResponseTokens: 512
             )
         )

@@ -83,8 +83,8 @@ reject skipped or missing build/security jobs even when a workflow is green.
   GitHub-hosted provenance policy, source/build-script hashes, unsigned bundle
   verification, bounded archive extraction, and escaping-link rejection
 - Swift formatting for new modular code
-- an advisory Xcode 27 / Swift 6.4 compatibility build while GitHub's runner
-  remains in public preview; stable Xcode remains authoritative for releases
+- required Xcode 27.0 (`27A266a`) / Swift 6.4 builds and packaging on the
+  owner-approved preview runner, with exact compiler identity in CI provenance
 
 Future pure tests will cover edit-operation serialization, click-event mapping,
 and out-of-process plugin capability denial.

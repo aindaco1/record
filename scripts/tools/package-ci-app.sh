@@ -61,6 +61,7 @@ ditto --norsrc --noextattr "$app_path" "$bundle_root/Record.app"
 
 xcode_version_output="$(xcodebuild -version)"
 xcode_version="${xcode_version_output%%$'\n'*}"
+xcode_build="${xcode_version_output#*$'\n'Build version }"
 package_resolved_hash="$(shasum -a 256 "$repo_root/Package.resolved" | awk '{print $1}')"
 build_app_hash="$(shasum -a 256 "$repo_root/scripts/release/build-app.sh" | awk '{print $1}')"
 stamp_app_hash="$(shasum -a 256 "$repo_root/scripts/release/stamp-app.sh" | awk '{print $1}')"
@@ -83,6 +84,7 @@ jq -n \
     --argjson runID "$run_id" \
     --argjson runAttempt "$run_attempt" \
     --arg xcodeVersion "$xcode_version" \
+    --arg xcodeBuild "$xcode_build" \
     --arg packageResolvedSHA256 "$package_resolved_hash" \
     --arg buildAppSHA256 "$build_app_hash" \
     --arg stampAppSHA256 "$stamp_app_hash" \
@@ -94,7 +96,7 @@ jq -n \
     --arg appVersion "$app_version" \
     --arg buildNumber "$build_number" \
     '{
-      schema: "record-ci-app-v2",
+      schema: "record-ci-app-v3",
       repository: $repository,
       commit: $commit,
       workflow: ".github/workflows/ci.yml",
@@ -102,6 +104,7 @@ jq -n \
       runAttempt: $runAttempt,
       runner: "github-hosted",
       xcodeVersion: $xcodeVersion,
+      xcodeBuild: $xcodeBuild,
       packageResolvedSHA256: $packageResolvedSHA256,
       buildAppSHA256: $buildAppSHA256,
       stampAppSHA256: $stampAppSHA256,
@@ -113,6 +116,10 @@ jq -n \
       appVersion: $appVersion,
       buildNumber: $buildNumber
     }' > "$bundle_root/metadata.json"
+jq -e --arg repository "$repository" --arg commit "$commit" \
+    --argjson runID "$run_id" --argjson runAttempt "$run_attempt" \
+    -f "$repo_root/scripts/release/ci-app-metadata.jq" \
+    "$bundle_root/metadata.json" >/dev/null
 chmod 0644 "$bundle_root/metadata.json"
 
 COPYFILE_DISABLE=1 /usr/bin/tar -czf "$archive" -C "$work_root" record-ci-app
