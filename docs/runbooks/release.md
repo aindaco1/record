@@ -26,9 +26,9 @@ cleanup; the temporary keychain is deleted even after failure.
 
 ## Candidate preparation
 
-The next Record candidate must include the shared-native migration and the
-[Apple adviser comparison findings](../testing/apple-adviser-2026-09-23.md)
-in its review. Adopt only adviser changes with demonstrated cleanup and
+Record 1.4.5 includes the shared-native migration and the cleanup fix informed
+by the [Apple adviser comparisons](../testing/apple-adviser-2026-09-23.md).
+For future candidates, adopt only adviser changes with demonstrated cleanup and
 preservation benefits; a model name, simpler schema or passing build alone is
 not evidence of improved formatting. Keep whole-token removal and source
 preservation guards, capture Apple model/OS metadata in developer evaluations,
