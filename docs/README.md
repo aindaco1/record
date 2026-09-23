@@ -78,6 +78,8 @@ verification, and installed-app or hardware acceptance remain separate claims.
   September 7 checks, completed #26 acceptance, and the remaining #9 qualifications.
 - [Record 1.4.1 release verification](testing/1.4.1-release.md): public artifacts,
   the previous-version updater, and installed capture checks.
+- [Record 1.4.5 release verification](testing/1.4.5-release.md): public artifacts,
+  the installed update, synthetic cleanup results and development cleanup.
 - Issue-triage snapshots: [1.3.0](project/issue-triage-1.3.0.md),
   [1.1.3](project/issue-triage-1.1.3.md), [1.1.0](project/issue-triage-1.1.0.md),
   [1.0.3](project/issue-triage-1.0.3.md), [1.0.2](project/issue-triage-1.0.2.md),
