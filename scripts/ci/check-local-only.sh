@@ -61,6 +61,10 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 "$repo_root/scripts/ci/check-entitlements.sh" "$entitlements"
+if [[ "$source_root" == "$repo_root/Sources" ]]; then
+    "$repo_root/scripts/ci/check-local-only.sh" \
+        "$repo_root/shared/dust-wave-platform/native/Sources" "$entitlements"
+fi
 if [[ -d "$source_root/RecordModelDownload" && \
       -d "$source_root/RecordModelDownloaderService" ]]; then
     "$repo_root/scripts/ci/check-model-downloader-source.sh" \

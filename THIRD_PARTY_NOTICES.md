@@ -10,6 +10,9 @@ Runtime Swift package dependencies and their licenses are recorded by
 - Apple Swift Argument Parser — Apache License 2.0
 - FluidAudio — Apache License 2.0
 - Sparkle — permissive licenses reproduced from its upstream `LICENSE`
+- Dust Wave Platform native speech and Apple adapters — MIT; exact source is
+  pinned by `shared/dust-wave-platform`. The extracted Record speech code retains
+  the original Record MIT attribution.
 
 The assembled app includes the complete dependency licenses in
 `Contents/Resources/Licenses`.

@@ -27,6 +27,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          submodules: recursive
 
       - name: Validate fixed publication target
         env:

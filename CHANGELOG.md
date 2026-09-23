@@ -6,6 +6,37 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-09-23
+
+### Fixed
+
+- Improve disposable-filler cleanup with Apple's general model while enforcing
+  deterministic preservation of quoted segments, meaningful repetition,
+  sentence boundaries and longer repetition runs. Limit stutter candidates to
+  short pronoun/article pairs and revalidate eligibility before removal. Keep
+  source audio, raw transcripts, speaker labels, timing and safe fallback.
+
+### Development
+
+- Add a separate pinned 20-case synthetic cleanup regression suite and record
+  the removal policy in native model evidence. Existing Jev questions, labels,
+  threshold and original 11-case corpus remain unchanged.
+
+- Add isolated Apple adviser comparisons for the general model, Boolean
+  decisions and bounded sentence context. Record Apple model/OS metadata in
+  local evaluation evidence. The first comparisons exposed quotation loss and
+  no improvement in emphasis preservation; the subsequent cleanup fix above
+  combines model selection with deterministic preservation rules.
+
+- Adopt Platform's shared native speech and Apple generation modules while
+  preserving RecordCore/RecordSpeech compatibility names, local-only guards,
+  formatting policy, model allowlist, and the existing FluidAudio version.
+
+- Add default local transcript-cleanup testing with the existing native pipeline
+  and shared Jev evaluator, reviewed synthetic fixtures, paired controls and an
+  explicit offline mode. CI and release gates remain independent of hosted
+  inference. Jev is developer tooling and is not included in the application.
+
 ## [1.4.4] - 2026-09-22
 
 ### Changed

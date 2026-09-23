@@ -40,6 +40,7 @@ required_files=(
     "$app_path/Contents/Resources/record-macwhisper"
     "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
     "$app_path/Contents/Resources/Licenses/Record-MIT.txt"
+    "$app_path/Contents/Resources/Licenses/DustWavePlatform-MIT.txt"
     "$app_path/Contents/Resources/Licenses/Swift-Argument-Parser-Apache-2.0.txt"
     "$app_path/Contents/Resources/Licenses/FluidAudio-Apache-2.0.txt"
     "$app_path/Contents/Resources/Licenses/Sparkle.txt"

@@ -26,6 +26,19 @@ cleanup; the temporary keychain is deleted even after failure.
 
 ## Candidate preparation
 
+The next Record candidate must include the shared-native migration and the
+[Apple adviser comparison findings](../testing/apple-adviser-2026-09-23.md)
+in its review. Adopt only adviser changes with demonstrated cleanup and
+preservation benefits; a model name, simpler schema or passing build alone is
+not evidence of improved formatting. Keep whole-token removal and source
+preservation guards, capture Apple model/OS metadata in developer evaluations,
+and compare fixed native/Jev cases before changing the default. The initial
+general-model experiments did not justify a model-only switch; the follow-up
+[cleanup fix](../testing/cleanup-fix-2026-09-23.md) combines it with deterministic
+preservation checks. Rerun both pinned suites for that candidate and inspect
+remaining judge-control findings separately from product outcomes.
+Jev remains a developer check and does not replace the release gates below.
+
 1. Run `./scripts/ci/local-gate.sh` on the exact candidate commit.
 2. Complete every implemented manual smoke case in `docs/testing.md`; mark only
    explicitly future camera, editor, 60-fps, and extension-host rows not

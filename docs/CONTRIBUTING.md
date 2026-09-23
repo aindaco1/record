@@ -46,6 +46,14 @@ or exact entitlement set require renewed privacy review. The
 
 ## Build and validate
 
+For standard local development testing, run `node scripts/test.mjs`. It runs
+the full gate below, native Apple transcript cleanup on synthetic examples, and
+Jev semantic review. See [setup and interpretation](testing/jev.md). Use
+`node scripts/test.mjs --offline` explicitly for the deterministic subset. Node
+20.9+ is required for the offline adapter tests; no npm dependencies are added.
+
+For scope-aware repository validation (also used by hosted CI), run:
+
 ```sh
 ./scripts/ci/validate.sh
 ```

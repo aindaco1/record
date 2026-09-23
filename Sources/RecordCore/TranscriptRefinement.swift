@@ -141,7 +141,7 @@ public enum TranscriptRefinementAdviserOutcome: String, Codable, Equatable, Send
 
 public struct TranscriptRefinementReport: Codable, Equatable, Sendable {
     public static let currentSchemaVersion = "record-transcript-refinement-v1"
-    public static let currentPolicyVersion = "candidate-removal-and-overlap-v1"
+    public static let currentPolicyVersion = "candidate-removal-and-overlap-v2"
 
     public let schemaVersion: String
     public let policyVersion: String
@@ -197,6 +197,14 @@ public enum TranscriptRefiner {
     private static let contextTokenCount = 6
     private static let maximumContextCharacters = 200
     private static let filledPauses: Set<String> = ["er", "erm", "uh", "uhh", "um", "umm"]
+    // Other repeated words can carry emphasis, refusal, tense or clause structure.
+    // These are only candidates: the adviser must still judge whether removal is safe.
+    private static let repeatCandidates: Set<String> = [
+        "i", "we", "you", "he", "she", "they", "it", "a", "an", "the",
+    ]
+    private static let quotationMarks: Set<Character> = [
+        "\"", "“", "”", "‘", "«", "»", "‹", "›", "`",
+    ]
     private static let normalizationLocale = Locale(identifier: "en_US_POSIX")
 
     public static func plan(
@@ -219,24 +227,11 @@ public enum TranscriptRefiner {
         }
 
         var candidates: [TranscriptRefinementCandidate] = []
-        for (segmentIndex, segment) in annotated.enumerated() where segment.overlapGroup == nil {
+        for (segmentIndex, segment) in annotated.enumerated() where permitsRemoval(in: segment) {
             let tokens = tokens(in: segment.text)
             guard tokens.count > 1 else { continue }
             for tokenIndex in tokens.indices {
-                let normalized = normalizedToken(tokens[tokenIndex])
-                guard !normalized.isEmpty else { continue }
-                let kind: TranscriptRefinementCandidateKind?
-                if filledPauses.contains(normalized) {
-                    kind = .filledPause
-                } else if tokenIndex > 0,
-                    normalized == normalizedToken(tokens[tokenIndex - 1]),
-                    !normalized.allSatisfy(\.isNumber)
-                {
-                    kind = .immediateRepeat
-                } else {
-                    kind = nil
-                }
-                guard let kind else { continue }
+                guard let kind = candidateKind(in: tokens, at: tokenIndex) else { continue }
                 let leftStart = max(tokens.startIndex, tokenIndex - contextTokenCount)
                 let rightEnd = min(tokens.endIndex, tokenIndex + contextTokenCount + 1)
                 candidates.append(
@@ -291,13 +286,16 @@ public enum TranscriptRefiner {
 
         var appliedCandidateIDs: Set<String> = []
         let refinedSegments = plan.segments.enumerated().map { index, segment in
-            guard let requested = removalsBySegment[index], !requested.isEmpty else {
+            guard let requested = removalsBySegment[index], !requested.isEmpty,
+                permitsRemoval(in: segment)
+            else {
                 return segment
             }
             let sourceTokens = tokens(in: segment.text)
             let valid = requested.filter { candidate in
                 sourceTokens.indices.contains(candidate.tokenIndex)
                     && sourceTokens[candidate.tokenIndex] == candidate.token
+                    && candidate.kind == candidateKind(in: sourceTokens, at: candidate.tokenIndex)
             }
             let removalIndices = Set(valid.map(\.tokenIndex))
             guard !removalIndices.isEmpty, removalIndices.count < sourceTokens.count else {
@@ -377,6 +375,41 @@ public enum TranscriptRefiner {
 
     private static func tokens(in text: String) -> [String] {
         text.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
+    private static func candidateKind(
+        in tokens: [String], at index: Int
+    ) -> TranscriptRefinementCandidateKind? {
+        let token = tokens[index]
+        let normalized = normalizedToken(token)
+        if filledPauses.contains(normalized) { return .filledPause }
+        guard index > 0, repeatCandidates.contains(normalized),
+            token.allSatisfy(\.isLetter), tokens[index - 1].allSatisfy(\.isLetter),
+            normalized == normalizedToken(tokens[index - 1])
+        else { return nil }
+        // Longer runs and punctuation boundaries can encode deliberate cadence.
+        if index > 1, normalizedToken(tokens[index - 2]) == normalized { return nil }
+        if index + 1 < tokens.count, normalizedToken(tokens[index + 1]) == normalized { return nil }
+        return .immediateRepeat
+    }
+
+    private static func permitsRemoval(in segment: TranscriptDocument.Segment) -> Bool {
+        guard segment.overlapGroup == nil else { return false }
+        // Keep the entire segment when literal/quoted speech is present. Guessing
+        // quote scope (including unfinished quotations) risks deleting cited words.
+        let characters = Array(segment.text)
+        for index in characters.indices {
+            let character = characters[index]
+            if quotationMarks.contains(character) { return false }
+            if character == "'" || character == "’" {
+                let insideWord =
+                    index > 0 && index + 1 < characters.count
+                    && (characters[index - 1].isLetter || characters[index - 1].isNumber)
+                    && (characters[index + 1].isLetter || characters[index + 1].isNumber)
+                if !insideWord { return false }
+            }
+        }
+        return true
     }
 
     private static func normalizedToken(_ token: String) -> String {

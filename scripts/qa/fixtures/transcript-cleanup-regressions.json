@@ -1,0 +1,504 @@
+[
+  {
+    "id": "leading-er",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Er, bring the green notebook after lunch."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "The green notebook is to be brought after lunch.",
+      "cleanup": "The disposable filled pause is removed."
+    },
+    "control": {
+      "requirement": "The green notebook is to be brought after lunch.",
+      "pass_candidate": "Bring the green notebook after lunch.",
+      "fail_candidate": "Bring the green notebook before lunch."
+    }
+  },
+  {
+    "id": "leading-uh",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Uh, keep the window closed until the storm passes."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "The window must stay closed until the storm passes.",
+      "cleanup": "The disposable filled pause is removed."
+    },
+    "control": {
+      "requirement": "The window must stay closed until the storm passes.",
+      "pass_candidate": "Keep the window closed until the storm passes.",
+      "fail_candidate": "Open the window during the storm."
+    }
+  },
+  {
+    "id": "pronoun-stutter",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "We we will meet outside the library."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "The speakers will meet outside the library.",
+      "cleanup": "The accidental doubled opening word is reduced to one instance."
+    },
+    "control": {
+      "requirement": "The speakers will meet outside the library.",
+      "pass_candidate": "We will meet outside the library.",
+      "fail_candidate": "We will meet inside the library."
+    }
+  },
+  {
+    "id": "article-stutter",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "The the spare key is under the yellow cup."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "The spare key is under the yellow cup.",
+      "cleanup": "The accidental doubled opening word is reduced to one instance."
+    },
+    "control": {
+      "requirement": "The spare key is under the yellow cup.",
+      "pass_candidate": "The spare key is under the yellow cup.",
+      "fail_candidate": "The spare key is under the blue cup."
+    }
+  },
+  {
+    "id": "degree-emphasis",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "This is really really cold."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "Both instances of really are retained to preserve emphatic repetition."
+    },
+    "control": {
+      "requirement": "Both instances of really are retained to preserve emphatic repetition.",
+      "pass_candidate": "This is really really cold.",
+      "fail_candidate": "This is really cold."
+    }
+  },
+  {
+    "id": "duration-emphasis",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "We waited a long long time for the lights."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "Both instances of long are retained to preserve emphatic repetition."
+    },
+    "control": {
+      "requirement": "Both instances of long are retained to preserve emphatic repetition.",
+      "pass_candidate": "We waited a long long time for the lights.",
+      "fail_candidate": "We waited a long time for the lights."
+    }
+  },
+  {
+    "id": "repeated-refusal",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "No no, that is not approved."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The repeated refusal No no is retained."
+    },
+    "control": {
+      "requirement": "The repeated refusal No no is retained.",
+      "pass_candidate": "No no, that is not approved.",
+      "fail_candidate": "No, that is not approved."
+    }
+  },
+  {
+    "id": "grammatical-had",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "She had had enough by Thursday."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "Both instances of had are retained as part of the past-perfect construction."
+    },
+    "control": {
+      "requirement": "Both instances of had are retained as part of the past-perfect construction.",
+      "pass_candidate": "She had had enough by Thursday.",
+      "fail_candidate": "She had enough by Thursday."
+    }
+  },
+  {
+    "id": "grammatical-that",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "I know that that answer is correct."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "Both instances of that are retained in the clause that that answer is correct."
+    },
+    "control": {
+      "requirement": "Both instances of that are retained in the clause that that answer is correct.",
+      "pass_candidate": "I know that that answer is correct.",
+      "fail_candidate": "I know that answer is correct."
+    }
+  },
+  {
+    "id": "sentence-boundary",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Go. Go when the light turns green."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "Both separate Go commands are retained."
+    },
+    "control": {
+      "requirement": "Both separate Go commands are retained.",
+      "pass_candidate": "Go. Go when the light turns green.",
+      "fail_candidate": "Go when the light turns green."
+    }
+  },
+  {
+    "id": "ascii-quotation",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "The transcript must contain \"uh\" exactly."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The literal quoted token uh is retained."
+    },
+    "control": {
+      "requirement": "The literal quoted token uh is retained.",
+      "pass_candidate": "The transcript must contain \"uh\" exactly.",
+      "fail_candidate": "The transcript must contain exactly."
+    }
+  },
+  {
+    "id": "single-quotation",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Keep the written token 'erm' in the caption."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The literal quoted token erm is retained."
+    },
+    "control": {
+      "requirement": "The literal quoted token erm is retained.",
+      "pass_candidate": "Keep the written token 'erm' in the caption.",
+      "fail_candidate": "Keep the written token in the caption."
+    }
+  },
+  {
+    "id": "quoted-span",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "She said “um we we should wait” before leaving."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The exact quotation um we we should wait is retained."
+    },
+    "control": {
+      "requirement": "The exact quotation um we we should wait is retained.",
+      "pass_candidate": "She said “um we we should wait” before leaving.",
+      "fail_candidate": "She said “we should wait” before leaving."
+    }
+  },
+  {
+    "id": "unfinished-quotation",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "The quote begins “um we need another hour."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The quoted word um and the request for another hour are retained."
+    },
+    "control": {
+      "requirement": "The quoted word um and the request for another hour are retained.",
+      "pass_candidate": "The quote begins “um we need another hour.",
+      "fail_candidate": "The quote begins “we need another hour."
+    }
+  },
+  {
+    "id": "code-literal",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "The identifier is `um` and must be kept."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The literal identifier um is retained."
+    },
+    "control": {
+      "requirement": "The literal identifier um is retained.",
+      "pass_candidate": "The identifier is `um` and must be kept.",
+      "fail_candidate": "The identifier is and must be kept."
+    }
+  },
+  {
+    "id": "contraction",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Um, don't unlock the side gate."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "Unlocking the side gate is prohibited.",
+      "cleanup": "The disposable filled pause is removed."
+    },
+    "control": {
+      "requirement": "Unlocking the side gate is prohibited.",
+      "pass_candidate": "Don't unlock the side gate.",
+      "fail_candidate": "Unlock the side gate."
+    }
+  },
+  {
+    "id": "repetition-run",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "All I hear is I I I."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "All three final instances of I are retained."
+    },
+    "control": {
+      "requirement": "All three final instances of I are retained.",
+      "pass_candidate": "All I hear is I I I.",
+      "fail_candidate": "All I hear is I I."
+    }
+  },
+  {
+    "id": "numeric-sequence",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Room 7 7 has two two-bed suites."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [
+      0
+    ],
+    "requirements": {
+      "meaning": "The room identifier contains two consecutive sevens."
+    },
+    "control": {
+      "requirement": "The room identifier contains two consecutive sevens.",
+      "pass_candidate": "Room 7 7 has two two-bed suites.",
+      "fail_candidate": "Room 7 has two two-bed suites."
+    }
+  },
+  {
+    "id": "inline-pause",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "We should uh try again on Saturday."
+      }
+    ],
+    "kept_indices": [
+      0
+    ],
+    "preserve_indices": [],
+    "requirements": {
+      "meaning": "Trying again is proposed for Saturday.",
+      "cleanup": "The disposable filled pause is removed."
+    },
+    "control": {
+      "requirement": "Trying again is proposed for Saturday.",
+      "pass_candidate": "We should try again on Saturday.",
+      "fail_candidate": "We should try again on Sunday."
+    }
+  },
+  {
+    "id": "overlap-refusal",
+    "segments": [
+      {
+        "speaker": "me",
+        "start_ms": 1000,
+        "end_ms": 4000,
+        "text": "Um, don't send that."
+      },
+      {
+        "speaker": "them",
+        "start_ms": 1200,
+        "end_ms": 3500,
+        "text": "The draft is ready."
+      }
+    ],
+    "kept_indices": [
+      0,
+      1
+    ],
+    "preserve_indices": [
+      0,
+      1
+    ],
+    "requirements": {
+      "meaning": "Speaker me prohibits sending the item while speaker them says the draft is ready."
+    },
+    "control": {
+      "requirement": "Speaker me prohibits sending the item.",
+      "pass_candidate": "me: Um, don't send that.\nthem: The draft is ready.",
+      "fail_candidate": "me: Send that now.\nthem: The draft is ready."
+    }
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "revision": "0affb6c5652611b87947bd87762d8aa17d35ea32",
+  "files": {
+    "packages/test-core/src/jev.js": "30610b3eb76cf29028f66b0a625704391c6191198f5e59086dc1117c2681e917",
+    "packages/worker-core/src/response-body.js": "c7bdeab8fe7a61b13907127857e2d3b564863b9f4585ce85e35c7af9764b19b2",
+    "packages/worker-core/src/bounded-stream.js": "39dd213135d8876cff1db956d6522da73104a76051d81b2cc3a19264f5dd3b40"
+  },
+  "fixture_sha256": "2c71bc985261e49ce06e3db922c359c7a45991628f27199a9c287b61bfe4e4c8",
+  "regression_fixture_sha256": "9d2ecd07b218088f1552b4a5c39f00f5eac8e25d20e9e9ce5bba91e11ae090fc"
+}

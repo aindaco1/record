@@ -42,6 +42,13 @@ repository.
 
 ## Validation
 
+The standard local development command is `node scripts/test.mjs`. It runs the
+existing deterministic validation, then native Apple transcript cleanup and Jev
+review of the pinned synthetic corpus. Use `--offline` explicitly to omit both
+inference stages. Follow [Jev setup](docs/testing/jev.md); never supply private
+transcripts or recordings to the developer evaluator. Jev cannot override exact
+or native failures. CI and release validation remain independent of hosted Jev.
+
 Run the smallest relevant test while iterating, then:
 
 ```sh

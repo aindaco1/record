@@ -21,11 +21,19 @@ final class RecordSpeechTests: XCTestCase {
     func testPublicResultContractsAreStableAndCodable() throws {
         let result = ParakeetTranscriptResult(
             text: "hello", durationSeconds: 1, confidence: 0.9,
-            tokens: [.init(text: "▁hello", tokenId: 1, startsAtSeconds: 0, endsAtSeconds: 1, confidence: 0.9)],
+            tokens: [
+                .init(
+                    text: "▁hello", tokenId: 1, startsAtSeconds: 0, endsAtSeconds: 1,
+                    confidence: 0.9)
+            ],
             words: [.init(text: "hello", startsAtSeconds: 0, endsAtSeconds: 1)]
         )
-        XCTAssertEqual(try JSONDecoder().decode(ParakeetTranscriptResult.self, from: JSONEncoder().encode(result)), result)
-        XCTAssertEqual(ParakeetTranscriber.defaultModelDirectory(for: .v3).lastPathComponent, "parakeet-tdt-0.6b-v3")
+        XCTAssertEqual(
+            try JSONDecoder().decode(
+                ParakeetTranscriptResult.self, from: JSONEncoder().encode(result)), result)
+        XCTAssertEqual(
+            ParakeetTranscriber.defaultModelDirectory(for: .v3).lastPathComponent,
+            "parakeet-tdt-0.6b-v3")
     }
 
     func testSharedModelVerifierRejectsAnIncompleteModel() throws {
@@ -33,12 +41,10 @@ final class RecordSpeechTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: root) }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         XCTAssertThrowsError(try ParakeetModelVerifier.validateV3(at: root)) { error in
-            XCTAssertTrue(String(describing: error).contains("Preprocessor.mlmodelc/coremldata.bin is missing"))
+            XCTAssertTrue(
+                String(describing: error).contains(
+                    "Preprocessor.mlmodelc/coremldata.bin is missing"))
         }
     }
 
-    func testAudioDurationFillsFluidAudioZeroDuration() {
-        XCTAssertEqual(ParakeetTranscriber.resolvedDuration(reported: 0, audio: 87), 87)
-        XCTAssertEqual(ParakeetTranscriber.resolvedDuration(reported: 86.9, audio: 87), 86.9)
-    }
 }

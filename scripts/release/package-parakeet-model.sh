@@ -31,7 +31,7 @@ for tool in curl ruby shasum stat unzip zip; do
 done
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-manifest_source="$repo_root/Sources/RecordSpeech/ParakeetModelVerifier.swift"
+manifest_source="$repo_root/shared/dust-wave-platform/native/Sources/DustWaveSpeech/ParakeetModelVerifier.swift"
 attribution_source="$repo_root/docs/models/PARAKEET_MODEL_ATTRIBUTION.md"
 
 source_revision="$(
