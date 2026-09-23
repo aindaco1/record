@@ -2,6 +2,11 @@
 
 ## Goals
 
+Shared speech and Apple generation mechanics now live in Platform's native
+SwiftPM package. Record retains capture, transcript cleanup policy, UI and local
+storage. [ADR 0022](adr/0022-platform-native-speech.md) records the boundary,
+compatibility exports, validation and rollback.
+
 Record is a menu-bar-first macOS application that captures high-quality media
 without making the recording pipeline depend on the editor, transcription, or
 plugins. The raw session remains recoverable when any downstream component

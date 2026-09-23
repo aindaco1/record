@@ -16,9 +16,8 @@ final class TranscriptRefinementTests: XCTestCase {
             [
                 .filledPause,
                 .immediateRepeat,
-                .immediateRepeat,
             ])
-        XCTAssertEqual(plan.candidates.map(\.token), ["uh", "I", "very"])
+        XCTAssertEqual(plan.candidates.map(\.token), ["uh", "I"])
         XCTAssertFalse(plan.candidates.contains { $0.token == "Ah" })
         XCTAssertFalse(plan.candidates.contains { $0.token == "10" })
     }
@@ -52,13 +51,12 @@ final class TranscriptRefinementTests: XCTestCase {
         let repeatedI = try XCTUnwrap(
             plan.candidates.first { $0.kind == .immediateRepeat && $0.token == "I" }
         )
-        let emphaticVery = try XCTUnwrap(plan.candidates.first { $0.token == "very" })
+        XCTAssertFalse(plan.candidates.contains { $0.token == "very" })
 
         let result = TranscriptRefiner.apply(
             [
                 .init(candidateID: filler.id, action: .remove),
                 .init(candidateID: repeatedI.id, action: .remove),
-                .init(candidateID: emphaticVery.id, action: .keep),
                 .init(candidateID: "invented", action: .remove),
                 .init(candidateID: filler.id, action: .remove),
             ], to: plan)
@@ -79,8 +77,7 @@ final class TranscriptRefinementTests: XCTestCase {
         XCTAssertEqual(
             result.acceptedDecisions,
             [
-                .init(candidateID: repeatedI.id, action: .remove),
-                .init(candidateID: emphaticVery.id, action: .keep),
+                .init(candidateID: repeatedI.id, action: .remove)
             ])
     }
 
@@ -126,8 +123,67 @@ final class TranscriptRefinementTests: XCTestCase {
 
         XCTAssertEqual(report.sourceSHA256.count, 64)
         XCTAssertEqual(report.schemaVersion, "record-transcript-refinement-v1")
+        XCTAssertEqual(report.policyVersion, "candidate-removal-and-overlap-v2")
         let encoded = try JSONEncoder().encode(report)
         XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("private synthetic"))
+    }
+
+    func testPreservesEmphasisGrammarAndSentenceBoundariesDespiteRemovalAdvice() {
+        for text in [
+            "It is very very important", "This is really really cold",
+            "We waited a long long time", "No no, stop", "She had had enough",
+            "I know that that answer is correct", "Go. Go now", "I, I need time",
+            "All I hear is I I I.", "We we we should go", "The code is 5 5 2",
+        ] {
+            let plan = TranscriptRefiner.plan(for: [segment(text)])
+            XCTAssertTrue(plan.candidates.isEmpty, text)
+            XCTAssertEqual(TranscriptRefiner.apply([], to: plan).segments[0].text, text)
+        }
+    }
+
+    func testQuotedAndLiteralSegmentsAreProtectedIncludingUnfinishedQuotes() {
+        for text in [
+            "The word is \"um\" exactly", "Keep 'uh' here", "He said “um we we should go”",
+            "The quote begins ‘erm we wait", "Please keep «um» in the caption",
+            "The identifier is `um`", "Um, she said \"wait\"", "The quote ends with um”",
+        ] {
+            XCTAssertTrue(TranscriptRefiner.plan(for: [segment(text)]).candidates.isEmpty, text)
+        }
+        for text in ["Um, don't go", "Uh, don’t unlock the gate"] {
+            XCTAssertEqual(TranscriptRefiner.plan(for: [segment(text)]).candidates.count, 1, text)
+        }
+    }
+
+    func testRemovalRevalidatesEligibilityEvenForAStaleOrForgedPlan() {
+        for (text, index, kind) in [
+            ("very very cold", 1, TranscriptRefinementCandidateKind.immediateRepeat),
+            ("Keep \"um\" here", 1, .filledPause),
+            ("She had had enough", 2, .immediateRepeat),
+            ("I. I agree", 1, .immediateRepeat),
+            ("I I I agree", 1, .immediateRepeat),
+            ("I agree", 0, .filledPause),
+        ] {
+            let source = segment(text)
+            let candidate = TranscriptRefinementCandidate(
+                id: "untrusted", kind: kind, segmentIndex: 0, tokenIndex: index,
+                speaker: "me", token: String(text.split(separator: " ")[index]),
+                leftContext: "", rightContext: "")
+            let plan = TranscriptRefinementPlan(
+                segments: [source], candidates: [candidate], overlaps: [])
+            let result = TranscriptRefiner.apply(
+                [.init(candidateID: candidate.id, action: .remove)], to: plan)
+            XCTAssertEqual(result.segments, [source], text)
+            XCTAssertTrue(result.removals.isEmpty, text)
+            XCTAssertTrue(result.acceptedDecisions.isEmpty, text)
+        }
+    }
+
+    func testSimplePronounAndArticleStuttersRemainEligible() {
+        for text in ["I I will go", "We we can wait", "The the key is here", "An an apple fell"] {
+            let plan = TranscriptRefiner.plan(for: [segment(text)])
+            XCTAssertEqual(plan.candidates.count, 1, text)
+            XCTAssertEqual(plan.candidates.first?.kind, .immediateRepeat, text)
+        }
     }
 
     private func segment(

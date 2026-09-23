@@ -128,6 +128,12 @@ candidates. Record validates every decision, preserves timing and source-speaker
 labels, and marks simultaneous cross-speaker segments as overlapping. It never
 asks the model to rewrite a transcript or identify a person.
 
+Record keeps segments containing quotation or code-literal marks verbatim, so
+extra hesitation around quoted dialogue may remain. Other repeated words are
+preserved unless they form a short pronoun/article stutter that the model
+approves for removal. Punctuation boundaries, longer repetition runs and
+overlapping speech remain protected.
+
 If the model is unavailable or generation fails, the ordinary local transcript
 still completes. A changed transcript retains the complete pre-refinement
 result in `transcript.raw.json`; `transcript.refinement.json` records the

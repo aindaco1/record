@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
           fetch-depth: 0
       - name: Test documentation validation policy
         run: python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
@@ -43,6 +44,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
       - name: Require successful scope and documentation checks
         env:
           SCOPE_RESULT: ${{ needs.changes.result }}
@@ -73,6 +75,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
       - name: Check required validation result
         env:
           SCOPE_RESULT: ${{ needs.changes.result }}
@@ -95,6 +98,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
 
       - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
@@ -145,6 +149,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
       - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
       - name: Run ThreadSanitizer and AddressSanitizer
@@ -162,6 +167,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
       # actions/dependency-review-action v5.0.0, pinned to a verified commit.
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
         with:

@@ -31,6 +31,60 @@ final class FoundationModelTranscriptAdviserTests: XCTestCase {
         XCTAssertEqual(result, TranscriptRefinementAdvice(decisions: [], outcome: .notNeeded))
     }
 
+    func testExperimentsDoNotChangeTheProductionDefaultOrInvokeEmptyInference() async {
+        XCTAssertEqual(OnDeviceTranscriptRefinementAdviser().modelProfile, .general)
+        XCTAssertEqual(TranscriptAdviserExperiment.baseline.modelProfile, .contentTagging)
+        for variant in [
+            TranscriptAdviserExperiment.production, .baseline, .general,
+            .generalBoolean, .generalSentence,
+        ] {
+            let result = await variant.adviser(segments: []).advise(candidates: [], language: "en")
+            XCTAssertEqual(result, TranscriptRefinementAdvice(decisions: [], outcome: .notNeeded))
+        }
+    }
+
+    func testSentenceExperimentPreservesCandidateIdentityAndRemovalContract() {
+        let segments = [
+            TranscriptDocument.Segment(
+                speaker: "me", startMilliseconds: 0, endMilliseconds: 5000,
+                text:
+                    "Keep this separate. I was carefully choosing which of the available words to use, um, before replying. This is unrelated."
+            )
+        ]
+        let original = TranscriptRefiner.plan(for: segments)
+        let candidate = original.candidates[0]
+        let expanded = SentenceContextExperiment(segments: segments).contextualize(candidate)
+        XCTAssertEqual(expanded.id, candidate.id)
+        XCTAssertEqual(expanded.tokenIndex, candidate.tokenIndex)
+        XCTAssertEqual(expanded.token, candidate.token)
+        XCTAssertTrue(expanded.leftContext.hasPrefix("I was carefully"))
+        XCTAssertFalse(expanded.leftContext.contains("Keep this separate"))
+        XCTAssertEqual(expanded.rightContext, "before replying.")
+        let withContext = TranscriptRefinementPlan(
+            segments: original.segments, candidates: [expanded], overlaps: original.overlaps)
+        let decision = TranscriptRefinementDecision(candidateID: candidate.id, action: .remove)
+        XCTAssertEqual(
+            TranscriptRefiner.apply([decision], to: original),
+            TranscriptRefiner.apply([decision], to: withContext))
+    }
+
+    func testSentenceContextIsBoundedAndUnknownTokensRemainUnchanged() {
+        let segments = [
+            TranscriptDocument.Segment(
+                speaker: "me", startMilliseconds: 0, endMilliseconds: 5000,
+                text: String(repeating: "before ", count: 100) + "um "
+                    + String(repeating: "after ", count: 100) + "."
+            )
+        ]
+        let candidate = TranscriptRefiner.plan(for: segments).candidates.first { $0.token == "um" }!
+        let experiment = SentenceContextExperiment(segments: segments)
+        let expanded = experiment.contextualize(candidate)
+        XCTAssertEqual(expanded.leftContext.count, 200)
+        XCTAssertEqual(expanded.rightContext.count, 200)
+        let unknown = self.candidate(id: "unknown")
+        XCTAssertEqual(experiment.contextualize(unknown), unknown)
+    }
+
     private func candidate(id: String) -> TranscriptRefinementCandidate {
         TranscriptRefinementCandidate(
             id: id,

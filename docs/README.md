@@ -47,6 +47,14 @@ unless a procedure says otherwise.
 
 - [Testing strategy and acceptance](testing.md): automated gates, manual smoke
   procedures, hardware matrices, and performance criteria.
+- [Transcript cleanup and Jev](testing/jev.md): default local development tests,
+  synthetic-only semantic evaluation, shared tooling and explicit offline modes.
+- [Shared native migration evidence](testing/shared-native-2026-09-23.md):
+  four-project extraction, baseline comparisons and remaining quality findings.
+- [Apple adviser comparisons](testing/apple-adviser-2026-09-23.md): general-model,
+  Boolean and sentence-context experiments informing the next Record release.
+- [Cleanup improvements](testing/cleanup-fix-2026-09-23.md): preservation fixes,
+  before/after synthetic results and remaining Jev control mismatches.
 - [macOS 27 readiness](testing/macos-27-readiness.md): dated platform findings
   and the approved Xcode 27 release-toolchain policy.
 - [Release runbook](runbooks/release.md): candidate preparation, signing,
@@ -55,7 +63,7 @@ unless a procedure says otherwise.
   handling and recovery.
 - [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
 - [Release notes](releases/): user-facing notes for each published version,
-  including [Record 1.4.4](releases/1.4.4.md).
+  including [Record 1.4.5](releases/1.4.5.md).
 
 ## Historical records
 

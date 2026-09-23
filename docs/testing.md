@@ -4,6 +4,14 @@ Record separates deterministic logic from hardware/TCC behavior. Documentation
 changes run a small offline gate; changes to code or build inputs run the full
 suite below.
 
+## Local development workflow
+
+`node scripts/test.mjs` runs full deterministic validation, native transcript
+cleanup and Jev review by default. The [Jev guide](testing/jev.md) covers the
+pinned shared evaluator, synthetic-only boundary, setup, explicit offline mode,
+request previews, controls and evidence. Hosted CI and release gates run the
+deterministic subset. A semantic pass cannot replace the hardware matrix below.
+
 ## Documentation validation
 
 Run `./scripts/ci/validate.sh`. For an eligible documentation-only range it
@@ -280,12 +288,18 @@ microphone and system speakers overlap. Confirm the final JSON and Markdown
 retain speaker labels and timestamps, label overlapping segments, and contain
 no unconstrained rewrites. If any token is removed, confirm
 `transcript.raw.json` contains the complete pre-refinement transcript. In all
-enabled cases, inspect `transcript.refinement.json` for the v1 policy, source
+enabled cases, inspect `transcript.refinement.json` for policy
+`candidate-removal-and-overlap-v2` within the unchanged v1 report schema, source
 hash, capability outcome, and content-free decisions; it must not duplicate
 transcript text. Disable Apple Intelligence or test an unsupported language and
 confirm the setting becomes unavailable while ordinary transcription continues.
 Turn the option off and confirm the next session produces the ordinary
 transcript without a refinement report.
+
+For cleanup changes, also run the pinned synthetic regression suite described
+in [the Jev guide](testing/jev.md#regression-suite). Include quotation, deliberate
+emphasis, grammatical repetition and punctuation boundaries in manual output
+review; a passing build does not establish preservation quality.
 
 ## Screenshot acceptance
 

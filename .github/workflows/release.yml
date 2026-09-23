@@ -33,6 +33,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          submodules: recursive
           ref: ${{ env.RELEASE_TAG }}
 
       - name: Select pinned released Xcode

@@ -16,12 +16,17 @@ let package = Package(
         ),
     ],
     dependencies: [
+        .package(path: "shared/dust-wave-platform/native"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
-        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.7.0"),
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.7"),
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0"),
     ],
     targets: [
-        .target(name: "RecordCore"),
+        .target(
+            name: "RecordCore",
+            dependencies: [
+                .product(name: "DustWaveSpeechCore", package: "native")
+            ]),
         .target(
             name: "RecordCapture",
             dependencies: ["RecordCore"]
@@ -33,8 +38,7 @@ let package = Package(
         .target(
             name: "RecordSpeech",
             dependencies: [
-                "RecordCore",
-                .product(name: "FluidAudio", package: "FluidAudio"),
+                .product(name: "DustWaveSpeech", package: "native")
             ]
         ),
         .target(
@@ -53,6 +57,7 @@ let package = Package(
                 "RecordCore",
                 "RecordMedia",
                 "RecordSpeech",
+                .product(name: "DustWaveAppleIntelligence", package: "native"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 .product(name: "Sparkle", package: "Sparkle"),

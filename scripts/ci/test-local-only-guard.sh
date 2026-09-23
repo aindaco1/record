@@ -39,6 +39,20 @@ assert_rejected raw-socket 'let descriptor = socket(AF_INET, SOCK_STREAM, 0)'
 assert_rejected remote-url 'let endpoint = URL(string: "https://example.invalid")'
 assert_rejected external-tool 'let executable = "/usr/bin/curl"'
 
+# The ordinary entrypoint must scan the extracted dependency as well as app code.
+shared_fixture="$temporary_root/shared-consumer"
+mkdir -p "$shared_fixture/scripts/ci" "$shared_fixture/Sources" \
+    "$shared_fixture/Configuration" "$shared_fixture/shared/dust-wave-platform/native/Sources"
+cp "$guard" "$shared_fixture/scripts/ci/check-local-only.sh"
+cp "$repo_root/scripts/ci/check-entitlements.sh" "$shared_fixture/scripts/ci/check-entitlements.sh"
+cp "$entitlements" "$shared_fixture/Configuration/Record.entitlements"
+printf '%s\n' 'import Foundation' > "$shared_fixture/Sources/Safe.swift"
+printf '%s\n' 'import Network' > "$shared_fixture/shared/dust-wave-platform/native/Sources/Unsafe.swift"
+if "$shared_fixture/scripts/ci/check-local-only.sh" >/dev/null 2>&1; then
+    echo "local-only guard ignored the shared native dependency" >&2
+    exit 1
+fi
+
 networked_entitlements="$temporary_root/networked.entitlements"
 cp "$entitlements" "$networked_entitlements"
 /usr/libexec/PlistBuddy \

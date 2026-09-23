@@ -1,5 +1,9 @@
 # ADR 0010: Bounded on-device transcript refinement
 
+- Model selection and removal policy amended by
+  [ADR 0023](0023-conservative-cleanup-preservation.md): the general model uses
+  stricter deterministic preservation; the original decision below is historical.
+
 - Toolchain policy amended by [ADR 0020](0020-xcode-27-release-toolchain.md):
   Xcode 27.0 build `27A266a` is authoritative, including exact build identity
   in the CI app handoff. Historical toolchain references below describe the

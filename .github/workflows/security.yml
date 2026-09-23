@@ -23,6 +23,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+          submodules: recursive
       - name: Classify complete change range
         id: scope
         run: python3 scripts/ci/change-scope.py --github-event --github-output
@@ -41,6 +42,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          submodules: recursive
 
       - name: Select pinned released Xcode
         run: ./scripts/ci/select-stable-xcode.sh
