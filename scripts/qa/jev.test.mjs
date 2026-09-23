@@ -2,12 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT, fixtures, fixtureContract, prepareCorpus, budget, summary } from './jev.mjs';
+import { ROOT, fixtures, fixtureContract, prepareCorpus, budget, summary, review } from './jev.mjs';
 import { main, parseArgs } from '../test.mjs';
 
-const pin = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/qa/jev-pin.json')));
-function nativeEvidence() {
-  return { complete: true, fixtureSHA256: pin.fixture_sha256, cases: fixtures().map((f) => ({
+function nativeEvidence(suite = 'baseline') {
+  return { complete: true, suite, fixtureSHA256: fixtureContract(suite).hash, cases: fixtures(undefined, suite).map((f) => ({
     id: f.id, candidateCount: 1, outcome: 'used_on_device_model',
     segments: f.kept_indices.map((i) => structuredClone(f.segments[i]))
   })) };
@@ -103,6 +102,75 @@ test('incomplete reports, borderline findings, and confident control mistakes pr
   assert.equal(result.native.review, 1);
   assert.equal(result.controls.falsePass, 1);
   assert.equal(result.combinedPass, false);
+});
+
+test('release control mistakes are diagnosed separately from passing product outputs', () => {
+  const observed = {
+    baseline: { 'overlapping-disagreement-control-pass': 'fail' },
+    regressions: { 'grammatical-had-control-fail': 'review', 'grammatical-that-control-fail': 'pass',
+      'quoted-span-control-fail': 'review', 'repetition-run-control-fail': 'pass' }
+  };
+  for (const [suite, decisions] of Object.entries(observed)) {
+    const corpus = prepareCorpus(nativeEvidence(suite), fixtures(undefined, suite), suite);
+    const report = passingReport(corpus);
+    for (const [id, decision] of Object.entries(decisions)) report.cases.find((c) => c.id === id).result.findings.meaning.decision = decision;
+    report.summary = summary(report, corpus);
+    assert.equal(report.summary.native.fail, 0);
+    assert.equal(report.summary.native.pass, suite === 'baseline' ? 11 : 20);
+    assert.deepEqual(report.summary.controls, suite === 'baseline'
+      ? { correct: 21, falsePass: 0, falseFailure: 1, review: 0, unevaluated: 0 }
+      : { correct: 36, falsePass: 2, falseFailure: 0, review: 2, unevaluated: 0 });
+    assert.equal(report.summary.productPass, true);
+    assert.equal(report.summary.controlsPass, false);
+    assert.equal(report.summary.combinedPass, false);
+    assert.deepEqual(report.summary.blockingReasons, ['judge_controls']);
+    const markdown = review(report, corpus);
+    assert.match(markdown, /All product cases passed in this run/);
+    assert.match(markdown, /examples are not Record outputs/);
+    assert.match(markdown, /## Judge control:/);
+    assert.match(markdown, suite === 'baseline' ? /expected pass; Jev fail/ : /expected fail; Jev pass/);
+  }
+});
+
+test('literal losses missed by Jev controls still fail exact checks on product output', () => {
+  const rows = fixtures(undefined, 'regressions');
+  const evidence = nativeEvidence('regressions');
+  const ids = ['grammatical-had', 'grammatical-that', 'quoted-span', 'repetition-run'];
+  for (const id of ids) {
+    evidence.cases.find((c) => c.id === id).segments[0].text = rows.find((f) => f.id === id).control.fail_candidate;
+  }
+  // The quoted control also moves an opening quote onto another word. That is
+  // rejected at preflight; a token-only loss must still fail preservation.
+  assert.throws(() => prepareCorpus(evidence, rows, 'regressions'), /outside the synthetic source/);
+  evidence.cases.find((c) => c.id === 'quoted-span').segments[0].text = 'She said “um we should wait” before leaving.';
+  const corpus = prepareCorpus(evidence, rows, 'regressions');
+  assert.deepEqual(corpus.filter((c) => c.deterministicFailures.length).map((c) => c.id), ids);
+  const report = passingReport(corpus); // Even a confident Jev pass cannot approve these omissions.
+  report.summary = summary(report, corpus);
+  assert.equal(report.summary.native.fail, 4);
+  assert.equal(report.summary.productPass, false);
+  assert.equal(report.summary.controlsPass, true);
+  assert.equal(report.summary.combinedPass, false);
+  assert.deepEqual(report.summary.blockingReasons, ['product_exact_native']);
+  assert.match(review(report, corpus), /## Product output: grammatical-that/);
+  assert.doesNotMatch(review(report, corpus), /All product cases passed/);
+});
+
+test('semantic product failures and incomplete answers cannot be mislabeled as control-only findings', () => {
+  const corpus = prepareCorpus(nativeEvidence());
+  const report = passingReport(corpus);
+  report.cases[0].result.findings.meaning.decision = 'fail';
+  let result = summary(report, corpus);
+  assert.equal(result.productPass, false);
+  assert.deepEqual(result.blockingReasons, ['product_jev']);
+  report.cases[0].result.findings.meaning.decision = 'pass';
+  delete report.cases[0].result.findings.cleanup;
+  result = summary(report, corpus);
+  assert.equal(result.productPass, false);
+  assert.equal(result.native.unevaluated, 1);
+  assert.equal(result.combinedPass, false);
+  assert.deepEqual(result.blockingReasons, ['evaluation_incomplete']);
+  assert.match(review({ ...report, summary: result }, corpus), /cleanup: expected pass; Jev unevaluated/);
 });
 
 test('spending and question budgets fail before live calls', () => {

@@ -174,6 +174,17 @@ uncertainty and unknown model versions require review. A false pass or false
 failure on a control prevents a combined pass. Do not lower the threshold to
 green a candidate; review surprising judgments against the original fixture.
 
+Reports distinguish `productPass` (all actual cleanup cases satisfy exact/native
+checks and Jev), `controlsPass` (Jev agrees with every fixed control label), and
+`combinedPass` (both pass and evaluation completed). The existing `native` counts
+continue to include both exact/native checks and product Jev judgments.
+`blockingReasons` identifies `product_exact_native`, `product_jev`,
+`judge_controls`, or `evaluation_incomplete`. A missing question answer is
+unevaluated, even if the other answers passed. The Markdown review labels each
+flagged example as a product output or judge control and shows its expected and
+observed decision. Control candidates are deliberately good/bad synthetic text;
+they are not the app's outputs. See [the control diagnosis](jev-control-diagnosis-2026-09-23.md).
+
 Exit 0 means all stages passed, or the explicitly requested offline/preview
 subset completed successfully. Exit 1 means completed native or semantic checks
 need attention. Exit 2 means setup or evaluation was incomplete. Deterministic

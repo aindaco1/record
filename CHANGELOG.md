@@ -6,6 +6,13 @@ All notable changes to Record are documented here. Record follows
 
 ## [Unreleased]
 
+### Development
+
+- Distinguish product failures, Jev control mistakes and incomplete evaluation
+  in cleanup reports. Add offline regressions proving literal losses stay
+  blocked even when Jev passes them, and missing answers cannot count as passes.
+  Keep the frozen corpora, questions, thresholds and combined exit gate.
+
 ## [1.4.5] - 2026-09-23
 
 ### Fixed
