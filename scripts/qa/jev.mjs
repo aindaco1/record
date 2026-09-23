@@ -99,15 +99,32 @@ export function budget(corpus, limit = 0.25) {
   return { questions, reservedEstimateUsd, maximumEstimatedUsd: limit, inputUsdPerMillion: INPUT_RATE };
 }
 
+function decisionFor(item, result) {
+  const findings = result?.findings || {};
+  const decisions = Object.keys(item.requirements).map((key) => findings[key]?.decision);
+  if (decisions.some((decision) => !['pass', 'fail', 'review'].includes(decision))) return 'unevaluated';
+  return decisions.includes('fail') ? 'fail' : decisions.includes('review') ? 'review' : 'pass';
+}
+
 export function summary(report, corpus) {
   const counts = { native: { pass: 0, fail: 0, review: 0, unevaluated: 0 }, controls: { correct: 0, falsePass: 0, falseFailure: 0, review: 0, unevaluated: 0 } };
+  const blockers = new Set();
+  if (!report.complete) blockers.add('evaluation_incomplete');
   for (const item of corpus) {
-    const findings = Object.values(report.cases.find((c) => c.id === item.id)?.result?.findings || {});
-    const decision = !findings.length ? 'unevaluated' : findings.some((f) => f.decision === 'fail') ? 'fail' : findings.some((f) => f.decision === 'review') ? 'review' : 'pass';
-    if (item.expected) counts.controls[decision === 'unevaluated' || decision === 'review' ? decision : decision === item.expected ? 'correct' : decision === 'pass' ? 'falsePass' : 'falseFailure']++;
-    else counts.native[item.deterministicFailures.length ? 'fail' : decision]++;
+    const decision = decisionFor(item, report.cases.find((c) => c.id === item.id)?.result);
+    if (decision === 'unevaluated') blockers.add('evaluation_incomplete');
+    if (item.expected) {
+      counts.controls[decision === 'unevaluated' || decision === 'review' ? decision : decision === item.expected ? 'correct' : decision === 'pass' ? 'falsePass' : 'falseFailure']++;
+      if (decision !== item.expected && decision !== 'unevaluated') blockers.add('judge_controls');
+    } else {
+      counts.native[item.deterministicFailures.length ? 'fail' : decision]++;
+      if (item.deterministicFailures.length) blockers.add('product_exact_native');
+      if (decision === 'fail' || decision === 'review') blockers.add('product_jev');
+    }
   }
-  return { ...counts, combinedPass: report.complete && counts.native.pass === corpus.filter((c) => !c.expected).length && counts.controls.correct === corpus.filter((c) => c.expected).length };
+  const productPass = counts.native.pass === corpus.filter((c) => !c.expected).length;
+  const controlsPass = counts.controls.correct === corpus.filter((c) => c.expected).length;
+  return { ...counts, productPass, controlsPass, blockingReasons: [...blockers], combinedPass: report.complete && productPass && controlsPass };
 }
 
 function credentials(config) {
@@ -124,16 +141,24 @@ function credentials(config) {
   return { accountId, token };
 }
 
-function review(report, corpus) {
+export function review(report, corpus) {
+  const { native, controls, productPass, controlsPass, blockingReasons } = report.summary;
   const lines = ['# Record transcript cleanup evaluation', '', `Complete: ${report.complete}. Combined pass: ${report.summary.combinedPass}. Network attempts: ${report.networkAttempts}.`, '',
-    'The probability margin is provisional. Controls are engineering labels, not independent calibration. This is not capture, ASR, hardware or release acceptance.', '', JSON.stringify(report.summary), ''];
+    `Product cases (exact/native checks and Jev): ${native.pass}/${corpus.filter((c) => !c.expected).length} passing.`,
+    `Judge controls: ${controls.correct}/${corpus.filter((c) => c.expected).length} correct; ${controls.falsePass} false passes, ${controls.falseFailure} false failures, ${controls.review} reviews, ${controls.unevaluated} unevaluated.`, '',
+    ...(blockingReasons.length ? [`Blocking reasons: ${blockingReasons.join(', ')}.`, ''] : []),
+    ...(report.complete && productPass && !controlsPass ? ['All product cases passed in this run. Judge controls block the combined pass; their deliberately good/bad examples are not Record outputs.', ''] : []),
+    'The probability margin is provisional. Controls are engineering labels, not independent calibration. This is not capture, ASR, hardware or release acceptance.', ''];
   for (const item of corpus) {
     const result = report.cases.find((c) => c.id === item.id);
-    const flagged = Object.entries(result?.result?.findings || {}).filter(([, finding]) => finding.decision !== (item.expected || 'pass'));
-    if (!flagged.length && !item.deterministicFailures.length && result?.result) continue;
-    lines.push(`## ${item.id}`, '', ...item.deterministicFailures.map((f) => `- Exact/native failure: ${f}`),
-      ...flagged.map(([key, f]) => `- ${f.decision}: ${item.requirements[key]} ${JSON.stringify(f.probabilities)}`),
-      ...(!result?.result ? ['- Jev result unavailable.'] : []), '', ...item.candidate.split('\n').map((line) => `> ${line}`), '');
+    const flagged = Object.keys(item.requirements).filter((key) => result?.result?.findings?.[key]?.decision !== (item.expected || 'pass'));
+    if (!flagged.length && !item.deterministicFailures.length) continue;
+    lines.push(`## ${item.expected ? 'Judge control' : 'Product output'}: ${item.id}`, '', ...item.deterministicFailures.map((f) => `- Exact/native failure: ${f}`),
+      ...flagged.map((key) => {
+        const finding = result?.result?.findings?.[key];
+        return `- ${key}: expected ${item.expected || 'pass'}; Jev ${finding?.decision || 'unevaluated'}. ${item.requirements[key]}` +
+          (finding ? ` Probabilities: ${JSON.stringify(finding.probabilities)}; margin: ${finding.margin}.` : ' Jev result unavailable.');
+      }), '', ...item.candidate.split('\n').map((line) => `> ${line}`), '');
   }
   return lines.join('\n');
 }
