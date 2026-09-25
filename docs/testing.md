@@ -105,7 +105,11 @@ versions, exact preview bytes, retry IDs across relaunch, explicit-send-only
 behavior, update busy-state cleanup, relay grouping and helper source/entitlements.
 The package gate runs `scripts/qa/report-sender-smoke.sh` against the signed helper
 in a disposable sandboxed host, proving invalid input is rejected over real XPC
-without sending a report.
+without sending a report. The disposable host and copied helper use isolated
+bundle identities and retain the helper's entitlements. For an explicitly
+approved live canary, add `--send-synthetic UUID`; this mode constructs only a
+fixed synthetic crash and never reads preferences, media or crash files. Reuse
+its UUID for a retry, respect the shared relay limiter, and close test issues.
 
 Before releasing 1.4.6, exercise the signed app with synthetic data:
 

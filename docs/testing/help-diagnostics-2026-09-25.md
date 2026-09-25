@@ -20,6 +20,11 @@ owner explicitly authorized public submission of the filtered preview.
   bounded file reads and menu callback wiring.
 - `scripts/qa/report-sender-smoke.sh`: the real packaged XPC service rejects
   synthetic private input before transport from a sandboxed disposable host.
+  The probe gives its disposable bundle and copied helper unique identities,
+  retaining the helper's entitlements, to avoid collisions with production
+  sandbox containers. Reusing a test identity across ad hoc and Developer ID
+  signatures stalled in macOS sandbox initialization before main; isolation
+  resolved it, and an external timeout bounds future infrastructure failures.
   This is not a live report submission.
 - Record's contract fixture passes the JavaScript relay validator; unknown/private
   fields and mismatched crash versions are rejected. App-owned adapter copies
