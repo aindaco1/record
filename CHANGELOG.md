@@ -4,11 +4,11 @@ All notable changes to Record are documented here. Record follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.4.6] - 2026-09-25
 
 ### Development
 
-- Share sparkle controller and framework-free launch policy through the pinned Dust Wave Platform dependency. Preserve existing update consent and product-specific diagnostics behavior. See the [migration record](docs/SHARED_DESKTOP_MIGRATION.md).
+- Share Sparkle controller and framework-free launch policy through the pinned Dust Wave Platform dependency. Preserve existing update consent and product-specific diagnostics behavior. See the [migration record](docs/SHARED_DESKTOP_MIGRATION.md).
 
 - Distinguish product failures, Jev control mistakes and incomplete evaluation
   in cleanup reports. Add offline regressions proving literal losses stay
