@@ -58,13 +58,13 @@ jobs:
         with:
           languages: swift
           build-mode: manual
-          # Match the last verified Xcode 27 scan; 2.27.1 fails spawning SwiftPM's manifest.
-          tools: https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.27.0/codeql-bundle-osx64.tar.zst
 
       - name: Build
+        # CodeQL's rewritten sandbox-exec cannot launch on this runner. This flag
+        # affects only SwiftPM's build-time manifest sandbox in the isolated scan.
         run: >-
           swift build -c release --arch arm64
-          --disable-automatic-resolution
+          --disable-automatic-resolution --disable-sandbox
 
       - name: Analyze
         uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd
