@@ -57,6 +57,7 @@ install -m 0644 THIRD_PARTY_NOTICES.md \
     "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"
 install -m 0644 shared/dust-wave-platform/LICENSE \
     "$app_path/Contents/Resources/Licenses/DustWavePlatform-MIT.txt"
+cp shared/dust-wave-platform/desktop/LICENSE.* "$app_path/Contents/Resources/Licenses/"
 install -m 0644 LICENSE \
     "$app_path/Contents/Resources/Licenses/Record-MIT.txt"
 install -m 0644 .build/checkouts/swift-argument-parser/LICENSE.txt \

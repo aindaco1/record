@@ -1,5 +1,9 @@
 # Third-party notices
 
+## Shared desktop services
+
+Dust Wave Platform desktop 0.2.0 provides shared updater and reviewed-report mechanics under MIT. Original Record, Auto Subtitle, CutNotes and Podcast Visualizer notices remain in `shared/dust-wave-platform/desktop/LICENSE.*` and are packaged with Platform's MIT license in `Contents/Resources/Licenses`.
+
 Record preserves the MIT-licensed Git history of
 [digimata/quill](https://github.com/digimata/quill). The repository's MIT
 license remains in `LICENSE`.
