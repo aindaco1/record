@@ -8,6 +8,8 @@ All notable changes to Record are documented here. Record follows
 
 ### Development
 
+- Share sparkle controller and framework-free launch policy through the pinned Dust Wave Platform dependency. Preserve existing update consent and product-specific diagnostics behavior. See the [migration record](docs/SHARED_DESKTOP_MIGRATION.md).
+
 - Distinguish product failures, Jev control mistakes and incomplete evaluation
   in cleanup reports. Add offline regressions proving literal losses stay
   blocked even when Jev passes them, and missing answers cannot count as passes.

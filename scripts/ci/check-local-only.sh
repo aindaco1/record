@@ -64,6 +64,10 @@ fi
 if [[ "$source_root" == "$repo_root/Sources" ]]; then
     "$repo_root/scripts/ci/check-local-only.sh" \
         "$repo_root/shared/dust-wave-platform/native/Sources" "$entitlements"
+    for module in DustWaveUpdates DustWaveUpdatePolicy; do
+        "$repo_root/scripts/ci/check-local-only.sh" \
+            "$repo_root/shared/dust-wave-platform/desktop/Sources/$module" "$entitlements"
+    done
 fi
 if [[ -d "$source_root/RecordModelDownload" && \
       -d "$source_root/RecordModelDownloaderService" ]]; then

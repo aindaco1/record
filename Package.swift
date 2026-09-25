@@ -16,6 +16,7 @@ let package = Package(
         ),
     ],
     dependencies: [
+        .package(path: "shared/dust-wave-platform/desktop"),
         .package(path: "shared/dust-wave-platform/native"),
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.3.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", exact: "0.15.7"),
@@ -25,7 +26,8 @@ let package = Package(
         .target(
             name: "RecordCore",
             dependencies: [
-                .product(name: "DustWaveSpeechCore", package: "native")
+                .product(name: "DustWaveSpeechCore", package: "native"),
+                .product(name: "DustWaveUpdatePolicy", package: "desktop"),
             ]),
         .target(
             name: "RecordCapture",
@@ -60,7 +62,7 @@ let package = Package(
                 .product(name: "DustWaveAppleIntelligence", package: "native"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
-                .product(name: "Sparkle", package: "Sparkle"),
+                .product(name: "DustWaveUpdates", package: "desktop"),
             ],
             // The app assembler installs these directly into Record.app.
             exclude: ["Info.plist", "Resources"],
