@@ -37,12 +37,18 @@ owner explicitly authorized public submission of the filtered preview.
   incoming/outgoing network entitlement; both dedicated helpers have exactly
   sandbox and outbound-network entitlements.
 
-## Acceptance still pending
+## Signed-app visual acceptance
 
 Native computer-use calls timed out on the menu-only Record process, including
-calls targeting the exact installed app. Visual window and file-panel acceptance
-is pending, not inferred from tests or process launch. The user was asked to open
-the new window to permit inspection.
+calls targeting the exact installed app. After the user opened Help & diagnostics,
+the signed 1.4.6 window was inspected directly. The preview and controls were
+readable, Refresh created a new report ID, and local export produced the reviewed
+JSON on disk. Import cancellation and invalid synthetic input preserved the prior
+preview. A valid synthetic incident produced the expected allowlisted summary,
+excluding fabricated paths, names and symbols; Refresh removed the crash summary.
+No actual diagnostic report was sent during the visual checks.
+
+## Acceptance still pending
 
 The Record endpoint's production deployment, GitHub App repository access and
 synthetic live create/duplicate/aggregate/reopen checks remain pending. No private
