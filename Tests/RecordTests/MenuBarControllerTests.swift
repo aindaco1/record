@@ -5,6 +5,7 @@ import XCTest
 final class MenuBarControllerTests: XCTestCase {
     func testMenuUsesStableActionLabels() {
         XCTAssertEqual(MenuBarController.settingsMenuTitle, "Settings…")
+        XCTAssertEqual(MenuBarController.diagnosticsMenuTitle, "Help & diagnostics…")
         XCTAssertEqual(
             MenuBarController.openRecoveryFolderMenuTitle,
             "Open Recovery Folder…"
@@ -42,6 +43,19 @@ final class MenuBarControllerTests: XCTestCase {
             menu.topLevelMenuLayout[settingsIndex + 2],
             MenuBarController.checkForUpdatesMenuTitle
         )
+    }
+
+    func testDiagnosticsMenuActionIsAvailableDuringCapture() {
+        let menu = MenuBarController()
+        var calls = 0
+        menu.onShowDiagnostics = { calls += 1 }
+        XCTAssertEqual(
+            menu.topLevelMenuTitles.filter { $0 == MenuBarController.diagnosticsMenuTitle }.count, 1
+        )
+        menu.update(recording: true, elapsed: "0:01")
+        XCTAssertTrue(
+            NSApp.sendAction(NSSelectorFromString("showDiagnosticsClicked"), to: menu, from: nil))
+        XCTAssertEqual(calls, 1)
     }
 
     func testScreenSourceMenuHasExactlyOnePersistentModeSelected() {

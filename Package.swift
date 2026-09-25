@@ -10,6 +10,7 @@ let package = Package(
         .library(name: "RecordMedia", targets: ["RecordMedia"]),
         .library(name: "RecordSpeech", targets: ["RecordSpeech"]),
         .executable(name: "record", targets: ["Record"]),
+        .executable(name: "record-report-sender", targets: ["RecordReportSenderService"]),
         .executable(
             name: "record-model-downloader",
             targets: ["RecordModelDownloaderService"]
@@ -28,6 +29,7 @@ let package = Package(
             dependencies: [
                 .product(name: "DustWaveSpeechCore", package: "native"),
                 .product(name: "DustWaveUpdatePolicy", package: "desktop"),
+                .product(name: "DustWaveDiagnostics", package: "desktop"),
             ]),
         .target(
             name: "RecordCapture",
@@ -53,6 +55,13 @@ let package = Package(
             exclude: ["Info.plist"]
         ),
         .executableTarget(
+            name: "RecordReportSenderService",
+            dependencies: [
+                "RecordCore", .product(name: "DustWaveDiagnostics", package: "desktop"),
+            ],
+            exclude: ["Info.plist"]
+        ),
+        .executableTarget(
             name: "Record",
             dependencies: [
                 "RecordCapture",
@@ -63,6 +72,7 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 .product(name: "DustWaveUpdates", package: "desktop"),
+                .product(name: "DustWaveDiagnostics", package: "desktop"),
             ],
             // The app assembler installs these directly into Record.app.
             exclude: ["Info.plist", "Resources"],

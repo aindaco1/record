@@ -145,6 +145,12 @@ final class AppController {
     private let root: URL
     private let menuBar = MenuBarController()
     private let updateController = AppUpdateController()
+    private var diagnosticEvents: [RecordDiagnosticReport.Event] = [.launch]
+    private lazy var diagnostics = RecordDiagnostics(
+        setBusy: { [weak self] in self?.updateController.reportSubmissionInProgress = $0 },
+        snapshot: { [unowned self] in self.diagnosticSnapshot() }
+    )
+    private lazy var diagnosticsWindow = DiagnosticsWindowController(model: diagnostics)
     private let launchAtLoginController = LaunchAtLoginController()
     private let notifications: RecordNotificationCenter
     private let transcription: TranscriptionCoordinator
@@ -227,6 +233,8 @@ final class AppController {
         menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
         menuBar.onOpenRecoveryFolder = { [weak self] in self?.openRecoveryFolder() }
         menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
+        menuBar.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
+        settingsController.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
         menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
         menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] availability in
             self?.settingsController.updateInteractionAvailability(availability)
@@ -454,6 +462,7 @@ final class AppController {
                 self.finishScreenshotCapture(output, exportDirectory: exportDirectory)
             } catch {
                 if !Self.isSourceSelectionCancellation(error) {
+                    self.recordDiagnosticEvent(.screenshotFailed)
                     FileHandle.standardError.write(
                         Data("screenshot capture failed: \(error)\n".utf8)
                     )
@@ -478,6 +487,7 @@ final class AppController {
         menuBar.updateScreenshotCaptureAvailable(true)
 
         if output.isCompleteSuccess {
+            recordDiagnosticEvent(.screenshotSaved)
             menuBar.flashScreenshotSuccess()
         } else if output.savedURL != nil {
             postNotification(
@@ -509,6 +519,42 @@ final class AppController {
         terminateIfRequested()
     }
 
+    private func recordDiagnosticEvent(_ event: RecordDiagnosticReport.Event) {
+        diagnosticEvents.append(event)
+        diagnosticEvents = Array(diagnosticEvents.suffix(20))
+    }
+
+    private func diagnosticSnapshot() -> RecordDiagnosticReport {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let activity: RecordDiagnosticReport.Activity
+        if videoPaused {
+            activity = .paused
+        } else if let activeRecording {
+            activity = activeRecording.mode == .screen ? .screenRecording : .audioRecording
+        } else if permissionTask != nil || videoStartTask != nil || sessionPublishTask != nil
+            || screenshotCaptureTask != nil
+        {
+            activity = .busy
+        } else {
+            activity = .idle
+        }
+        return RecordDiagnosticReport(
+            version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
+                as? String ?? "0",
+            build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0",
+            operatingSystem: "\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)",
+            state: .init(
+                activity: activity,
+                screenSource: RecordDiagnosticReport.Source(
+                    rawValue: screenCaptureSourcePreferences.selected.rawValue) ?? .mainDisplay,
+                transcription: Config.transcriptionEnabled()
+                    ? (Config.transcriptionSelection().engine == .parakeet
+                        ? .parakeet : .macwhisper) : .disabled,
+                transcriptCleanup: Config.refineTranscriptWithAppleIntelligence(),
+                modelSetupInProgress: modelSetupInProgress, events: diagnosticEvents)
+        )
+    }
+
     private func showSettings() {
         settingsController.updateInteractionAvailability(
             menuBar.settingsInteractionAvailability
@@ -529,6 +575,7 @@ final class AppController {
         let failures = screenshotShortcutRegistrar.apply(shortcuts)
         settingsController.showShortcutRegistrationFailures(failures)
         if !failures.isEmpty {
+            recordDiagnosticEvent(.shortcutUnavailable)
             let detail = failures.map {
                 "\($0.kind.rawValue)=\($0.status)"
             }.joined(separator: ", ")
@@ -560,6 +607,7 @@ final class AppController {
         }
 
         menuBar.updateRequestingPermissions(for: mode)
+        recordDiagnosticEvent(.recordingRequested)
         permissionTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let preparation = await self.recordingPermission.prepare(for: mode)
@@ -722,6 +770,7 @@ final class AppController {
     }
 
     private func stopSession() {
+        recordDiagnosticEvent(.recordingStopped)
         guard let activeRecording else { return }
         switch activeRecording {
         case .audio(let session):
@@ -1002,6 +1051,7 @@ final class AppController {
     }
 
     private func toggleVideoPause() {
+        recordDiagnosticEvent(.pauseResumeRequested)
         guard case .video(let session) = activeRecording,
             videoStartTask == nil,
             videoRotationTask == nil,

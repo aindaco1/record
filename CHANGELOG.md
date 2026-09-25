@@ -6,6 +6,14 @@ All notable changes to Record are documented here. Record follows
 
 ## [1.4.6] - 2026-09-25
 
+### Added
+
+- Add Paper-style **Help & diagnostics…** in the menu and Settings: review a
+  content-free snapshot, import a filtered crash summary, save JSON locally or
+  explicitly submit it to public Record issues. Reuse Platform's crash filtering,
+  transport and relay grouping. Keep the main app network-denied and confine
+  submission to a fixed-endpoint, schema-validating XPC helper.
+
 ### Development
 
 - Share Sparkle controller and framework-free launch policy through the pinned Dust Wave Platform dependency. Preserve existing update consent and product-specific diagnostics behavior. See the [migration record](docs/SHARED_DESKTOP_MIGRATION.md).

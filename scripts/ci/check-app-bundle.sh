@@ -23,15 +23,6 @@ if [[ ! -d "$required_directory" || -L "$required_directory" ]]; then
     echo "missing or unsafe app directory: $required_directory" >&2
     exit 1
 fi
-model_downloader="$app_path/Contents/XPCServices/RecordModelDownloader.xpc"
-model_downloader_executable="$model_downloader/Contents/MacOS/record-model-downloader"
-model_downloader_info="$model_downloader/Contents/Info.plist"
-if [[ ! -d "$model_downloader" || -L "$model_downloader" || \
-      ! -x "$model_downloader_executable" || -L "$model_downloader_executable" || \
-      ! -f "$model_downloader_info" || -L "$model_downloader_info" ]]; then
-    echo "missing or unsafe Record model downloader XPC service" >&2
-    exit 1
-fi
 
 required_files=(
     "$app_path/Contents/Info.plist"
@@ -110,36 +101,43 @@ do
 done
 assert_plist_value LSUIElement true
 
-assert_model_downloader_value() {
-    local key="$1"
-    local expected="$2"
-    local actual
-    actual="$(/usr/bin/plutil -extract "$key" raw -o - "$model_downloader_info")"
+assert_helper_value() {
+    local info="$1" key="$2" expected="$3" actual
+    actual="$(/usr/bin/plutil -extract "$key" raw -o - "$info")"
     if [[ "$actual" != "$expected" ]]; then
-        echo "expected model downloader $key=$expected, found: $actual" >&2
+        echo "expected helper $key=$expected, found: $actual" >&2
         exit 1
     fi
 }
 
-assert_model_downloader_value CFBundleExecutable record-model-downloader
-assert_model_downloader_value CFBundleIdentifier com.aindaco.record.model-downloader
-assert_model_downloader_value CFBundlePackageType 'XPC!'
-assert_model_downloader_value LSMinimumSystemVersion 15.0
-assert_model_downloader_value XPCService.ServiceType Application
-assert_model_downloader_value CFBundleShortVersionString \
-    "$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - \
-        "$app_path/Contents/Info.plist")"
-assert_model_downloader_value CFBundleVersion \
-    "$(/usr/bin/plutil -extract CFBundleVersion raw -o - \
-        "$app_path/Contents/Info.plist")"
-
-architectures="$(/usr/bin/lipo -archs "$required_executable")"
-if [[ "$architectures" != "arm64" ]]; then
-    echo "expected an arm64-only app binary, found: $architectures" >&2
-    exit 1
-fi
-model_downloader_architectures="$(/usr/bin/lipo -archs "$model_downloader_executable")"
-if [[ "$model_downloader_architectures" != "arm64" ]]; then
-    echo "expected an arm64-only model downloader, found: $model_downloader_architectures" >&2
+for specification in \
+    'RecordModelDownloader:record-model-downloader:com.aindaco.record.model-downloader' \
+    'RecordReportSender:record-report-sender:com.aindaco.record.report-sender'
+do
+    IFS=: read -r bundle executable identifier <<< "$specification"
+    helper="$app_path/Contents/XPCServices/$bundle.xpc"
+    binary="$helper/Contents/MacOS/$executable"
+    info="$helper/Contents/Info.plist"
+    if [[ ! -d "$helper" || -L "$helper" || ! -x "$binary" || -L "$binary" || \
+          ! -f "$info" || -L "$info" ]]; then
+        echo "missing or unsafe Record helper: $bundle" >&2
+        exit 1
+    fi
+    assert_helper_value "$info" CFBundleExecutable "$executable"
+    assert_helper_value "$info" CFBundleIdentifier "$identifier"
+    assert_helper_value "$info" CFBundlePackageType 'XPC!'
+    assert_helper_value "$info" LSMinimumSystemVersion 15.0
+    assert_helper_value "$info" XPCService.ServiceType Application
+    for key in CFBundleShortVersionString CFBundleVersion; do
+        assert_helper_value "$info" "$key" \
+            "$(/usr/bin/plutil -extract "$key" raw -o - "$app_path/Contents/Info.plist")"
+    done
+    if [[ "$(/usr/bin/lipo -archs "$binary")" != arm64 ]]; then
+        echo "expected an arm64-only helper: $bundle" >&2
+        exit 1
+    fi
+done
+if [[ "$(/usr/bin/lipo -archs "$required_executable")" != arm64 ]]; then
+    echo "expected an arm64-only app binary" >&2
     exit 1
 fi

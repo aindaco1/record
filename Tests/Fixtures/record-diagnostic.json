@@ -1,0 +1,21 @@
+{
+  "schema": "record-diagnostic-v1",
+  "id": "11111111-2222-4333-8444-555555555555",
+  "kind": "current_state",
+  "application": {
+    "version": "1.4.6",
+    "build": "146",
+    "operatingSystem": "27.0.0",
+    "architecture": "arm64"
+  },
+  "state": {
+    "activity": "idle",
+    "screenSource": "mainDisplay",
+    "transcription": "parakeet",
+    "transcriptCleanup": true,
+    "modelSetupInProgress": false,
+    "events": [
+      "launch"
+    ]
+  }
+}

@@ -45,6 +45,8 @@ unless a procedure says otherwise.
 
 ## Test and release
 
+- [Help and diagnostics validation](testing/help-diagnostics-2026-09-25.md):
+  combined 1.4.6 candidate checks and remaining live acceptance.
 - [Testing strategy and acceptance](testing.md): automated gates, manual smoke
   procedures, hardware matrices, and performance criteria.
 - [Transcript cleanup and Jev](testing/jev.md): default local development tests,

@@ -3,10 +3,11 @@
 Record treats screenshots, recordings, transcripts, clipboard content and
 clipboard-derived names, plugin state, diagnostics, and file metadata as
 private local data. The product has no accounts, telemetry, cloud
-transcription, upload, or capture-data network path. Network access is confined
+transcription, media-upload, or capture-data network path. Network access is confined
 to sandboxed helpers: Sparkle checks and installs signed application updates,
 and the Parakeet downloader fetches one pinned GitHub model asset only after an
-explicit user request.
+explicit user request. A third helper sends only an explicitly reviewed,
+content-free diagnostic projection under [ADR 0025](../adr/0025-reviewed-diagnostics.md).
 
 This is the reference for Record's enforceable security invariants. See the
 [security policy](../SECURITY.md) for supported versions and private reporting,
@@ -16,7 +17,7 @@ and the [privacy policy](../PRIVACY.md) for user-facing data handling.
 
 1. Product-source CI rejects common Apple networking frameworks, client APIs,
    raw sockets, remote URL construction, telemetry SDKs, and network command
-   execution outside the dedicated model downloader. A separate helper guard
+   execution outside the dedicated model downloader and reviewed-report sender. A separate helper guard
    permits Foundation `URLSession` but rejects configurable remote URLs, raw
    sockets, command-line download tools, and additional entitlements. Both
    guards have positive and negative fixture tests.
@@ -25,12 +26,13 @@ and the [privacy policy](../PRIVACY.md) for user-facing data handling.
    and installer XPC services are the narrow exception for launch and manual
    update requests; the appcast and archive both require Ed25519 signatures.
    `RecordModelDownloader.xpc` is the separate, outbound-only exception for the
-   explicit Parakeet setup action.
+   explicit Parakeet setup action. `RecordReportSender.xpc` is outbound-only
+   for a schema-validated preview, with no file grants or caller-selected URL.
 3. Record enables FluidAudio's offline mode at every executable entry point
    and immediately before model preparation. A test calls FluidAudio's public
    download surface and requires its typed `networkDisabled` failure.
 4. Release signing embeds the reviewed entitlement files, and CI extracts both
-   the main-app and model-helper entitlements from the signed artifact rather
+   the main-app and both dedicated-helper entitlements from the signed artifact rather
    than trusting only source configuration.
 5. Models enter through either a user-selected local folder or the explicit
    **Download and Install** action. The helper selects the fixed asset itself,
@@ -68,6 +70,14 @@ only its local existence and loading APIs. This is why the sandbox boundary is
 required in addition to source scanning. Dependency updates must be reviewed
 for new network, telemetry, process-launch, file-access, and model-loading
 behavior before merge.
+
+The diagnostic helper validates canonical bytes before invoking Platform's
+`ReviewedReportClient` at one fixed HTTPS endpoint. Main-app source cannot invoke
+Platform's transport; it uses only crash projection and receipt validation.
+CI checks the immutable dependency pin, helper source, closed schema, bounded
+file reads, retry identity and signed entitlements. Relay intake independently
+rejects unknown fields and bounds actual request bytes; existing Platform-backed
+serialization and issue delivery own grouping and retry reconciliation.
 
 ## Local execution and metadata
 
@@ -124,6 +134,9 @@ the notification.
   host. Neither path includes recording data, transcript text, clipboard
   content, session metadata, diagnostics, local paths, or a Record account
   identifier.
+- Explicit diagnostic submission publishes only the reviewed projection to
+  Record GitHub issues via the relay. Raw diagnostics remain local. See the
+  [privacy policy](../PRIVACY.md#reviewed-diagnostic-reports).
 - The developer-only Parakeet setup script remains available outside the app
   sandbox. The shipping app uses a different, fixed-asset XPC path and does not
   enable FluidAudio's downloader.

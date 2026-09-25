@@ -46,3 +46,13 @@ migration records whether the source rollback applies cleanly.
 Local source/build evidence does not establish notarization, a signed updater
 replacement, physical hardware behavior or deployed GitHub delivery. Use the
 existing release runbook before shipping.
+
+## Help and diagnostics in 1.4.6
+
+The same pinned desktop module also supplies crash projection, reviewed-report
+transport and receipt validation for [ADR 0025](adr/0025-reviewed-diagnostics.md).
+This follow-up adds an explicitly authorized public-report exception through a
+separate sandboxed XPC sender; the main app retains its network prohibition.
+The updater migration above remains independently recorded. Diagnostics requires
+a new Record namespace in the existing relay and separate signed/live acceptance;
+its rollback keeps namespace history and disables intake rather than deleting it.

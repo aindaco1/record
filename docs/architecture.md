@@ -73,6 +73,14 @@ then repeats archive verification, expands into private temporary storage, and
 reuses the existing per-file manifest validation and atomic installer. The
 main app retains no network entitlement, and FluidAudio remains forced offline.
 
+Help & diagnostics follows Paper's preview/import/save/send workflow. `RecordCore`
+owns the closed report schema, canonical validation and XPC protocol; Platform
+owns crash projection, bounded transport and acknowledgements. The UI persists
+only the filtered pending report, keeps retries on the same ID, and defers manual
+update checks during sending. `RecordReportSender.xpc` accepts only validated JSON
+and chooses its fixed endpoint. The existing relay reuses Platform's grouping and
+GitHub writer with Record-owned schema and routing. See [ADR 0025](adr/0025-reviewed-diagnostics.md).
+
 ## Session format
 
 Screenshots deliberately do not create sessions or manifests. A one-shot
