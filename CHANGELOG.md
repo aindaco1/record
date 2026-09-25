@@ -4,6 +4,10 @@ All notable changes to Record are documented here. Record follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.7] - 2026-09-25
+
+- Adopt the shared Apple support core through the compatible desktop diagnostics API. Preserve reviewed reports, explicit sending, update consent and existing app behavior.
+
 ## [1.4.6] - 2026-09-25
 
 ### Added
