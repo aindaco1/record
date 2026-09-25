@@ -184,6 +184,7 @@ final class SettingsWindowController: NSWindowController {
     private let transcriptRefinementCheckbox = NSButton(
         checkboxWithTitle: "Improve Transcript Readability", target: nil, action: nil)
 
+    var onShowDiagnostics: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
     var onScreenshotPreferencesChanged: (() -> Void)?
     var onToggleCapturePrivacy: ((CapturePrivacyFeature) -> Void)?
@@ -398,6 +399,8 @@ final class SettingsWindowController: NSWindowController {
         ])
     }
 
+    @objc private func showDiagnostics() { onShowDiagnostics?() }
+
     private func buildGeneralPage() -> NSView {
         makePage(
             title: "General",
@@ -447,6 +450,8 @@ final class SettingsWindowController: NSWindowController {
             launchAtLoginCheckbox.target = self
             launchAtLoginCheckbox.action = #selector(toggleLaunchAtLogin)
             stack.addArrangedSubview(row(label: "", views: [launchAtLoginCheckbox]))
+            let help = NSButton(title: MenuBarController.diagnosticsMenuTitle, target: self, action: #selector(showDiagnostics))
+            stack.addArrangedSubview(row(label: "Support", views: [help]))
         }
     }
 

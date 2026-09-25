@@ -11,6 +11,7 @@ final class MenuBarController {
     static let settingsMenuTitle = "Settings…"
     static let openRecoveryFolderMenuTitle = "Open Recovery Folder…"
     static let openLastRecordingMenuTitle = "Open last recording"
+    static let diagnosticsMenuTitle = "Help & diagnostics…"
     static let checkForUpdatesMenuTitle = "Check for Updates…"
     static let screenSourceMenuTitle = "Screen source"
     static let captureDisplayMenuTitle = "Capture Full Display"
@@ -86,6 +87,7 @@ final class MenuBarController {
     var onRetryTranscription: (() -> Void)?
     var onOpenRecoveryFolder: (() -> Void)?
     var onOpenLastRecording: (() -> Void)?
+    var onShowDiagnostics: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
     var onSettingsInteractionAvailabilityChanged: ((SettingsInteractionAvailability) -> Void)?
     var onQuit: (() -> Void)?
@@ -225,6 +227,12 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         menu.addItem(checkForUpdatesItem)
+        let diagnosticsItem = NSMenuItem(
+            title: Self.diagnosticsMenuTitle, action: #selector(showDiagnosticsClicked),
+            keyEquivalent: ""
+        )
+        diagnosticsItem.target = self
+        menu.addItem(diagnosticsItem)
 
         menu.addItem(.separator())
 
@@ -528,6 +536,7 @@ final class MenuBarController {
     @objc private func retryTranscriptionClicked() { onRetryTranscription?() }
     @objc private func openRecoveryFolderClicked() { onOpenRecoveryFolder?() }
     @objc private func openLastRecordingClicked() { onOpenLastRecording?() }
+    @objc private func showDiagnosticsClicked() { onShowDiagnostics?() }
     @objc private func checkForUpdatesClicked() { onCheckForUpdates?() }
     @objc private func quitClicked() { onQuit?() }
 }

@@ -6,14 +6,18 @@ repository.
 ## Product invariants
 
 - Keep screenshots, recording content, transcripts, clipboard content and
-  clipboard-derived names, diagnostics, and session metadata local.
-- Do not add accounts, analytics, upload clients, cloud transcription, or
+  clipboard-derived names, raw diagnostics, and session metadata local.
+  ADR 0025 permits only an explicitly reviewed, content-free diagnostic report.
+- Do not add accounts, analytics, general upload clients, cloud transcription, or
   unreviewed/general-purpose download paths.
 - The main app must retain no incoming or outgoing network entitlement. The
   reviewed Sparkle downloader XPC service is the only update network path. The
   dedicated model-downloader XPC service may fetch only the pinned Parakeet
   release asset after explicit user action; it must receive no URL, user data,
   recording metadata, or general file-system access.
+- The dedicated report-sender XPC service may submit only the validated
+  `record-diagnostic-v1` preview to its fixed endpoint after explicit consent.
+  It receives no URL, path, raw crash file, media, transcript, or file access.
 - Never invoke configured completion hooks through a shell. Require absolute
   executable paths and pass arguments directly.
 - Preserve raw media until a complete exported session has been validated.

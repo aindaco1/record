@@ -1,10 +1,10 @@
 # Privacy policy
 
-Effective: September 2, 2026
+Effective: September 25, 2026
 
 Record is local-first software. It does not create an account, collect
 analytics, upload screenshots or recordings, upload transcripts, sell data, or
-send crash reports. Screenshot pixels, recording media, transcripts,
+automatically send crash reports. Screenshot pixels, recording media, transcripts,
 configuration, plugin preferences, and session diagnostics remain on the Mac
 where Record runs.
 
@@ -22,7 +22,7 @@ enabled recording-name template explicitly contains the `{clipboard}` token.
 ## Network access
 
 The main Record app has no network entitlement. Sandboxed helper services make
-two narrowly scoped GitHub connections. At each launch, Sparkle's downloader
+narrowly scoped update, model-download and reviewed-report connections. At each launch, Sparkle's downloader
 checks Record's signed release feed; the same check remains available through
 **Check for Updates…**. When the user explicitly chooses **Download and
 Install** for Parakeet, a separate model helper downloads only Record's fixed,
@@ -42,6 +42,35 @@ snippets are processed by Apple's on-device Foundation Models framework. They
 do not leave the Mac, and Record does not send them to an Apple or third-party
 network service. Record preserves the pre-refinement local transcript whenever
 the readable output changes.
+
+## Reviewed diagnostic reports
+
+**Help & diagnostics…** opens a preview without uploading anything. The report
+contains numeric app/build/macOS versions, fixed capture activity/source and
+transcription categories, cleanup/model-setup booleans, and up to 20 event
+categories from this launch. It excludes recordings, screenshots, transcripts,
+clipboard content, names, paths, session identifiers, raw errors and logs.
+
+You may select a Record `.ips` file up to 2 MiB. Platform's allowlisted projection
+retains only exception/signal, a known image and bounded offset, and incident
+versions. The raw file and stack symbols stay local. No automatic crash discovery
+or submission occurs.
+
+**Send to public GitHub issues** sends exactly the displayed JSON (up to 8 KiB)
+through a dedicated sandboxed helper to
+`https://crash.dustwave.xyz/v1/record/reports`. The main app remains network-denied.
+The helper has no file grants, validates the closed schema, rejects redirects and
+requires a matching acknowledgement. The relay creates or updates issues only in
+`aindaco1/record`; matching reports share an issue. Retries reuse the report ID
+without counting twice within the relay's bounded receipt retention. Counts are
+submissions, not unique users or proven causes. A new Refresh creates a new ID.
+
+The relay receives ordinary connection metadata and uses it for abuse prevention,
+not issue content. GitHub issues are public. Use [private security reporting](SECURITY.md)
+for vulnerabilities. Record keeps one filtered pending report in local preferences
+for retry across relaunches; Refresh replaces it, and removing the container deletes
+it. Saved JSON remains until you delete it. Published issues are subject to GitHub's
+retention and moderation; deleting local data does not remove a public submission.
 
 ## Retention and deletion
 

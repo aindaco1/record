@@ -153,6 +153,15 @@ These settings do not modify global macOS display preferences, download
 helpers, or grant plugins network access. See the
 [local-only boundary](security/local-only-boundary.md) for security details.
 
+## Help and diagnostics
+
+Choose **Help & diagnostics…** in the menu or **Settings… → General → Support**.
+Review the filtered JSON, import an optional Record `.ips` crash summary, save a
+local copy, or explicitly send the preview to Record's public GitHub issues.
+Nothing is sent automatically. Retry an unconfirmed submission with the same
+preview; **Refresh** creates a new report. See [Support](SUPPORT.md) for the full
+workflow and the [privacy policy](PRIVACY.md) for the exact data boundary.
+
 ## Updates, login, and uninstalling
 
 Record silently checks its signed GitHub release feed once at launch. When a

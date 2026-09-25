@@ -19,13 +19,14 @@ done < <(
         -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o \
         -name '*.h' -o -name '*.hpp' -o -name '*.m' -o -name '*.mm' \
     \) \
+        ! -path "$source_root/RecordReportSenderService/*" \
         ! -path "$source_root/RecordModelDownload/*" \
         ! -path "$source_root/RecordModelDownloaderService/*" \
         -print0
 )
 
 forbidden_imports='^[[:space:]]*(import|@import)[[:space:]]+(CFNetwork|FoundationNetworking|Network|NetworkExtension|WebKit)([;.[:space:]]|$)'
-forbidden_symbols='URLSession|NSURLSession|NW(Connection|Listener|Browser|PathMonitor)|CF(Read|Write)Stream|CFSocket|GCDAsyncSocket|ClientBootstrap|ServerBootstrap|SentrySDK|PostHogSDK|FirebaseAnalytics'
+forbidden_symbols='ReviewedReportClient|BoundedReportTransport|URLSession|NSURLSession|NW(Connection|Listener|Browser|PathMonitor)|CF(Read|Write)Stream|CFSocket|GCDAsyncSocket|ClientBootstrap|ServerBootstrap|SentrySDK|PostHogSDK|FirebaseAnalytics'
 forbidden_calls='(^|[^[:alnum:]_.])(socket|connect|getaddrinfo|gethostbyname|sendto|recvfrom)[[:space:]]*[(]|Darwin[.](socket|connect|getaddrinfo|gethostbyname|sendto|recvfrom)[[:space:]]*[(]'
 forbidden_urls='URL[[:space:]]*[(][[:space:]]*string:[[:space:]]*"https?://'
 forbidden_tools='/(usr/bin|usr/local/bin|opt/homebrew/bin)/(curl|wget|nc)'
@@ -62,6 +63,7 @@ fi
 
 "$repo_root/scripts/ci/check-entitlements.sh" "$entitlements"
 if [[ "$source_root" == "$repo_root/Sources" ]]; then
+    "$repo_root/scripts/ci/check-report-sender-boundary.sh"
     "$repo_root/scripts/ci/check-local-only.sh" \
         "$repo_root/shared/dust-wave-platform/native/Sources" "$entitlements"
     for module in DustWaveUpdates DustWaveUpdatePolicy; do

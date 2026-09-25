@@ -16,6 +16,7 @@ trap 'rm -rf "$signing_root"' EXIT
 signing_app="$signing_root/Record.app"
 ditto --norsrc --noextattr "$app_path" "$signing_app"
 ./scripts/release/sign-app.sh "$signing_app" - none
+./scripts/qa/report-sender-smoke.sh "$signing_app"
 RECORD_APP_PATH="$signing_app" ./scripts/ci/verify-package.sh
 
 # Exercise the complete signed-feed generator with a disposable matching key

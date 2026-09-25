@@ -97,6 +97,32 @@ reject skipped or missing build/security jobs even when a workflow is green.
 Future pure tests will cover edit-operation serialization, click-event mapping,
 and out-of-process plugin capability denial.
 
+## Help and diagnostics acceptance
+
+Automated cases cover the shared Swift/relay contract, rejected private/unknown
+fields, bounded incident reads, wrong-app crash rejection, preserved incident
+versions, exact preview bytes, retry IDs across relaunch, explicit-send-only
+behavior, update busy-state cleanup, relay grouping and helper source/entitlements.
+The package gate runs `scripts/qa/report-sender-smoke.sh` against the signed helper
+in a disposable sandboxed host, proving invalid input is rejected over real XPC
+without sending a report.
+
+Before releasing 1.4.6, exercise the signed app with synthetic data:
+
+1. Open **Help & diagnostics…** from the menu and General settings; confirm one
+   reusable window, readable preview and status, and all buttons fit.
+2. Refresh, save and import a synthetic Record incident. Confirm no upload,
+   private fixture strings excluded, and wrong-app/oversized files leave the
+   prior preview intact. Cancel both file panels.
+3. Submit a synthetic reviewed report through the packaged XPC helper. Confirm
+   the exact preview reaches Record issues, same-ID retry does not increment,
+   a new ID aggregates and a closed matching issue reopens. Close test issues.
+4. Exercise failed/unconfirmed delivery and relaunch retry. Verify Refresh and
+   Import are disabled while sending, and updates work again after either outcome.
+5. Recheck signed main-app and helper entitlements, package versions and the
+   prior-release Sparkle update. Record actual results separately; passing unit
+   tests is not live delivery, notarization or capture acceptance.
+
 ## Manual smoke test available now
 
 The current integrated build supports full-display, application/window, and

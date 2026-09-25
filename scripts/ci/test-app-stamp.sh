@@ -11,6 +11,9 @@ app_path="$test_root/Record.app"
 model_downloader="$app_path/Contents/XPCServices/RecordModelDownloader.xpc"
 mkdir -p "$app_path/Contents" "$model_downloader/Contents"
 cp "$repo_root/Sources/Record/Info.plist" "$app_path/Contents/Info.plist"
+report_sender="$app_path/Contents/XPCServices/RecordReportSender.xpc"
+mkdir -p "$report_sender/Contents"
+cp "$repo_root/Sources/RecordReportSenderService/Info.plist" "$report_sender/Contents/Info.plist"
 cp "$repo_root/Sources/RecordModelDownloaderService/Info.plist" \
     "$model_downloader/Contents/Info.plist"
 
@@ -36,3 +39,14 @@ if "$repo_root/scripts/release/stamp-app.sh" "$app_path" 1.2.3 0 \
 fi
 
 echo "app version stamp tests passed"
+test "$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - \
+    "$report_sender/Contents/Info.plist")" = 1.2.3
+test "$(/usr/bin/plutil -extract CFBundleVersion raw -o - \
+    "$report_sender/Contents/Info.plist")" = 45
+mv "$report_sender/Contents/Info.plist" "$report_sender/Contents/Info.saved"
+if "$repo_root/scripts/release/stamp-app.sh" "$app_path" 1.2.4 46 >/dev/null 2>&1; then
+    echo "app stamp accepted a missing report helper" >&2
+    exit 1
+fi
+test "$(/usr/bin/plutil -extract CFBundleVersion raw -o - \
+    "$app_path/Contents/Info.plist")" = 45

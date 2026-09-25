@@ -6,6 +6,7 @@ cd "$repo_root"
 
 python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
 node --test scripts/qa/jev.test.mjs
+node --test integrations/crash-relay/record-contract.test.mjs
 ./scripts/ci/check-local-only.sh
 ./scripts/ci/test-local-only-guard.sh
 ./scripts/ci/test-model-downloader-boundary.sh
@@ -20,6 +21,7 @@ node --test scripts/qa/jev.test.mjs
 swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/RecordModelDownload Sources/RecordModelDownloaderService \
+    Sources/Record/Diagnostics Sources/RecordReportSenderService \
     Sources/Record/AppUpdateController.swift \
     Sources/Record/Audio/SessionAudioFinalizer.swift \
     Sources/Record/AudioSessionInspector.swift \

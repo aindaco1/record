@@ -14,5 +14,10 @@ final class AppUpdateController: UpdateChecking {
             startingUpdater: startingUpdater, checkingOnLaunch: true)
     }
 
+    var reportSubmissionInProgress: Bool {
+        get { updates.busy }
+        set { updates.busy = newValue }
+    }
+
     func checkForUpdates() { updates.checkForUpdates() }
 }

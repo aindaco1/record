@@ -12,9 +12,10 @@ timestamp_mode="${3:-none}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 framework="$app_path/Contents/Frameworks/Sparkle.framework"
 current="$framework/Versions/Current"
+report_sender="$app_path/Contents/XPCServices/RecordReportSender.xpc"
 model_downloader="$app_path/Contents/XPCServices/RecordModelDownloader.xpc"
 
-if [[ ! -d "$app_path" || ! -d "$framework" || ! -d "$model_downloader" ]]; then
+if [[ ! -d "$app_path" || ! -d "$framework" || ! -d "$model_downloader" || ! -d "$report_sender" ]]; then
     echo "missing Record app, model downloader, or Sparkle framework" >&2
     exit 1
 fi
@@ -41,6 +42,9 @@ common_flags=(
 codesign "${common_flags[@]}" \
     --entitlements "$repo_root/Configuration/RecordModelDownloader.entitlements" \
     "$model_downloader"
+codesign "${common_flags[@]}" \
+    --entitlements "$repo_root/Configuration/RecordReportSender.entitlements" \
+    "$report_sender"
 codesign "${common_flags[@]}" "$current/XPCServices/Installer.xpc"
 codesign "${common_flags[@]}" --preserve-metadata=entitlements \
     "$current/XPCServices/Downloader.xpc"

@@ -53,13 +53,14 @@ sources, settings, recovery, transcription options, updates, and uninstalling.
 ## Privacy and security
 
 Record keeps screenshots, recordings, transcripts, clipboard content,
-clipboard-derived names, and diagnostics local. It has no accounts, analytics,
-uploads, or cloud transcription. The sandboxed main app has no incoming or
-outgoing network entitlement.
+clipboard-derived names, and raw diagnostics local. It has no accounts, analytics,
+media uploads, or cloud transcription. **Help & diagnostics…** lets you review,
+save, and explicitly submit a filtered report to public GitHub issues. The sandboxed
+main app has no incoming or outgoing network entitlement.
 
-Network access is limited to sandboxed helpers for signed application updates
-and the fixed Parakeet model download after explicit user action. Selecting
-MacWhisper extends the local trust boundary to that separately installed app.
+Network access is limited to sandboxed helpers for signed application updates,
+the fixed Parakeet model download, and reviewed diagnostic submission after
+explicit user action. Selecting MacWhisper extends the local trust boundary to that separately installed app.
 See the [privacy policy](docs/PRIVACY.md) for data handling, the
 [security policy](docs/SECURITY.md) for private reporting, and the
 [local-only boundary](docs/security/local-only-boundary.md) for enforcement.

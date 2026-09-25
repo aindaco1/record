@@ -31,3 +31,9 @@ codesign --display --entitlements "$model_downloader_embedded" --xml \
     "$model_downloader"
 "$repo_root/scripts/ci/check-model-downloader-entitlements.sh" \
     "$model_downloader_embedded"
+
+# Both dedicated helpers have exactly sandbox + outbound network, and no file grants.
+report_sender="$verification_app/Contents/XPCServices/RecordReportSender.xpc"
+report_sender_embedded="$temporary_root/report-sender.plist"
+codesign --display --entitlements "$report_sender_embedded" --xml "$report_sender"
+"$repo_root/scripts/ci/check-model-downloader-entitlements.sh" "$report_sender_embedded"

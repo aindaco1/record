@@ -18,7 +18,8 @@ mkdir -p \
     "$app_path/Contents/Resources" \
     "$app_path/Contents/Resources/Licenses" \
     "$app_path/Contents/Frameworks" \
-    "$app_path/Contents/XPCServices/RecordModelDownloader.xpc/Contents/MacOS"
+    "$app_path/Contents/XPCServices/RecordModelDownloader.xpc/Contents/MacOS" \
+    "$app_path/Contents/XPCServices/RecordReportSender.xpc/Contents/MacOS"
 
 cd "$repo_root"
 swift build -c release --arch arm64 --disable-automatic-resolution
@@ -43,6 +44,11 @@ install -m 0755 "$model_downloader_binary" \
     "$model_downloader_bundle/Contents/MacOS/record-model-downloader"
 install -m 0644 Sources/RecordModelDownloaderService/Info.plist \
     "$model_downloader_bundle/Contents/Info.plist"
+report_sender_bundle="$app_path/Contents/XPCServices/RecordReportSender.xpc"
+install -m 0755 "$binary_root/record-report-sender" \
+    "$report_sender_bundle/Contents/MacOS/record-report-sender"
+install -m 0644 Sources/RecordReportSenderService/Info.plist \
+    "$report_sender_bundle/Contents/Info.plist"
 ditto --norsrc --noextattr \
     "$sparkle_framework" \
     "$app_path/Contents/Frameworks/Sparkle.framework"
@@ -73,6 +79,8 @@ install -m 0644 .build/checkouts/Sparkle/LICENSE \
 codesign --remove-signature "$app_path/Contents/MacOS/record"
 codesign --remove-signature \
     "$model_downloader_bundle/Contents/MacOS/record-model-downloader"
+
+codesign --remove-signature "$report_sender_bundle/Contents/MacOS/record-report-sender"
 
 "$repo_root/scripts/release/stamp-app.sh" "$app_path" "$version" "$build_number"
 
