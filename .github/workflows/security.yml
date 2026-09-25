@@ -60,9 +60,11 @@ jobs:
           build-mode: manual
 
       - name: Build
+        # CodeQL's rewritten sandbox-exec cannot launch on this runner. This flag
+        # affects only SwiftPM's build-time manifest sandbox in the isolated scan.
         run: >-
           swift build -c release --arch arm64
-          --disable-automatic-resolution
+          --disable-automatic-resolution --disable-sandbox
 
       - name: Analyze
         uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd
