@@ -64,8 +64,9 @@ unless a procedure says otherwise.
 - [GitHub Actions outage runbook](runbooks/github-actions-outage.md): incident
   handling and recovery.
 - [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
-- [Release notes](releases/): user-facing notes for each published version,
-  including [Record 1.4.5](releases/1.4.5.md).
+- [Release notes](releases/): notes for published versions, including
+  [Record 1.4.7](releases/1.4.7.md), and the
+  [planned Record 1.4.8](releases/1.4.8.md) (unreleased).
 
 ## Historical records
 

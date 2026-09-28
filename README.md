@@ -81,7 +81,8 @@ security, testing, releases, and historical records. Useful starting points:
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/project/roadmap.md)
 - [Changelog](CHANGELOG.md)
-- [Record 1.4.5 release notes](docs/releases/1.4.5.md)
+- [Record 1.4.7 release notes](docs/releases/1.4.7.md)
+- [Planned Record 1.4.8 release notes](docs/releases/1.4.8.md) (unreleased)
 
 ## Provenance and license
 
