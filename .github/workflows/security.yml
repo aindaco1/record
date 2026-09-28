@@ -52,7 +52,7 @@ jobs:
           swift package resolve
           git diff --exit-code -- Package.resolved
 
-      # github/codeql-action v4.38.1, pinned to a verified commit.
+      # github/codeql-action v4.38.2, pinned to a verified commit.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2
         with:
