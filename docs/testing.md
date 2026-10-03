@@ -205,7 +205,9 @@ Use synthetic or non-sensitive content for development recordings:
 10. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
-Open **Settings…** and switch through General, Screenshots, and Recording.
+Open **Settings…** and switch through Recording, Sessions, Transcription,
+Screenshots, Shortcuts, and General in the sidebar. Confirm that Recording Setup
+and Recent Sessions menu commands select pages in this same window.
 Confirm every label and control fits at the minimum window size, including
 **Window or Application**, and that there is exactly one **Save to** control.
 The menu must retain **Screen source** but omit the former Plugins, Transcript
@@ -222,6 +224,14 @@ the selection. Relaunch and confirm only the selected mode persists: Record
 must ask for the source again and must not retain a window title, app name,
 display identifier, or region.
 
+Check all six pages at the minimum window size: labels and help text must wrap,
+controls must remain reachable, and keyboard focus must stay on the visible page.
+Use Up/Down in the sidebar and Command-A/Command-V in the session filter and name
+field. Enter an invalid template, confirm the inline explanation, then restore a
+valid template. The last valid value must survive closing and reopening Settings.
+Confirm unavailable model/cleanup options have visible explanations. Starting,
+running, and saving capture must disable input/source changes and show why.
+
 Open **Settings → General**, enable **Open Record at Login**, and confirm Record
 appears in System Settings → General → Login Items, then disable it again. If
 macOS reports that approval is required, the control should show a mixed state
@@ -229,7 +239,7 @@ and open the Login Items pane without re-registering repeatedly. A first
 `.notFound` state must still leave the control enabled so registration can
 proceed.
 
-Open **Settings → Recording**, enable **Rename Finished Recording**, edit the
+Open **Settings → General**, enable **Rename finished recordings**, edit the
 template, test date/time and bundled-word tokens, then use a synthetic clipboard
 value with `{clipboard}`. Confirm unsafe path punctuation is removed, a duplicate
 name receives a numeric suffix, and disabling the option restores the plain
@@ -287,7 +297,7 @@ for the real test:
 Stop a short audio-only recording and confirm `transcript.json` and
 `transcript.md` appear in its session directory. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
-**Settings → Recording**, choose **MacWhisper (Small)** from **Model**, and repeat the
+**Settings → Transcription**, choose **MacWhisper (Small)** from **Engine**, and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
 be reported in `transcribe.log` without deleting either WAV file, and a job
 where every available track fails must not create a successful transcript.
@@ -312,7 +322,7 @@ MacWhisper menu choice must be absent when either MacWhisper, its bundled `mw`,
 or Record's user-script bridge is missing.
 
 On an eligible macOS 26+ test Mac, enable Apple Intelligence and choose
-**Settings → Recording → Improve Transcript Readability**. Record synthetic speech
+**Settings → Transcription → Improve Transcript Readability**. Record synthetic speech
 with filled pauses, an immediate repeated word, and a short interval where the
 microphone and system speakers overlap. Confirm the final JSON and Markdown
 retain speaker labels and timestamps, label overlapping segments, and contain
@@ -337,7 +347,8 @@ Use synthetic windows and a disposable approved export folder. Do not include
 notifications, private Desktop items, credentials, or other personal content.
 
 1. Open **Settings…**, then select **Screenshots**. Confirm PNG is the default,
-   JPEG quality is 95%, shutter sound is on, and the shortcuts are
+   JPEG quality is 95%, and shutter sound is on. Select **Shortcuts** and
+   confirm the screenshot shortcuts are
    Command-Shift-1 for full display, Command-Shift-2 for window/application,
    and Option-Command-Shift-4 for area on a fresh installation. Edit each
    shortcut, verify a duplicate is rejected, turn one Off with
@@ -348,7 +359,7 @@ notifications, private Desktop items, credentials, or other personal content.
    remains available. In an isolated upgrade profile, launch 1.3.2 without
    editing shortcuts, then 1.4.0: Area must remain Command-Shift-4. Repeat with
    custom bindings and Off, and verify the saved values survive unchanged.
-   Choose **Restore Defaults**, quit, and relaunch: Area must now remain
+   Choose **Restore Screenshot Defaults**, quit, and relaunch: Area must now remain
    Option-Command-Shift-4. Inspect the new camcorder icon in Finder at small
    and large sizes against light and dark backgrounds.
 2. Put the pointer on each attached display and invoke full-display capture.

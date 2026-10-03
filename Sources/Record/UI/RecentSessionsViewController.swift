@@ -2,8 +2,8 @@ import AppKit
 import RecordCore
 
 @MainActor
-final class RecentSessionsWindowController: NSWindowController, NSTableViewDataSource,
-    NSTableViewDelegate, NSSearchFieldDelegate, NSWindowDelegate
+final class RecentSessionsViewController: NSViewController, NSTableViewDataSource,
+    NSTableViewDelegate, NSSearchFieldDelegate
 {
     private let search = NSSearchField()
     private let table = NSTableView()
@@ -29,15 +29,9 @@ final class RecentSessionsWindowController: NSWindowController, NSTableViewDataS
     var onRetry: ((URL, ExportDirectoryLease?) -> Void)?
     var onDefer: ((URL) -> Void)?
 
-    init() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 850, height: 650),
-            styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered,
-            defer: false)
-        window.title = "Recent Sessions"
-        window.minSize = NSSize(width: 680, height: 500)
-        super.init(window: window)
-        window.delegate = self
+    init() { super.init(nibName: nil, bundle: nil) }
+    override func loadView() {
+        view = NSView()
         search.placeholderString = "Filter by title or date (YYYY-MM-DD)"
         search.delegate = self
         search.setAccessibilityLabel("Filter sessions by title or date")
@@ -50,7 +44,7 @@ final class RecentSessionsWindowController: NSWindowController, NSTableViewDataS
         let list = NSScrollView()
         list.documentView = table
         list.hasVerticalScroller = true
-        list.heightAnchor.constraint(equalToConstant: 230).isActive = true
+        list.heightAnchor.constraint(equalToConstant: 200).isActive = true
         preview.isEditable = false
         preview.isSelectable = true
         preview.font = .systemFont(ofSize: 13)
@@ -69,13 +63,19 @@ final class RecentSessionsWindowController: NSWindowController, NSTableViewDataS
         let playback = NSStackView(views: [
             microphoneButton, systemButton, videoButton, button("Refresh", #selector(refresh)),
         ])
-        let stack = NSStackView(views: [search, list, status, playback, variant, text, actions])
+        let stack = NSStackView(views: [
+            SettingsLayout.heading("Sessions", size: 24),
+            SettingsLayout.note(
+                "Recordings in the current save folder and private recovery storage."),
+            search, list, status, playback, variant, text, actions,
+        ])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.translatesAutoresizingMaskIntoConstraints = false
-        window.contentView?.addSubview(stack)
-        if let content = window.contentView {
+        view.addSubview(stack)
+        let content = view
+        do {
             NSLayoutConstraint.activate([
                 stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
                 stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
@@ -86,18 +86,13 @@ final class RecentSessionsWindowController: NSWindowController, NSTableViewDataS
         for view in [search, list, status, text] {
             view.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
-        window.center()
+        showSelection()
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { nil }
 
-    func show(roots: [URL], retaining lease: ExportDirectoryLease?) {
-        update(roots: roots, retaining: lease)
-        showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
     func update(roots: [URL], retaining lease: ExportDirectoryLease?) {
+        _ = view
         if self.roots != roots {
             previewTask?.cancel()
             preview.string = ""
@@ -111,18 +106,21 @@ final class RecentSessionsWindowController: NSWindowController, NSTableViewDataS
         refresh()
     }
 
-    func windowWillClose(_ notification: Notification) {
+    func endBrowsing() {
         refreshTask?.cancel()
         previewTask?.cancel()
         lease = nil
+        roots = []
         sessions = []
         filtered = []
         preview.string = ""
         displayedTranscript = nil
+        table.reloadData()
+        showSelection()
     }
 
     @objc func refresh() {
-        guard window?.isVisible == true || !roots.isEmpty else { return }
+        guard !roots.isEmpty else { return }
         refreshTask?.cancel()
         let roots = roots
         let retainedLease = lease

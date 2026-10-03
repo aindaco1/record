@@ -1,6 +1,7 @@
 # ADR 0015: Unify durable settings and keep the menu action-oriented
 
-- Status: accepted; Parakeet setup action amended by ADR 0017
+- Status: accepted; Parakeet setup action amended by ADR 0017; section layout
+  amended by [ADR 0026](0026-local-recording-workflow.md)
 - Date: 2026-09-02
 
 ## Context

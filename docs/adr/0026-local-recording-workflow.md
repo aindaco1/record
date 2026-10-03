@@ -52,6 +52,18 @@ content, or recording metadata. Cancelling invalidates the connection and stops
 the helper's download. Verification and atomic installation retain existing
 size, checksum, signature, and path guards. The main app has no network entitlement.
 
+## Settings ownership
+
+The 2026-10-03 UX review consolidates setup, session browsing, and preferences in
+one AppKit sidebar window. Menu commands select pages of that existing window.
+The session browser is an embedded view controller; leaving its page or closing
+the window cancels reads and releases its browsing lease. Recording setup calls
+the existing AppController permission and capture paths. Pages share small layout
+helpers and the existing preference stores; there is no parallel settings model.
+Filename examples render through RecordCore with placeholder clipboard text.
+Standard field-editing commands use the native responder chain in this accessory
+app. No privacy, network, capture-source, or consent boundary changes.
+
 ## Validation
 
 Deterministic tests cover partial retry, deferred recovery, source invalidation,

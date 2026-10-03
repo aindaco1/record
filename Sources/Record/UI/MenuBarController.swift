@@ -192,7 +192,7 @@ final class MenuBarController {
             action: #selector(recentSessionsClicked), keyEquivalent: "")
         menu.addItem(recentSessionsItem)
         let readinessItem = NSMenuItem(
-            title: "Ready to Record…", action: #selector(readinessClicked), keyEquivalent: "")
+            title: "Recording Setup…", action: #selector(readinessClicked), keyEquivalent: "")
         menu.addItem(readinessItem)
 
         gifskiItem = NSMenuItem(

@@ -8,18 +8,24 @@ This guide covers everyday capture, settings, and recovery. See the
 
 Record has no Dock icon. Open its camera in the menu bar for immediate capture,
 source-selection, open, retry, and update commands. **Settings…** groups durable
-preferences into General, Screenshots, Recording, and Audio sections. Reopening
-Record from Finder returns to Settings.
+preferences and recording tools into one sidebar: Recording, Sessions,
+Transcription, Screenshots, Shortcuts, and General. Reopening
+Record from Finder returns to the same window and last-used section. Use the
+Up/Down keys in the sidebar to change sections. Text fields support standard
+Command-A, Command-C, Command-X, Command-V, and undo shortcuts. Command-W closes
+the window; it does not quit Record.
 
 During screen or audio recording, a red dot blinks at the camera's lower-right
 corner. The dot is steady when Reduce Motion is enabled and disappears while
 paused.
 
-## Ready to Record
+## Recording setup
 
-Open **Ready to Record…** from the menu or General settings to review the save folder, permissions
-for your chosen mode, microphone test, and optional local transcription model.
-The checklist opens automatically for a new setup and can be revisited later.
+Open **Settings… → Recording** or **Recording Setup…** from the menu. Choose
+screen or audio-only mode, screen source, audio sources, and microphone directly
+on this page. The inline checklist covers the save folder, required permissions,
+input test, and optional local transcription model. A new setup opens here.
+The save folder is in General; model setup is in Transcription.
 Choose **Start Screen Recording** or **Start Audio Recording** when ready.
 It never begins recording or downloads a model by itself.
 
@@ -40,19 +46,19 @@ is removed before capture.
 Screenshots save immediately to the approved export folder and independently
 copy a lossless PNG to the clipboard. Disk files default to native-resolution
 lossless PNG. **Settings… → Screenshots** can select JPEG at a default 95%
-quality, adjust quality and shutter sound, edit a shortcut, or turn one Off.
+quality and adjust shutter sound. Edit or disable shortcuts in **Shortcuts**.
 JPEG transparency is flattened onto white. The shutter sound is suppressed
 while recording.
 
 Record 1.4 preserves existing screenshot shortcuts, including Off and the
 original Command-Shift-4 Area shortcut for users who never customized it.
-Choose **Settings… → Screenshots → Restore Defaults** to adopt the new Area
+Choose **Settings… → Shortcuts → Restore Screenshot Defaults** to adopt the new Area
 shortcut explicitly. Full Display and Window/Application defaults remain
 Command-Shift-1 and Command-Shift-2.
 
 ## Screen and audio recording
 
-Use **Screen source** in the menu to select a display, window, application, or
+Use **Settings… → Recording → Screen source** or the menu to select a display, window, application, or
 custom region for screen recording. The main display is the default.
 
 Application choices remain restricted to the selected application, including
@@ -78,7 +84,7 @@ update macOS. The same scope check protects window/application screenshots.
 
 ### Inputs, activity, and recording controls
 
-**Settings… → Audio** selects Microphone + System Audio, Microphone Only, or
+**Settings… → Recording** selects Microphone + System Audio, Microphone Only, or
 System Audio Only for either recording mode. Choose System Default or a specific
 microphone. Record does not change the Mac's default input. If a specifically
 selected microphone disconnects, Record stops and preserves the session, then
@@ -92,10 +98,10 @@ microphone and system sources independently during recording.
 The compact panel appears automatically while preparing, recording, or saving.
 It shows the same elapsed time and controls as the menu. Screen recordings exclude
 Record's windows, including the panel. Close it for the current session or turn off
-**Show compact panel while recording** in Audio settings. Closing the panel does
+**Show compact panel while recording** in Recording settings. Closing the panel does
 not stop recording.
 
-**Settings… → Recording → Global Shortcuts** assigns screen start/stop, audio
+**Settings… → Shortcuts → Recording** assigns screen start/stop, audio
 start/stop, and screen pause/resume keys. Click a control and type a combination;
 Delete turns it Off and Escape cancels editing. New recording shortcuts start Off.
 A start/stop shortcut stops its own active recording mode; it does not change
@@ -131,8 +137,8 @@ output device or creating a virtual aggregate device for a selected input.
 
 ## Recent Sessions
 
-Open **Recent Sessions…** from the menu or General settings to browse the current approved save folder and private
-recovery sessions. The list shows title, date, duration, recording type, and state.
+Choose **Sessions** in the sidebar or **Recent Sessions…** from the menu to
+browse the current approved save folder and private recovery sessions. The list shows title, date, duration, recording type, and state.
 Filter by title or date (`YYYY-MM-DD`), select a session, then preview or copy the
 clean or raw transcript, play a source in its default local application, reveal
 its folder, or retry unfinished transcription. **Refresh** picks up folder changes.
@@ -165,8 +171,8 @@ complete for these sessions.
 ### MacWhisper
 
 If MacWhisper and its bundled `mw` CLI are installed, Record offers the engine.
-Selecting it provisions Record's bundled, content-checked user-script bridge. Open **Settings… → Recording**
-and choose **MacWhisper (Small)** from **Model**. This option is absent unless
+Selecting it provisions Record's bundled, content-checked user-script bridge. Open **Settings… → Transcription**
+and choose **MacWhisper (Small)** from **Engine**. This option is absent unless
 MacWhisper and its bundled `mw` are available. Record prepares and validates its
 sandbox helper only for the selected MacWhisper integration.
 Record validates the MacWhisper application signature before each invocation
@@ -190,7 +196,7 @@ unsuppressed result in `transcript.raw.json`.
 ### Improve transcript readability
 
 On macOS 26 or newer, an eligible Mac with Apple Intelligence enabled can opt
-in to **Settings… → Recording → Improve Transcript Readability**. Apple's
+in to **Settings… → Transcription → Improve Transcript Readability**. Apple's
 on-device model advises Record only on bounded filled-pause and immediate-repeat
 candidates. Record validates every decision, preserves timing and source-speaker
 labels, and marks simultaneous cross-speaker segments as overlapping. It never
@@ -208,6 +214,14 @@ result in `transcript.raw.json`; `transcript.refinement.json` records the
 content-free policy decisions and a source hash. See
 [advanced configuration](configuration.md) for automation settings.
 
+### Recording names
+
+In **General**, enable **Rename finished recordings** and edit **Name template**
+directly. Valid changes save immediately; an invalid token shows an explanation
+and leaves the last valid template saved. The example uses placeholder clipboard
+text and never reads the clipboard. Actual clipboard content is read only when
+a recording name requests `{clipboard}`.
+
 ## Built-in plugins
 
 Settings groups small, capability-specific features by what they affect:
@@ -223,7 +237,7 @@ helpers, or grant plugins network access. See the
 
 ## Help and diagnostics
 
-Choose **Help & diagnostics…** in the menu or **Settings… → General → Support**.
+Choose **Help & diagnostics…** in the menu or **Settings… → General → Help & diagnostics…**.
 Review the filtered JSON, import an optional Record `.ips` crash summary, save a
 local copy, or explicitly send the preview to Record's public GitHub issues.
 Nothing is sent automatically. Retry an unconfirmed submission with the same

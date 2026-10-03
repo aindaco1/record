@@ -122,7 +122,7 @@ versions, deployment target, architecture, Swift, and Xcode without local paths.
 6. Confirm the previous version's microphone, screen/system-audio, and
    system-audio-only grants remain enabled and neither recording path repeats
    an approved prompt. Compare both apps with `scripts/ci/check-tcc-identity.sh`.
-7. On a clean model cache, exercise **Settings… → Recording → Set Up Parakeet
+7. On a clean model cache, exercise **Settings… → Transcription → Set Up Parakeet
    Model… → Download and Install**. Confirm the public model asset downloads,
    verifies, installs, and resumes pending transcription. Inspect the signed
    main app and `RecordModelDownloader.xpc` entitlements separately.

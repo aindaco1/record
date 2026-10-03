@@ -27,6 +27,8 @@ unless a procedure says otherwise.
 - [Roadmap](project/roadmap.md): current direction, deferred ideas, and non-goals.
 - [Handy comparison](project/handy-review-2026-10-02.md): October 2 research and
   prioritized proposals for usability and reliability; not implementation commitments.
+- [Settings UX review](project/settings-ux-review-2026-10-03.md): approved sidebar
+  layout, direct controls, keyboard behavior and implementation decisions.
 - [GitHub issues](https://github.com/aindaco1/record/issues): live issue status
   and acceptance criteria.
 

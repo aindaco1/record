@@ -15,12 +15,23 @@ All notable changes to Record are documented here. Record follows
   raw/clean transcript previews, copy, source playback, reveal, and retry/defer.
 - Configurable global recording shortcuts using the existing native registrar;
   new assignments start Off and existing screenshot preferences are preserved.
-- A resumable Ready to Record checklist and model setup with received-byte
+- An inline recording-readiness checklist and model setup with received-byte
   progress, verification/install stages, and cancellation.
 - An automatic compact recording panel with elapsed time, pause/resume, and stop;
-  Audio settings can disable it. The existing recording exclusion covers it.
+  Recording settings can disable it. The existing recording exclusion covers it.
+
+### Changed
+
+- One sidebar window gives direct access to Recording, Sessions, Transcription,
+  Screenshots, Shortcuts, and General. Recording setup and session browsing no
+  longer require secondary windows. All shortcut assignments share one page.
+- Recording names can be edited inline with a safe example and validation.
+  Model and cleanup availability explanations stay visible beside their controls.
 
 ### Fixed
+
+- Standard text-editing shortcuts work in Settings and the session filter.
+- Settings descriptions wrap instead of being clipped to two lines.
 
 - Preserve successful transcription tracks when another track fails, explicitly
   label partial results, and retry unfinished tracks without repeating success.
