@@ -6,7 +6,7 @@ when the model is absent; only transcription waits for setup.
 
 ## Set up in Record 1.3.2 or newer
 
-1. Open **Settings → Recording → Set Up Parakeet Model…**.
+1. Open **Settings → Transcription → Set Up Parakeet Model…**.
 2. Choose **Download and Install**.
 3. Keep Record open while it downloads and verifies about 466 MB. Pending local
    transcription resumes automatically after installation.
@@ -35,7 +35,7 @@ plus the upstream model card and attribution/license documents. The model files
 come unmodified from the immutable publisher revision below. The pack is a
 separate release asset; it is not stored in Git or bundled into `Record.app`.
 
-1. Open **Settings → Recording → Set Up Parakeet Model…**.
+1. Open **Settings → Transcription → Set Up Parakeet Model…**.
 2. Choose **Import Existing Model…**.
 3. Select either the expanded `Record-Parakeet-v3-aed0274` folder or its
    `parakeet-tdt-0.6b-v3` folder.

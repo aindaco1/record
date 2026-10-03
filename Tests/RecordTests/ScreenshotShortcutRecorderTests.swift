@@ -5,6 +5,18 @@ import XCTest
 
 @MainActor
 final class ScreenshotShortcutRecorderTests: XCTestCase {
+    func testIdleSettingsDoesNotRetainActivityFromAFinishedRecording() throws {
+        let suite = "IdleAudioSettingsTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        controller.updateAudioLevels((microphone: 0.7, system: 0.8), configuration: .init())
+        controller.updateInteractionAvailability(.idle)
+        let meters = allSubviews(of: try XCTUnwrap(controller.window?.contentView))
+            .compactMap { $0 as? NSLevelIndicator }
+        XCTAssertEqual(meters.count, 2)
+        XCTAssertTrue(meters.allSatisfy { $0.doubleValue == 0 })
+    }
     func testRecorderMapsOnlySupportedShortcutModifiers() {
         let modifiers = ShortcutRecorderButton.shortcutModifiers(
             from: [.command, .shift, .capsLock, .function]
@@ -27,7 +39,7 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
         let controller = SettingsWindowController(
             screenshotPreferences: ScreenshotPreferences(defaults: defaults)
         )
-        controller.select(section: .screenshots)
+        controller.select(section: .shortcuts)
         let window = try XCTUnwrap(controller.window)
         let contentView = try XCTUnwrap(window.contentView)
 
@@ -44,7 +56,7 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
             longestLabel.intrinsicContentSize.width
         )
 
-        for title in ["Restore Defaults", "Open macOS Keyboard Shortcuts…"] {
+        for title in ["Restore Screenshot Defaults", "macOS Keyboard Shortcuts…"] {
             let button = try XCTUnwrap(
                 descendants.compactMap { $0 as? NSButton }.first { $0.title == title }
             )
@@ -64,7 +76,7 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
             screenshotPreferences: ScreenshotPreferences(defaults: defaults)
         )
 
-        XCTAssertEqual(controller.selectedSection, .general)
+        XCTAssertEqual(controller.selectedSection, .recording)
         controller.select(section: .screenshots)
         XCTAssertEqual(controller.selectedSection, .screenshots)
         controller.select(section: .recording)
@@ -75,8 +87,8 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
             .compactMap { ($0 as? NSTextField)?.stringValue }
         XCTAssertEqual(text.filter { $0 == "Save to" }.count, 1)
         XCTAssertTrue(text.contains("Window or Application"))
-        XCTAssertTrue(text.contains("Template"))
-        XCTAssertTrue(text.contains("Model"))
+        XCTAssertTrue(text.contains("Name template"))
+        XCTAssertTrue(text.contains("Parakeet model"))
     }
 
     func testUnifiedSettingsOwnsTranscriptionPresentation() throws {
@@ -135,10 +147,122 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
         )
         XCTAssertFalse(controller.isDestinationSelectionEnabled)
         XCTAssertFalse(controller.areCapturePrivacyControlsEnabled)
+        XCTAssertFalse(controller.startRecordingButton.isEnabled)
+        XCTAssertFalse(controller.checkPermissionsButton.isEnabled)
+        XCTAssertFalse(controller.screenSourcePopup.isEnabled)
 
         controller.updateInteractionAvailability(.idle)
         XCTAssertTrue(controller.isDestinationSelectionEnabled)
         XCTAssertTrue(controller.areCapturePrivacyControlsEnabled)
+        XCTAssertTrue(controller.startRecordingButton.isEnabled)
+        controller.recordingMode.selectedSegment = 1
+        controller.recordingModeChanged()
+        XCTAssertFalse(controller.screenSourcePopup.isEnabled)
+        XCTAssertEqual(controller.startRecordingButton.title, "Start Audio Recording")
+    }
+
+    func testSidebarKeepsEveryDestinationInTheSameWindow() throws {
+        let suite = "SidebarSettingsTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        let window = try XCTUnwrap(controller.window)
+        for section in SettingsWindowController.Section.allCases {
+            controller.select(section: section)
+            XCTAssertTrue(controller.window === window)
+            XCTAssertEqual(controller.sidebar.selectedRow, section.rawValue)
+            XCTAssertEqual(controller.pageViews.filter { !$0.value.isHidden }.map(\.key), [section])
+        }
+        XCTAssertTrue(controller.pageViews[.sessions] === controller.sessions.view)
+        let buttons = allSubviews(of: try XCTUnwrap(window.contentView)).compactMap {
+            $0 as? NSButton
+        }
+        XCTAssertFalse(
+            buttons.contains {
+                ["Ready to Record…", "Recent Sessions…", "Edit…"].contains($0.title)
+            })
+    }
+
+    func testInlineNameEditingSavesOnlyValidTemplatesAndUsesPlaceholderClipboard() throws {
+        let suite = "InlineNameTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        var saved: [String] = []
+        controller.onUpdateRecordingNameTemplate = { saved.append($0) }
+        controller.recordingTemplateField.stringValue = "Meeting {clipboard}"
+        let change = Notification(
+            name: NSControl.textDidChangeNotification, object: controller.recordingTemplateField)
+        controller.controlTextDidChange(change)
+        XCTAssertEqual(saved, ["Meeting {clipboard}"])
+        XCTAssertEqual(controller.recordingNamePreview.stringValue, "Example: Meeting Clipboard")
+        controller.recordingTemplateField.stringValue = "{unsupported}"
+        controller.controlTextDidChange(change)
+        XCTAssertEqual(saved.count, 1)
+        XCTAssertTrue(controller.recordingNamePreview.stringValue.contains("last valid template"))
+    }
+
+    func testSettingsTextFieldsSupportCommandAWithoutAnEditMenu() throws {
+        let window = SettingsWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        let editor = NSTextView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
+        editor.string = "Search or template text"
+        window.contentView?.addSubview(editor)
+        XCTAssertTrue(window.makeFirstResponder(editor))
+        editor.setSelectedRange(NSRange(location: 0, length: 0))
+        let event = try XCTUnwrap(
+            NSEvent.keyEvent(
+                with: .keyDown, location: .zero,
+                modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, characters: "a", charactersIgnoringModifiers: "a", isARepeat: false,
+                keyCode: 0))
+        XCTAssertTrue(window.performKeyEquivalent(with: event))
+        XCTAssertEqual(
+            editor.selectedRange(), NSRange(location: 0, length: editor.string.utf16.count))
+    }
+
+    func testWindowEditingCommandsDoNotInterceptShortcutAssignment() throws {
+        let window = SettingsWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
+            styleMask: [.titled], backing: .buffered, defer: false)
+        let recorder = ShortcutRecorderButton()
+        window.contentView?.addSubview(recorder)
+        var recorded: ScreenshotShortcut?
+        recorder.onRecord = { recorded = $0 }
+        recorder.performClick(nil)
+        let event = try XCTUnwrap(
+            NSEvent.keyEvent(
+                with: .keyDown, location: .zero,
+                modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, characters: "w", charactersIgnoringModifiers: "w", isARepeat: false,
+                keyCode: 13))
+        XCTAssertTrue(window.performKeyEquivalent(with: event))
+        XCTAssertEqual(recorded?.keyCode, 13)
+        XCTAssertEqual(recorded?.modifiers, .command)
+        XCTAssertFalse(recorder.isRecordingShortcut)
+    }
+
+    func testAllPagesFitHorizontallyAtMinimumSize() throws {
+        let suite = "MinimumSettingsTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        let window = try XCTUnwrap(controller.window)
+        window.setContentSize(window.contentMinSize)
+        let content = try XCTUnwrap(window.contentView)
+        for section in SettingsWindowController.Section.allCases {
+            controller.select(section: section)
+            content.layoutSubtreeIfNeeded()
+            let page = try XCTUnwrap(controller.pageViews[section])
+            for control in allSubviews(of: page).compactMap({ $0 as? NSControl })
+            where !control.isHiddenOrHasHiddenAncestor {
+                let frame = control.convert(control.bounds, to: content)
+                XCTAssertGreaterThanOrEqual(frame.minX, 190, "\(section): \(control)")
+                XCTAssertLessThanOrEqual(
+                    frame.maxX, content.bounds.maxX + 1, "\(section): \(control)")
+            }
+        }
     }
 
     private func allSubviews(of view: NSView) -> [NSView] {

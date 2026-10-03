@@ -4,6 +4,29 @@ import XCTest
 
 @MainActor
 final class RecordingPermissionTests: XCTestCase {
+    func testSystemOnlySkipsDeniedMicrophone() async {
+        let microphone = FakeMicrophonePermissionProvider(state: .denied, requestResult: false)
+        let system = FakeSystemAudioPermissionRegistrar()
+        let controller = makeController(microphone: microphone, systemAudio: system)
+        let result = await controller.prepare(
+            for: .audioOnly, audio: .init(includeMicrophone: false))
+        XCTAssertEqual(result, .ready)
+        XCTAssertEqual(microphone.requestCount, 0)
+        XCTAssertEqual(system.requestCount, 1)
+    }
+
+    func testMicrophoneOnlyDoesNotRequestSystemAudioOrScreen() async {
+        let microphone = FakeMicrophonePermissionProvider(state: .authorized, requestResult: false)
+        let screen = FakeScreenPermissionProvider(isGranted: false, requestResult: false)
+        let system = FakeSystemAudioPermissionRegistrar()
+        let controller = makeController(microphone: microphone, screen: screen, systemAudio: system)
+        let result = await controller.prepare(
+            for: .audioOnly, audio: .init(includeSystemAudio: false))
+        XCTAssertEqual(result, .ready)
+        XCTAssertEqual(screen.requestCount, 0)
+        XCTAssertEqual(system.requestCount, 0)
+    }
+
     func testScreenCommandRequestsMicrophoneThenScreenOnly() async {
         var events: [String] = []
         let microphone = FakeMicrophonePermissionProvider(

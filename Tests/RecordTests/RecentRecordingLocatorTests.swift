@@ -4,6 +4,26 @@ import RecordCore
 import XCTest
 
 final class RecentRecordingLocatorTests: XCTestCase {
+    func testSessionsIncludesRecoveryAndOnlyCurrentRootsWithoutDuplicates() throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.container) }
+        let recovery = try makeSession(
+            named: "recovery", under: fixture.privateRoot, state: .failed,
+            endedAt: Date(timeIntervalSince1970: 20))
+        let current = try makeSession(
+            named: "current", under: fixture.exportRoot, state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 30))
+        _ = try makeSession(
+            named: "previous-destination", under: fixture.container, state: .finalized,
+            endedAt: Date(timeIntervalSince1970: 40))
+        let sessions = RecentRecordingLocator.sessions(
+            under: [fixture.privateRoot, fixture.exportRoot, fixture.exportRoot])
+        XCTAssertEqual(sessions.map(\.directory), [current, recovery])
+        XCTAssertEqual(
+            RecentRecordingLocator.sessions(under: [fixture.privateRoot]).map(\.directory),
+            [recovery])
+    }
+
     func testFindsNewestFinishedSessionAcrossApprovedRoots() throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.container) }

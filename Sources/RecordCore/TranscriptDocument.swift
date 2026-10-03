@@ -36,12 +36,17 @@ public struct TranscriptDocument: Codable, Equatable, Sendable {
     public let model: String
     public let createdAt: String
     public let segments: [Segment]
+    public let incompleteTrackCount: Int?
 
-    public init(engine: String, model: String, createdAt: String, segments: [Segment]) {
+    public init(
+        engine: String, model: String, createdAt: String, segments: [Segment],
+        incompleteTrackCount: Int? = nil
+    ) {
         self.engine = engine
         self.model = model
         self.createdAt = createdAt
         self.segments = segments
+        self.incompleteTrackCount = incompleteTrackCount
     }
 
     enum CodingKeys: String, CodingKey {
@@ -49,10 +54,12 @@ public struct TranscriptDocument: Codable, Equatable, Sendable {
         case model
         case createdAt = "created_at"
         case segments
+        case incompleteTrackCount = "incomplete_tracks"
     }
 
     /// Writes the readable derivative first and the canonical JSON completion
-    /// marker last. A session is pending whenever `transcript.json` is absent.
+    /// marker last. For resumable jobs, the checkpoint determines completion;
+    /// a canonical transcript can also contain the successful part of a session.
     public func write(to sessionDirectory: URL, title: String) throws {
         try Data(rendered(title: title).utf8).write(
             to: sessionDirectory.appendingPathComponent("transcript.md"),
@@ -80,6 +87,12 @@ public struct TranscriptDocument: Codable, Equatable, Sendable {
 
     public func rendered(title: String) -> String {
         var lines = ["# \(title)", "", "engine: \(engine) (\(model))", ""]
+        if let incompleteTrackCount, incompleteTrackCount > 0 {
+            lines += [
+                "Partial transcript — \(incompleteTrackCount) audio track(s) need retry in Record.",
+                "",
+            ]
+        }
         for segment in segments {
             let overlap = segment.overlapGroup == nil ? "" : " (overlapping)"
             lines.append(

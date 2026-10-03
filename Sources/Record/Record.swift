@@ -85,6 +85,13 @@ final class RecordApplicationDelegate: NSObject, NSApplicationDelegate {
         controller?.prepareNotifications()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
+        -> Bool
+    {
+        controller?.showSettings()
+        return true
+    }
+
     func applicationShouldTerminate(
         _ sender: NSApplication
     ) -> NSApplication.TerminateReply {
@@ -144,6 +151,9 @@ final class AppController {
 
     private let root: URL
     private let menuBar = MenuBarController()
+    private lazy var recentSessions = RecentSessionsViewController()
+    private lazy var modelSetupWindow = ModelSetupWindowController()
+    private var modelSetupTask: Task<Void, Never>?
     private let updateController = AppUpdateController()
     private var diagnosticEvents: [RecordDiagnosticReport.Event] = [.launch]
     private lazy var diagnostics = RecordDiagnostics(
@@ -159,6 +169,11 @@ final class AppController {
     private let pendingScreenshotIntentStore: PendingScreenshotIntentStore
     private let exportDirectoryAccess = ExportDirectoryAccess()
     private let capturePrivacyPreferences = CapturePrivacyPreferences()
+    private let audioPreferences = RecordingAudioPreferences()
+    private let audioDeviceMonitor = AudioInputDeviceMonitor()
+    private lazy var recordingPanel = RecordingPanelController()
+    private var recordingAudio = CaptureAudioConfiguration()
+    private var selectedMicrophoneRecovery = SelectedMicrophoneRecovery()
     private let recordingNamePreferences = RecordingNamePreferences()
     private let screenCaptureSourcePreferences = ScreenCaptureSourcePreferences()
     private let systemScreenCapturePicker = SystemScreenCapturePicker()
@@ -170,7 +185,7 @@ final class AppController {
         regionSelector: regionSelectionController
     )
     private lazy var settingsController = SettingsWindowController(
-        screenshotPreferences: screenshotPreferences
+        screenshotPreferences: screenshotPreferences, sessions: recentSessions
     )
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
@@ -218,6 +233,25 @@ final class AppController {
             notifications.post(notification)
         }
         menuBar.onToggle = { [weak self] in self?.toggle() }
+        menuBar.onRecordingPresentation = { [weak self] presentation in
+            guard let self else { return }
+            self.recordingPanel.render(presentation, enabled: self.audioPreferences.showsPanel)
+            if presentation == .idle,
+                self.selectedMicrophoneRecovery.handle(.recordingPreserved) == .offerInput,
+                !self.quitAfterStop
+            {
+                DispatchQueue.main.async { [weak self] in
+                    self?.offerAnotherMicrophone(afterRecording: true)
+                }
+            }
+        }
+        recordingPanel.onStop = { [weak self] in self?.stopSession() }
+        recordingPanel.onPauseResume = { [weak self] in self?.toggleVideoPause() }
+        audioDeviceMonitor.start { [weak self] in self?.audioDevicesChanged() }
+        settingsController.onAudioPreferencesChanged = { [weak self] in
+            guard let self else { return }
+            if !self.audioPreferences.showsPanel { self.recordingPanel.close() }
+        }
         menuBar.onCaptureScreenshot = { [weak self] in self?.requestScreenshot($0) }
         menuBar.onShowSettings = { [weak self] in
             self?.showSettings()
@@ -233,13 +267,91 @@ final class AppController {
         menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
         menuBar.onOpenRecoveryFolder = { [weak self] in self?.openRecoveryFolder() }
         menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
+        menuBar.onShowReadiness = { [weak self] in self?.showSettings(section: .recording) }
+        settingsController.onRefreshReadiness = { [unowned self] mode in
+            RecordingReadiness(
+                hasSaveFolder: self.exportDirectoryLease != nil,
+                audio: self.audioPreferences.configuration, screenRecording: mode == .screen,
+                microphoneGranted: SystemMicrophonePermissionProvider().state == .authorized,
+                screenGranted: self.recordingPermission.isScreenCaptureGranted,
+                inputTested: UserDefaults.standard.string(forKey: "recording.testedInput")
+                    == (self.audioPreferences.microphoneUID ?? "default"),
+                modelInstalled: Config.transcriptionSelection().engine == .parakeet
+                    ? ParakeetModelInstaller.isInstalled(.v3)
+                    : MacWhisperExecutable.resolve(configuredPath: Config.transcriptionExecutable())
+                        != nil)
+        }
+        settingsController.onSelectScreenSource = { [weak self] in
+            self?.selectScreenCaptureSource($0)
+        }
+        settingsController.onStartRecording = { [weak self] in self?.requestRecording($0) }
+        settingsController.onCheckPermissions = { [weak self] mode in
+            guard let self, self.activeRecording == nil, self.permissionTask == nil,
+                self.videoStartTask == nil, self.sessionPublishTask == nil
+            else { return }
+            self.settingsController.updateInteractionAvailability(
+                .init(destinationSelectionEnabled: false, capturePrivacyEnabled: false))
+            self.permissionTask = Task { [weak self] in
+                guard let self else { return }
+                let result = await self.recordingPermission.prepare(
+                    for: mode, audio: self.audioPreferences.configuration)
+                self.permissionTask = nil
+                switch result {
+                case .ready: break
+                case .needsSettings(let blocker), .waitingForRestart(let blocker):
+                    _ = self.recordingPermission.presentSettingsRequired(for: blocker)
+                }
+                // Setup does not retain a live tap or begin capture.
+                _ = self.recordingPermission.takePreparedSystemAudioTap()
+                self.settingsController.refreshReadiness()
+                self.refreshSettingsInteractionAvailability()
+            }
+        }
+        modelSetupWindow.onCancel = { [weak self] in self?.modelSetupTask?.cancel() }
+        menuBar.onShowRecentSessions = { [weak self] in self?.showRecentSessions() }
+        recentSessions.onRetry = { [weak self] directory, lease in
+            Task { await self?.transcription.retry(directory, retaining: lease) }
+        }
+        recentSessions.onDefer = { [weak self] directory in
+            Task {
+                do { try await self?.transcription.deferSession(directory) } catch {
+                    self?.postNotification(
+                        title: "Couldn’t defer transcription",
+                        body:
+                            "The recording is preserved. Try again after the current track finishes.",
+                        directory: directory)
+                }
+            }
+        }
         menuBar.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
+        settingsController.onSectionChanged = { [weak self] section in
+            guard let self, section == .sessions else { return }
+            self.recentSessions.update(
+                roots: self.recentRecordingRoots, retaining: self.exportDirectoryLease)
+        }
         settingsController.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
         menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
-        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] availability in
-            self?.settingsController.updateInteractionAvailability(availability)
+        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] _ in
+            self?.refreshSettingsInteractionAvailability()
         }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
+        screenshotShortcutRegistrar.onRecording = { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .screen, .audio:
+                let mode: RecordingMode = action == .screen ? .screen : .audioOnly
+                if self.activeRecording?.mode == mode {
+                    self.stopSession()
+                } else if self.activeRecording == nil {
+                    self.requestRecording(mode)
+                }
+            case .pauseResume: self.toggleVideoPause()
+            }
+        }
+        settingsController.onRecordingShortcutsChanged = { [weak self] in
+            self?.refreshRecordingShortcuts()
+        }
+        refreshRecordingShortcuts()
         screenshotShortcutRegistrar.onCapture = { [weak self] in
             self?.requestScreenshot($0)
         }
@@ -258,8 +370,10 @@ final class AppController {
         settingsController.onToggleRecordingName = { [weak self] in
             self?.toggleRecordingName()
         }
-        settingsController.onEditRecordingNameTemplate = { [weak self] in
-            self?.editRecordingNameTemplate()
+        settingsController.onUpdateRecordingNameTemplate = { [weak self] template in
+            guard let self else { return }
+            // The field validates first; preferences remain the final policy boundary.
+            try? self.recordingNamePreferences.setTemplate(template)
         }
         settingsController.onSelectTranscriptionEngine = { [weak self] in
             self?.selectTranscriptionEngine($0)
@@ -303,6 +417,11 @@ final class AppController {
             refreshRecentRecordingMenu()
         }
 
+        if recordingToResume == nil, screenshotToResume == nil, exportDirectoryLease == nil,
+            !UserDefaults.standard.bool(forKey: "recording.checklistDismissed")
+        {
+            DispatchQueue.main.async { [weak self] in self?.showSettings(section: .recording) }
+        }
         if let recordingToResume {
             DispatchQueue.main.async { [weak self] in
                 self?.requestRecording(recordingToResume, resumingAfterRestart: true)
@@ -555,14 +674,21 @@ final class AppController {
         )
     }
 
-    private func showSettings() {
+    private func refreshSettingsInteractionAvailability() {
         settingsController.updateInteractionAvailability(
-            menuBar.settingsInteractionAvailability
-        )
+            permissionTask == nil
+                ? menuBar.settingsInteractionAvailability
+                : .init(destinationSelectionEnabled: false, capturePrivacyEnabled: false))
+    }
+
+    func showSettings(section: SettingsWindowController.Section? = nil) {
+        refreshSettingsInteractionAvailability()
         refreshCapturePrivacySettings()
         refreshRecordingNameSettings()
         refreshTranscriptionSettings()
         refreshLaunchAtLoginSettings()
+        settingsController.updateScreenSource(screenCaptureSourcePreferences.selected)
+        if let section { settingsController.select(section: section) }
         settingsController.show(
             exportDirectory: exportDirectoryLease?.url
                 ?? exportDirectoryAccess.suggestedDirectory
@@ -583,6 +709,11 @@ final class AppController {
                 Data("screenshot shortcut registration failed: \(detail)\n".utf8)
             )
         }
+    }
+
+    private func refreshRecordingShortcuts() {
+        settingsController.updateRecordingShortcutFailures(
+            screenshotShortcutRegistrar.applyRecording(RecordingShortcuts()))
     }
 
     private func requestRecording(
@@ -606,11 +737,18 @@ final class AppController {
             return
         }
 
+        recordingAudio = audioPreferences.configuration
+        if !selectedMicrophoneIsAvailable {
+            permissionFlow.clear()
+            offerAnotherMicrophone()
+            return
+        }
         menuBar.updateRequestingPermissions(for: mode)
         recordDiagnosticEvent(.recordingRequested)
         permissionTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let preparation = await self.recordingPermission.prepare(for: mode)
+            let preparation = await self.recordingPermission.prepare(
+                for: mode, audio: self.recordingAudio)
             guard !Task.isCancelled else { return }
             self.permissionTask = nil
 
@@ -647,9 +785,13 @@ final class AppController {
         guard activeRecording == nil else { return }
         ensureExportFolderAccess()
         do {
+            guard selectedMicrophoneIsAvailable else {
+                throw AudioInputDevices.InputError.unavailable
+            }
             let newSession = try RecordingSession(
                 root: root,
-                preparedSystemAudioTap: preparedSystemAudioTap
+                preparedSystemAudioTap: preparedSystemAudioTap,
+                audio: recordingAudio
             ) { [weak self] event in
                 Task { @MainActor [weak self] in self?.handleCaptureHealth(event) }
             }
@@ -662,6 +804,7 @@ final class AppController {
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
             recordingExportName = nil
+            menuBar.update(recording: false, elapsed: nil)
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
             postNotification(
                 title: "Audio recording couldn’t start",
@@ -684,7 +827,11 @@ final class AppController {
             guard let self else { return }
             var newSession: VideoRecordingSession?
             do {
-                let prepared = try await self.prepareVideoCaptureSource()
+                var prepared = try await self.prepareVideoCaptureSource()
+                prepared.configuration.audio = self.recordingAudio
+                guard self.selectedMicrophoneIsAvailable else {
+                    throw AudioInputDevices.InputError.unavailable
+                }
                 try Task.checkCancellation()
                 let session = try VideoRecordingSession(root: self.root) { [weak self] event in
                     Task { @MainActor [weak self] in self?.handleVideoEvent(event) }
@@ -764,7 +911,7 @@ final class AppController {
 
     private func startTicker() {
         ticker?.invalidate()
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        ticker = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
     }
@@ -832,7 +979,6 @@ final class AppController {
                 "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
             ))
         activeRecording = nil
-        menuBar.update(recording: false, elapsed: nil)
 
         if finalized {
             let preferredExportName =
@@ -848,6 +994,7 @@ final class AppController {
             return
         }
         recordingExportName = nil
+        menuBar.update(recording: false, elapsed: nil)
         refreshRecentRecordingMenu()
         terminateIfRequested()
     }
@@ -889,8 +1036,6 @@ final class AppController {
         if case .video(let active) = activeRecording, active === session {
             activeRecording = nil
         }
-        menuBar.update(recording: false, elapsed: nil)
-
         switch result {
         case .success(let outcome):
             logIngress(outcome.ingress)
@@ -917,6 +1062,7 @@ final class AppController {
                 directory: session.dir
             )
         }
+        menuBar.update(recording: false, elapsed: nil)
         refreshRecentRecordingMenu()
         terminateIfRequested()
     }
@@ -928,6 +1074,7 @@ final class AppController {
         preferredBaseName: String
     ) {
         guard let exportDirectoryLease else {
+            menuBar.update(recording: false, elapsed: nil)
             if let originalVideoURL {
                 lastFinishedVideoURL = originalVideoURL
             }
@@ -1125,6 +1272,37 @@ final class AppController {
         }
     }
 
+    private func updateAudioLevels(_ levels: (microphone: Double, system: Double)) {
+        recordingPanel.updateAudio(levels, configuration: recordingAudio)
+        settingsController.updateAudioLevels(levels, configuration: recordingAudio)
+    }
+
+    private var selectedMicrophoneIsAvailable: Bool {
+        MicrophoneSelectionPolicy.isAvailable(
+            recordingAudio, deviceIDs: Set(AudioInputDevices.available().map(\.uid)))
+    }
+
+    private func audioDevicesChanged() {
+        settingsController.refreshAudioDevices()
+        guard activeRecording != nil, !selectedMicrophoneIsAvailable else { return }
+        if selectedMicrophoneRecovery.handle(.deviceLost) == .stopRecording { stopSession() }
+    }
+
+    private func offerAnotherMicrophone(afterRecording: Bool = false) {
+        let alert = NSAlert()
+        alert.messageText = "Selected microphone unavailable"
+        alert.informativeText =
+            (afterRecording
+                ? "Record stopped and preserved the available media. "
+                : "No recording was started. ")
+            + "Choose another microphone before starting a new recording."
+        alert.addButton(withTitle: "Choose Input")
+        alert.addButton(withTitle: "Later")
+        if alert.runModal() == .alertFirstButtonReturn {
+            showSettings(section: .recording)
+        }
+    }
+
     private func handleCaptureHealth(_ event: CaptureHealthEvent) {
         menuBar.updateCaptureHealth(event)
         let line =
@@ -1213,6 +1391,7 @@ final class AppController {
         guard activeRecording == nil, videoStartTask == nil else { return }
         screenCaptureSourcePreferences.selected = source
         menuBar.updateScreenCaptureSource(source)
+        settingsController.updateScreenSource(source)
     }
 
     private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
@@ -1228,34 +1407,6 @@ final class AppController {
     private func toggleRecordingName() {
         recordingNamePreferences.isEnabled.toggle()
         refreshRecordingNameSettings()
-    }
-
-    private func editRecordingNameTemplate() {
-        let input = NSTextField(string: recordingNamePreferences.template.rawValue)
-        input.frame = NSRect(x: 0, y: 0, width: 420, height: 24)
-        input.placeholderString = "{date} at {time} - {color} {animal}"
-
-        let alert = NSAlert()
-        alert.messageText = "Recording Name Template"
-        alert.informativeText =
-            "Tokens: {date}, {time}, {clipboard}, {color}, {adjective}, {animal}, "
-            + "{country}, {name}, {starWars}. Clipboard is read only when requested."
-        alert.accessoryView = input
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-
-        do {
-            try recordingNamePreferences.setTemplate(input.stringValue)
-            recordingNamePreferences.isEnabled = true
-            refreshRecordingNameSettings()
-        } catch {
-            let failure = NSAlert()
-            failure.alertStyle = .warning
-            failure.messageText = "Invalid Recording Name Template"
-            failure.informativeText = "Use only the supported tokens and balanced braces."
-            failure.runModal()
-        }
     }
 
     private func refreshRecordingNameSettings() {
@@ -1314,7 +1465,18 @@ final class AppController {
         }
     }
 
+    private func showRecentSessions() {
+        showSettings(section: .sessions)
+    }
+
     private func showTranscription(_ status: TranscriptionCoordinator.Status) {
+        if settingsController.isShowingSessions {
+            switch status {
+            case .progress(let session, let stage, _):
+                recentSessions.updateProgress(session: session, stage: stage)
+            default: recentSessions.refresh()
+            }
+        }
         switch status {
         case .idle:
             menuBar.updateTranscription(nil)
@@ -1322,9 +1484,14 @@ final class AppController {
             menuBar.updateTranscription(
                 queued > 0 ? "transcribing \(name) · \(queued) queued" : "transcribing \(name)"
             )
+        case .progress(let name, let stage, let queued):
+            menuBar.updateTranscription(
+                "\(stage) · \(name)" + (queued > 0 ? " · \(queued) queued" : ""))
+        case .deferred:
+            menuBar.updateTranscription("Transcription deferred · recording preserved")
         case .failed(let name):
             menuBar.updateTranscription(
-                "transcription failed · \(name)",
+                "transcription needs retry · \(name)",
                 retryAvailable: true
             )
         }
@@ -1355,14 +1522,16 @@ final class AppController {
     }
 
     private func refreshTranscriptionSettings() {
-        if MacWhisperExecutable.installedApplicationCLI() != nil {
+        if Config.transcriptionSelection().engine == .macwhisper,
+            MacWhisperExecutable.installedApplicationCLI() != nil
+        {
             try? MacWhisperExecutable.installBundledApplicationScriptIfNeeded()
         }
-        let macWhisperAvailable =
-            MacWhisperExecutable.resolve(
-                configuredPath: Config.transcriptionExecutable()
-            ) != nil
         var engine = Config.transcriptionSelection().engine
+        let macWhisperAvailable =
+            engine == .macwhisper
+            ? MacWhisperExecutable.resolve(configuredPath: Config.transcriptionExecutable()) != nil
+            : MacWhisperExecutable.installedApplicationCLI() != nil
         if engine == .macwhisper, !macWhisperAvailable {
             TranscriptionPreferences.select(.parakeet)
             engine = .parakeet
@@ -1425,15 +1594,21 @@ final class AppController {
         modelSetupInProgress = true
         refreshTranscriptionSettings()
         menuBar.updateTranscription("downloading Parakeet model…")
-        Task { [weak self, transcription, root] in
+        modelSetupWindow.begin()
+        modelSetupTask = Task { [weak self, transcription, root] in
             let result: Result<ParakeetModelInstaller.InstallResult, Error>
             do {
-                result = .success(try await ParakeetModelInstaller.downloadAndInstallV3())
+                result = .success(
+                    try await ParakeetModelInstaller.downloadAndInstallV3 { [weak self] progress in
+                        Task { @MainActor [weak self] in self?.modelSetupWindow.update(progress) }
+                    })
             } catch {
                 result = .failure(error)
             }
             guard let self else { return }
             self.modelSetupInProgress = false
+            self.modelSetupTask = nil
+            self.modelSetupWindow.close()
             self.menuBar.updateTranscription(nil)
             self.refreshTranscriptionSettings()
             switch result {
@@ -1441,6 +1616,7 @@ final class AppController {
                 self.presentParakeetModelReady()
                 await transcription.resumePending(root: root)
             case .failure(let error):
+                if Task.isCancelled || error is CancellationError { return }
                 let alert = NSAlert()
                 alert.alertStyle = .warning
                 alert.messageText = "Record Couldn’t Download the Parakeet Model"
@@ -1518,6 +1694,17 @@ final class AppController {
     }
 
     private func tick() {
+        switch activeRecording {
+        case .audio(let session): updateAudioLevels(session.audioLevels)
+        case .video(let session):
+            Task { [weak self] in
+                let levels = await session.audioLevels()
+                guard case .video(let current) = self?.activeRecording, current.id == session.id
+                else { return }
+                self?.updateAudioLevels(levels)
+            }
+        case nil: break
+        }
         guard let activeRecording else { return }
         let elapsed: TimeInterval
         switch activeRecording {
@@ -1572,9 +1759,14 @@ final class AppController {
         recentRecordingRefreshTask?.cancel()
         let roots = recentRecordingRoots
         let recoveryRoot = root
+        if settingsController.isShowingSessions {
+            recentSessions.update(roots: roots, retaining: exportDirectoryLease)
+        }
+        let retainedLease = exportDirectoryLease
         recentRecordingRefreshTask = Task { [weak self] in
             let (snapshot, hasRecoveryMaterial) = await Task.detached(priority: .utility) {
-                (
+                defer { withExtendedLifetime(retainedLease) {} }
+                return (
                     RecentRecordingLocator.snapshot(under: roots),
                     RecoveryMaterialLocator.hasMaterial(under: recoveryRoot)
                 )

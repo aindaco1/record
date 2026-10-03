@@ -16,6 +16,7 @@ extension SystemAudioRecorder: SessionAudioRecording {}
 final class RecordingSession {
     enum SessionError: Error {
         case missingFinalizedAudio(SessionManifest.TrackKind)
+        case noAudioSource
     }
 
     let id: UUID
@@ -23,8 +24,8 @@ final class RecordingSession {
     let startedAt: Date
 
     private let health: CaptureHealthLedger
-    private let mic: any SessionAudioRecording
-    private let system: any SessionAudioRecording
+    private let mic: (any SessionAudioRecording)?
+    private let system: (any SessionAudioRecording)?
     private let audioFinalizer: any SessionAudioFinalizing
     private var manifest: SessionManifest
 
@@ -33,22 +34,31 @@ final class RecordingSession {
         startedAt: Date = Date(),
         id: UUID = UUID(),
         preparedSystemAudioTap: PreparedSystemAudioTap? = nil,
+        audio: CaptureAudioConfiguration = .init(),
         mic: (any SessionAudioRecording)? = nil,
         system: (any SessionAudioRecording)? = nil,
         audioFinalizer: any SessionAudioFinalizing = PCM24WaveAudioFinalizer(),
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) throws {
+        guard audio.includeMicrophone || audio.includeSystemAudio else {
+            throw SessionError.noAudioSource
+        }
         self.id = id
         self.startedAt = startedAt
         let health = CaptureHealthLedger(onEvent: onHealth)
         self.health = health
-        self.mic = mic ?? MicRecorder(startedAt: startedAt) { health.record($0) }
+        self.mic =
+            audio.includeMicrophone
+            ? (mic
+                ?? MicRecorder(startedAt: startedAt, deviceUID: audio.microphoneDeviceID) {
+                    health.record($0)
+                }) : nil
         self.system =
-            system
-            ?? SystemAudioRecorder(
-                startedAt: startedAt,
-                preparedTap: preparedSystemAudioTap
-            ) { health.record($0) }
+            audio.includeSystemAudio
+            ? (system
+                ?? SystemAudioRecorder(startedAt: startedAt, preparedTap: preparedSystemAudioTap) {
+                    health.record($0)
+                }) : nil
         self.audioFinalizer = audioFinalizer
         dir = try SessionFolderAllocator.createDirectory(
             under: root,
@@ -59,8 +69,10 @@ final class RecordingSession {
             ownerProcessIdentifier: ProcessInfo.processInfo.processIdentifier,
             startedAt: startedAt,
             tracks: [
-                SessionMediaLayout.track(for: .microphone, stage: .capture),
-                SessionMediaLayout.track(for: .systemAudio, stage: .capture),
+                audio.includeMicrophone
+                    ? SessionMediaLayout.track(for: .microphone, stage: .capture) : nil,
+                audio.includeSystemAudio
+                    ? SessionMediaLayout.track(for: .systemAudio, stage: .capture) : nil,
             ].compactMap { $0 }
         )
         try manifest.write(to: dir)
@@ -74,7 +86,7 @@ final class RecordingSession {
     /// Start both tracks. If microphone capture fails after the system tap is
     /// live, tear down the tap so a half-session never continues silently.
     func start() throws {
-        try system.start(
+        try system?.start(
             writingTo: SessionMediaLayout.url(
                 for: .systemAudio,
                 stage: .capture,
@@ -82,7 +94,7 @@ final class RecordingSession {
             )!
         )
         do {
-            try mic.start(
+            try mic?.start(
                 writingTo: SessionMediaLayout.url(
                     for: .microphone,
                     stage: .capture,
@@ -90,60 +102,47 @@ final class RecordingSession {
                 )!
             )
         } catch {
-            system.stop()
+            system?.stop()
             throw error
         }
     }
 
     /// Stop both tracks and atomically transition `session.json` to finalized.
     func stop(endedAt: Date = Date()) async throws {
-        let micStart = mic.firstBufferAt ?? startedAt
-        let systemStart = system.firstBufferAt ?? startedAt
-        mic.stop()
-        system.stop()
+        let micStart = mic?.firstBufferAt ?? startedAt
+        let systemStart = system?.firstBufferAt ?? startedAt
+        mic?.stop()
+        system?.stop()
 
-        let sources: [SessionAudioArtifact] = [
-            .init(
-                kind: .microphone,
-                url: SessionMediaLayout.url(for: .microphone, stage: .capture, in: dir)!
-            ),
-            .init(
-                kind: .systemAudio,
-                url: SessionMediaLayout.url(for: .systemAudio, stage: .capture, in: dir)!
-            ),
-        ]
+        let sources = manifest.tracks.map {
+            SessionAudioArtifact(kind: $0.kind, url: dir.appendingPathComponent($0.filename))
+        }
         let finalizer = audioFinalizer
         let finalizedAudio = try await Task.detached(priority: .utility) {
             try finalizer.finalize(sources)
         }.value
-        guard
-            let micOutput = finalizedAudio.first(where: { $0.kind == .microphone }),
-            let systemOutput = finalizedAudio.first(where: { $0.kind == .systemAudio })
-        else {
-            throw SessionError.missingFinalizedAudio(
-                finalizedAudio.contains(where: { $0.kind == .microphone })
-                    ? .systemAudio : .microphone
-            )
+        let starts = manifest.tracks.map { $0.kind == .microphone ? micStart : systemStart }
+        let earliest = starts.min() ?? startedAt
+        let tracks = try manifest.tracks.map { track -> SessionManifest.Track in
+            guard let output = finalizedAudio.first(where: { $0.kind == track.kind }) else {
+                throw SessionError.missingFinalizedAudio(track.kind)
+            }
+            let start = track.kind == .microphone ? micStart : systemStart
+            return .init(
+                kind: track.kind, filename: output.url.lastPathComponent,
+                speaker: SessionMediaLayout.defaultSpeaker(for: track.kind),
+                startOffsetMilliseconds: Int(start.timeIntervalSince(earliest) * 1_000))
         }
-
-        let earliest = min(micStart, systemStart)
-        let tracks: [SessionManifest.Track] = [
-            .init(
-                kind: .microphone,
-                filename: micOutput.url.lastPathComponent,
-                speaker: SessionMediaLayout.defaultSpeaker(for: .microphone),
-                startOffsetMilliseconds: Int(micStart.timeIntervalSince(earliest) * 1_000)
-            ),
-            .init(
-                kind: .systemAudio,
-                filename: systemOutput.url.lastPathComponent,
-                speaker: SessionMediaLayout.defaultSpeaker(for: .systemAudio),
-                startOffsetMilliseconds: Int(systemStart.timeIntervalSince(earliest) * 1_000)
-            ),
-        ]
         manifest.healthEvents = health.snapshot()
         manifest = try manifest.finalized(at: endedAt, tracks: tracks)
         try manifest.write(to: dir)
+    }
+
+    var audioLevels: (microphone: Double, system: Double) {
+        (
+            (mic as? MicRecorder)?.activity.level() ?? 0,
+            (system as? SystemAudioRecorder)?.activity.level() ?? 0
+        )
     }
 
     private func persistHealthEvents(_ events: [CaptureHealthEvent]) {

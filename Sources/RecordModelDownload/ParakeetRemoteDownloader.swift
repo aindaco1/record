@@ -48,7 +48,10 @@ public final class ParakeetRemoteDownloader: NSObject, URLSessionTaskDelegate,
     private let lock = NSLock()
     private var session: URLSession?
     private var task: URLSessionDownloadTask?
+    private var progressObservation: NSKeyValueObservation?
     private var cancellationRequested = false
+    private var lastProgressPercent = -1
+    private var progressHandler: (@Sendable (Int64) -> Void)?
 
     public override init() {
         descriptor = .v3
@@ -67,6 +70,7 @@ public final class ParakeetRemoteDownloader: NSObject, URLSessionTaskDelegate,
 
     public func download(
         to outputFile: FileHandle,
+        progress: (@Sendable (Int64) -> Void)? = nil,
         completion: @escaping @Sendable (Error?) -> Void
     ) {
         let completionGate = CompletionGate(completion)
@@ -100,6 +104,8 @@ public final class ParakeetRemoteDownloader: NSObject, URLSessionTaskDelegate,
             return
         }
         session = downloadSession
+        progressHandler = progress
+        lastProgressPercent = -1
         cancellationRequested = false
         lock.unlock()
         startDownloadTask(
@@ -153,14 +159,40 @@ public final class ParakeetRemoteDownloader: NSObject, URLSessionTaskDelegate,
         )
     }
 
+    static func observeTransferredBytes(
+        of task: URLSessionTask,
+        handler: @escaping @Sendable (Int64) -> Void
+    ) -> NSKeyValueObservation {
+        // Completion-handler downloads do not invoke download-delegate progress methods.
+        task.observe(\.countOfBytesReceived, options: [.new]) { task, _ in
+            handler(task.countOfBytesReceived)
+        }
+    }
+
+    private func reportProgress(_ bytes: Int64, task: URLSessionTask) {
+        let count = min(descriptor.byteCount, max(0, bytes))
+        let percent = Int(Double(count) / Double(descriptor.byteCount) * 100)
+        let handler = lock.withLock { () -> (@Sendable (Int64) -> Void)? in
+            guard self.task === task, percent != lastProgressPercent else { return nil }
+            lastProgressPercent = percent
+            return progressHandler
+        }
+        handler?(count)
+    }
+
     private func finishDownload(session completedSession: URLSession) {
         lock.lock()
+        var observation: NSKeyValueObservation?
         if session === completedSession {
+            observation = progressObservation
+            progressObservation = nil
             task = nil
             session = nil
+            progressHandler = nil
             cancellationRequested = false
         }
         lock.unlock()
+        observation?.invalidate()
         completedSession.finishTasksAndInvalidate()
     }
 
@@ -226,13 +258,24 @@ public final class ParakeetRemoteDownloader: NSObject, URLSessionTaskDelegate,
                 downloadSession.downloadTask(with: url, completionHandler: handler)
             }
 
+        let observation = Self.observeTransferredBytes(of: nextTask) {
+            [weak self, weak nextTask] bytes in
+            guard let nextTask else { return }
+            self?.reportProgress(bytes, task: nextTask)
+        }
         lock.lock()
         let mayStart = session === downloadSession && !cancellationRequested
-        if mayStart { task = nextTask }
+        let previousObservation = progressObservation
+        if mayStart {
+            task = nextTask
+            progressObservation = observation
+        }
         lock.unlock()
+        previousObservation?.invalidate()
         if mayStart {
             nextTask.resume()
         } else {
+            observation.invalidate()
             nextTask.cancel()
             finishDownload(session: downloadSession)
             completion(CancellationError())

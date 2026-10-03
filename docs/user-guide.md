@@ -8,11 +8,26 @@ This guide covers everyday capture, settings, and recovery. See the
 
 Record has no Dock icon. Open its camera in the menu bar for immediate capture,
 source-selection, open, retry, and update commands. **Settings…** groups durable
-preferences into General, Screenshots, and Recording sections.
+preferences and recording tools into one sidebar: Recording, Sessions,
+Transcription, Screenshots, Shortcuts, and General. Reopening
+Record from Finder returns to the same window and last-used section. Use the
+Up/Down keys in the sidebar to change sections. Text fields support standard
+Command-A, Command-C, Command-X, Command-V, and undo shortcuts. Command-W closes
+the window; it does not quit Record.
 
 During screen or audio recording, a red dot blinks at the camera's lower-right
 corner. The dot is steady when Reduce Motion is enabled and disappears while
 paused.
+
+## Recording setup
+
+Open **Settings… → Recording** or **Recording Setup…** from the menu. Choose
+screen or audio-only mode, screen source, audio sources, and microphone directly
+on this page. The inline checklist covers the save folder, required permissions,
+input test, and optional local transcription model. A new setup opens here.
+The save folder is in General; model setup is in Transcription.
+Choose **Start Screen Recording** or **Start Audio Recording** when ready.
+It never begins recording or downloads a model by itself.
 
 ## Screenshots
 
@@ -31,19 +46,19 @@ is removed before capture.
 Screenshots save immediately to the approved export folder and independently
 copy a lossless PNG to the clipboard. Disk files default to native-resolution
 lossless PNG. **Settings… → Screenshots** can select JPEG at a default 95%
-quality, adjust quality and shutter sound, edit a shortcut, or turn one Off.
+quality and adjust shutter sound. Edit or disable shortcuts in **Shortcuts**.
 JPEG transparency is flattened onto white. The shutter sound is suppressed
 while recording.
 
 Record 1.4 preserves existing screenshot shortcuts, including Off and the
 original Command-Shift-4 Area shortcut for users who never customized it.
-Choose **Settings… → Screenshots → Restore Defaults** to adopt the new Area
+Choose **Settings… → Shortcuts → Restore Screenshot Defaults** to adopt the new Area
 shortcut explicitly. Full Display and Window/Application defaults remain
 Command-Shift-1 and Command-Shift-2.
 
 ## Screen and audio recording
 
-Use **Screen source** in the menu to select a display, window, application, or
+Use **Settings… → Recording → Screen source** or the menu to select a display, window, application, or
 custom region for screen recording. The main display is the default.
 
 Application choices remain restricted to the selected application, including
@@ -52,8 +67,8 @@ rejects picker results whose scope cannot be verified; use **Main Display** or
 update macOS. The same scope check protects window/application screenshots.
 
 - **Start screen recording** creates a video-only `recording.mov` and writes
-  `mic.wav` and `system.wav` independently as uncompressed 24-bit PCM.
-- **Start audio-only recording** writes the same two independent audio tracks
+  enabled `mic.wav` and `system.wav` sources independently as uncompressed 24-bit PCM.
+- **Start audio-only recording** writes the enabled independent audio tracks
   without capturing the display.
 - Screen recording supports pause and resume. Pausing closes the active media
   segment; resuming continues from the same in-memory source selection.
@@ -67,6 +82,32 @@ update macOS. The same scope check protects window/application screenshots.
   approved export storage. Record derives this from `session.json` and keeps
   no separate activity database.
 
+### Inputs, activity, and recording controls
+
+**Settings… → Recording** selects Microphone + System Audio, Microphone Only, or
+System Audio Only for either recording mode. Choose System Default or a specific
+microphone. Record does not change the Mac's default input. If a specifically
+selected microphone disconnects, Record stops and preserves the session, then
+offers input selection for the next recording. It never silently substitutes a
+microphone for that selection.
+
+**Test Input** listens for ten seconds and displays microphone activity without
+saving audio. Stop the test at any time. The two activity indicators show enabled
+microphone and system sources independently during recording.
+
+The compact panel appears automatically while preparing, recording, or saving.
+It shows the same elapsed time and controls as the menu. Screen recordings exclude
+Record's windows, including the panel. Close it for the current session or turn off
+**Show compact panel while recording** in Recording settings. Closing the panel does
+not stop recording.
+
+**Settings… → Shortcuts → Recording** assigns screen start/stop, audio
+start/stop, and screen pause/resume keys. Click a control and type a combination;
+Delete turns it Off and Escape cancels editing. New recording shortcuts start Off.
+A start/stop shortcut stops its own active recording mode; it does not change
+modes during capture. Held keys trigger once. Conflicts with other Record actions
+are rejected; unavailable system combinations are reported in Settings.
+
 ## Save location and recovery
 
 **Settings… → General → Save to** changes the one approved destination shared
@@ -74,7 +115,8 @@ by screenshots and completed screen or audio recordings. Desktop is suggested
 on first use, and the sandbox grant persists across launches.
 
 Each exported recording session contains an atomic `session.json` manifest,
-`mic.wav`, and `system.wav`. Screen sessions also contain `recording.mov`.
+the enabled `mic.wav` and/or `system.wav` sources. Screen sessions also contain
+`recording.mov`.
 Screenshots are individual image files and do not create session manifests.
 
 Record keeps its AAC/CAF capture sources in private recovery storage until it
@@ -89,18 +131,50 @@ unexported session material needs inspection. See the
 [testing and inspection guide](testing.md) for structural inspection commands.
 Follow the [support guidance](SUPPORT.md) when reporting a failure.
 
+Specific microphone choices use raw input in audio-only mode. **System Default**
+retains the existing voice-processing option. This avoids changing the system
+output device or creating a virtual aggregate device for a selected input.
+
+## Recent Sessions
+
+Choose **Sessions** in the sidebar or **Recent Sessions…** from the menu to
+browse the current approved save folder and private recovery sessions. The list shows title, date, duration, recording type, and state.
+Filter by title or date (`YYYY-MM-DD`), select a session, then preview or copy the
+clean or raw transcript, play a source in its default local application, reveal
+its folder, or retry unfinished transcription. **Refresh** picks up folder changes.
+Previous save folders are not indexed or scanned after you change destinations.
+
 ## Local transcription
 
 Parakeet v3 is the default engine. Follow the [Parakeet setup guide](models/parakeet.md)
 for verified download, manual import, and developer setup. Transcription waits
-for the model; recording remains available.
+for the model; recording remains available. Download setup reports received bytes,
+then verification and installation stages. **Cancel** stops the download or waits
+for the current verification/extraction step to finish before cancelling; partial
+setup files are removed and an existing model is preserved.
+
+Each source is transcribed independently. The menu shows the current source and
+real engine progress where available; engines without progress show the current
+stage. A failed source produces a clearly marked partial transcript when another
+source succeeds. Use **Recent Sessions → Retry unfinished tracks** to resume.
+Successful raw recognition is reused only when the source and recognition settings
+still match. **Transcribe later** defers queued or active work and keeps that choice
+across relaunches. An engine may finish its current operation before stopping.
+Media is preserved, and completion hooks wait for the entire transcript.
+
+New sessions retain raw ASR in `transcript.raw.json` before optional cleanup and
+track progress in the local `transcription.state.json` sidecar. A partial canonical
+JSON transcript includes `incomplete_tracks`; the Markdown also labels the result.
+Do not treat the mere presence of `transcript.json` as proof that every track is
+complete for these sessions.
 
 ### MacWhisper
 
-If MacWhisper and its bundled `mw` CLI are installed, Record provisions its
-own bundled, content-checked user-script bridge. Open **Settings… → Recording**
-and choose **MacWhisper (Small)** from **Model**. This option is absent unless
-MacWhisper, its bundled `mw`, and Record's sandbox helper are all available.
+If MacWhisper and its bundled `mw` CLI are installed, Record offers the engine.
+Selecting it provisions Record's bundled, content-checked user-script bridge. Open **Settings… → Transcription**
+and choose **MacWhisper (Small)** from **Engine**. This option is absent unless
+MacWhisper and its bundled `mw` are available. Record prepares and validates its
+sandbox helper only for the selected MacWhisper integration.
 Record validates the MacWhisper application signature before each invocation
 and never falls back silently from one engine to another. MacWhisper's own
 privacy policy and settings apply when it processes audio locally.
@@ -122,7 +196,7 @@ unsuppressed result in `transcript.raw.json`.
 ### Improve transcript readability
 
 On macOS 26 or newer, an eligible Mac with Apple Intelligence enabled can opt
-in to **Settings… → Recording → Improve Transcript Readability**. Apple's
+in to **Settings… → Transcription → Improve Transcript Readability**. Apple's
 on-device model advises Record only on bounded filled-pause and immediate-repeat
 candidates. Record validates every decision, preserves timing and source-speaker
 labels, and marks simultaneous cross-speaker segments as overlapping. It never
@@ -140,6 +214,14 @@ result in `transcript.raw.json`; `transcript.refinement.json` records the
 content-free policy decisions and a source hash. See
 [advanced configuration](configuration.md) for automation settings.
 
+### Recording names
+
+In **General**, enable **Rename finished recordings** and edit **Name template**
+directly. Valid changes save immediately; an invalid token shows an explanation
+and leaves the last valid template saved. The example uses placeholder clipboard
+text and never reads the clipboard. Actual clipboard content is read only when
+a recording name requests `{clipboard}`.
+
 ## Built-in plugins
 
 Settings groups small, capability-specific features by what they affect:
@@ -155,7 +237,7 @@ helpers, or grant plugins network access. See the
 
 ## Help and diagnostics
 
-Choose **Help & diagnostics…** in the menu or **Settings… → General → Support**.
+Choose **Help & diagnostics…** in the menu or **Settings… → General → Help & diagnostics…**.
 Review the filtered JSON, import an optional Record `.ips` crash summary, save a
 local copy, or explicitly send the preview to Record's public GitHub issues.
 Nothing is sent automatically. Retry an unconfirmed submission with the same

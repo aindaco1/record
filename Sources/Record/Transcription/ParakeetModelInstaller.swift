@@ -4,6 +4,9 @@ import RecordCore
 import RecordSpeech
 
 enum ParakeetModelInstaller {
+    enum Progress: Sendable {
+        case downloading(Int64), verifying, extracting, installing
+    }
     enum InstallResult: Equatable, Sendable {
         case alreadyInstalled
         case installed
@@ -66,7 +69,8 @@ enum ParakeetModelInstaller {
         downloader: any ParakeetModelArchiveDownloading =
             XPCParakeetModelArchiveDownloader(),
         destination: URL = cacheDirectory(for: .v3),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        progress: @escaping @Sendable (Progress) -> Void = { _ in }
     ) async throws -> InstallResult {
         let descriptor = ParakeetModelDownloadDescriptor.v3
         let temporaryRoot = fileManager.temporaryDirectory.appendingPathComponent(
@@ -103,7 +107,9 @@ enum ParakeetModelInstaller {
         }
         let outputFile = try FileHandle(forWritingTo: archive)
         do {
-            try await downloader.downloadV3Archive(to: outputFile)
+            progress(.downloading(0))
+            try await downloader.downloadV3Archive(to: outputFile) { progress(.downloading($0)) }
+            try Task.checkCancellation()
             try outputFile.close()
         } catch {
             try? outputFile.close()
@@ -116,7 +122,8 @@ enum ParakeetModelInstaller {
             destination: destination,
             manifest: .v3,
             fileManager: fileManager,
-            extract: ParakeetModelArchiveExtractor.extract
+            extract: ParakeetModelArchiveExtractor.extract,
+            progress: progress
         )
     }
 
@@ -126,8 +133,11 @@ enum ParakeetModelInstaller {
         destination: URL,
         manifest: ParakeetModelManifest,
         fileManager: FileManager = .default,
-        extract: (URL, URL) throws -> Void
+        extract: (URL, URL) throws -> Void,
+        progress: @Sendable (Progress) -> Void = { _ in }
     ) throws -> InstallResult {
+        try Task.checkCancellation()
+        progress(.verifying)
         try ParakeetModelDownloadVerifier.validate(
             fileAt: archive,
             descriptor: descriptor
@@ -142,7 +152,11 @@ enum ParakeetModelInstaller {
             attributes: [.posixPermissions: 0o700]
         )
         defer { try? fileManager.removeItem(at: extractionRoot) }
+        try Task.checkCancellation()
+        progress(.extracting)
         try extract(archive, extractionRoot)
+        try Task.checkCancellation()
+        progress(.installing)
 
         // The published model pack keeps attribution and license files beside
         // the model directory inside a distribution wrapper named after the
@@ -187,6 +201,7 @@ enum ParakeetModelInstaller {
         )
         try validate(modelAt: source, manifest: manifest)
 
+        try Task.checkCancellation()
         let parent = destination.deletingLastPathComponent()
         try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
         let available = try parent.resourceValues(
@@ -221,6 +236,7 @@ enum ParakeetModelInstaller {
             ".record-parakeet-backup-\(UUID().uuidString)",
             isDirectory: true
         )
+        try Task.checkCancellation()
         let hadDestination = fileManager.fileExists(atPath: destination.path)
         if hadDestination {
             try fileManager.moveItem(at: destination, to: backup)

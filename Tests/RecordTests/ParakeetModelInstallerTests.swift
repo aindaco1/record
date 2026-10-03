@@ -6,6 +6,37 @@ import RecordSpeech
 import XCTest
 
 final class ParakeetModelInstallerTests: XCTestCase {
+    func testCancellationAfterExtractionPreservesPreviousModelAndRemovesStaging() async throws {
+        let fixture = try makeFixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        try write("old", to: fixture.destination.appendingPathComponent("sentinel"))
+        let archive = fixture.root.appendingPathComponent("model.zip")
+        try write("archive", to: archive)
+        let descriptor = ParakeetModelDownloadDescriptor(
+            assetName: "model.zip",
+            downloadURLString: "https://github.com/example/model.zip", byteCount: 7,
+            sha256: digest("archive"))
+        let result = await Task.detached {
+            try ParakeetModelInstaller.installArchive(
+                from: archive, descriptor: descriptor,
+                destination: fixture.destination, manifest: fixture.manifest,
+                extract: { _, _ in withUnsafeCurrentTask { $0?.cancel() } })
+        }.result
+        if case .failure(let error) = result {
+            XCTAssertTrue(error is CancellationError)
+        } else {
+            XCTFail("cancelled installation must not commit")
+        }
+        XCTAssertEqual(
+            try String(
+                contentsOf: fixture.destination.appendingPathComponent("sentinel"), encoding: .utf8),
+            "old")
+        XCTAssertFalse(
+            try FileManager.default.contentsOfDirectory(atPath: fixture.root.path).contains {
+                $0.hasPrefix("expanded-")
+            })
+    }
+
     func testVerifiedModelInstallsAtomically() throws {
         let fixture = try makeFixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }

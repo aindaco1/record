@@ -180,18 +180,22 @@ final class RecordingPermissionController {
 
     var isScreenCaptureGranted: Bool { screen.isGranted }
 
-    func prepare(for mode: RecordingMode) async -> RecordingPermissionPreparation {
-        switch microphone.state {
-        case .authorized:
-            break
-        case .notDetermined:
-            guard await microphone.requestAccess() else {
+    func prepare(for mode: RecordingMode, audio: CaptureAudioConfiguration = .init()) async
+        -> RecordingPermissionPreparation
+    {
+        if audio.includeMicrophone {
+            switch microphone.state {
+            case .authorized:
+                break
+            case .notDetermined:
+                guard await microphone.requestAccess() else {
+                    return .needsSettings(.microphone)
+                }
+            case .denied:
                 return .needsSettings(.microphone)
             }
-        case .denied:
-            return .needsSettings(.microphone)
-        }
 
+        }
         switch mode {
         case .screen:
             if screen.isGranted { return .ready }
@@ -199,6 +203,7 @@ final class RecordingPermissionController {
                 ? .ready
                 : .waitingForRestart(.screenAndSystemAudio)
         case .audioOnly:
+            guard audio.includeSystemAudio else { return .ready }
             let status = systemAudio.registerAccessRequest()
             guard status == noErr else {
                 FileHandle.standardError.write(

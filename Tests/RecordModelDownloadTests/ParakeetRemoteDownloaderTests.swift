@@ -4,6 +4,21 @@ import RecordCore
 import XCTest
 
 final class ParakeetRemoteDownloaderTests: XCTestCase {
+    func testTaskByteObservationReportsActualBytesWithoutDownloadDelegateCallbacks() {
+        let task = ByteCountTask()
+        let updates = LockedCounter()
+        let observation = ParakeetRemoteDownloader.observeTransferredBytes(of: task) { bytes in
+            if bytes == 512 { updates.increment() }
+        }
+        task.receive(512)
+        XCTAssertEqual(updates.value, 1)
+
+        observation.invalidate()
+        task.receive(1024)
+        task.receive(512)
+        XCTAssertEqual(updates.value, 1)
+    }
+
     func testCompletionGateResolvesOnlyOnce() {
         let counter = LockedCounter()
         let gate = ParakeetRemoteDownloader.CompletionGate { _ in counter.increment() }
@@ -81,6 +96,16 @@ final class ParakeetRemoteDownloaderTests: XCTestCase {
                 .localizedDescription,
             "GitHub returned an invalid response for the Parakeet model."
         )
+    }
+}
+
+private final class ByteCountTask: URLSessionTask, @unchecked Sendable {
+    private var bytes: Int64 = 0
+    override var countOfBytesReceived: Int64 { bytes }
+    func receive(_ count: Int64) {
+        willChangeValue(forKey: "countOfBytesReceived")
+        bytes = count
+        didChangeValue(forKey: "countOfBytesReceived")
     }
 }
 

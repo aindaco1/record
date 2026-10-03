@@ -44,6 +44,7 @@ final class SystemAudioRecorder: @unchecked Sendable {
     private(set) var isRecording = false
     /// Wall-clock time of the first captured buffer — the track's true start,
     /// used to offset-align the two tracks' transcript timestamps.
+    let activity = AudioActivity()
     var firstBufferAt: Date? { writer?.snapshot().firstBufferAt }
 
     init(
@@ -78,7 +79,7 @@ final class SystemAudioRecorder: @unchecked Sendable {
             let format = try tapStreamFormat()
             try createAggregateDevice(tapUUID: tapHandle.uuid)
             let file = try makeFile(url: url, format: format)
-            writer = AudioFileWritePump(file: file) { [weak self] event in
+            writer = AudioFileWritePump(file: file, activity: activity) { [weak self] event in
                 self?.report(event)
             }
             try installIOProc(format: format)
