@@ -19,5 +19,15 @@ protocol TranscriptionEngine: Sendable {
     var model: String { get }
     func prepare() async throws
     func transcribe(_ audio: URL) async throws -> [TranscriptSegment]
+    func transcribe(_ audio: URL, progress: @escaping @Sendable (Double) async -> Void) async throws
+        -> [TranscriptSegment]
     func release() async
+}
+
+extension TranscriptionEngine {
+    func transcribe(_ audio: URL, progress: @escaping @Sendable (Double) async -> Void) async throws
+        -> [TranscriptSegment]
+    {
+        try await transcribe(audio)
+    }
 }

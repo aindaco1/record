@@ -26,6 +26,7 @@ public struct ScreenCaptureStreamPlan: Equatable, Sendable {
     public let showsMouseClicks: Bool
     public let capturesSystemAudio: Bool
     public let capturesMicrophone: Bool
+    public let microphoneDeviceID: String?
     public let sourceRect: CaptureRect?
 
     public init(
@@ -47,6 +48,7 @@ public struct ScreenCaptureStreamPlan: Equatable, Sendable {
         showsMouseClicks = configuration.highlightClicks
         capturesSystemAudio = configuration.audio.includeSystemAudio
         capturesMicrophone = configuration.audio.includeMicrophone
+        microphoneDeviceID = configuration.audio.microphoneDeviceID
         if case .region(_, let rect) = configuration.source {
             sourceRect = rect
         } else if case .systemRegion(let rect) = configuration.source {
@@ -71,6 +73,7 @@ public struct ScreenCaptureStreamPlan: Equatable, Sendable {
         configuration.showMouseClicks = showsMouseClicks
         configuration.capturesAudio = capturesSystemAudio
         configuration.captureMicrophone = capturesMicrophone
+        configuration.microphoneCaptureDeviceID = microphoneDeviceID
         configuration.sampleRate = 48_000
         configuration.channelCount = 2
         configuration.excludesCurrentProcessAudio = true

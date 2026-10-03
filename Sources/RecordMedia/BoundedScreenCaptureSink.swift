@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreMedia
 import Dispatch
 import Foundation
@@ -128,6 +129,8 @@ private final class MediaTrackIngressState {
 /// processing. On overflow it evicts the oldest queued sample for that track,
 /// keeping latency bounded while preserving the newest capture state.
 public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked Sendable {
+    public let microphoneActivity = AudioActivity()
+    public let systemAudioActivity = AudioActivity()
     private let processor: any MediaSampleProcessing
     private let onFailure: @Sendable (CaptureFailure) -> Void
     private let onHealth:
@@ -170,6 +173,26 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
                 ($0, MediaTrackIngressState(capacity: configuration.capacity(for: $0)))
             }
         )
+    }
+
+    private func recordActivity(_ sample: ScreenCaptureSample) {
+        guard sample.kind != .screen,
+            let description = CMSampleBufferGetFormatDescription(sample.buffer)
+        else { return }
+        let format = AVAudioFormat(cmAudioFormatDescription: description)
+        let count = min(128, CMSampleBufferGetNumSamples(sample.buffer))
+        guard count > 0,
+            let buffer = AVAudioPCMBuffer(
+                pcmFormat: format, frameCapacity: AVAudioFrameCount(count))
+        else { return }
+        buffer.frameLength = AVAudioFrameCount(count)
+        guard
+            CMSampleBufferCopyPCMDataIntoAudioBufferList(
+                sample.buffer, at: 0, frameCount: Int32(count), into: buffer.mutableAudioBufferList)
+                == noErr
+        else { return }
+        (sample.kind == .microphone ? microphoneActivity : systemAudioActivity).record(
+            buffer: buffer)
     }
 
     public func consume(_ sample: ScreenCaptureSample) {
@@ -273,6 +296,7 @@ public final class BoundedScreenCaptureSink: ScreenCaptureSampleSink, @unchecked
             lock.unlock()
 
             do {
+                recordActivity(sample)
                 let result = try processor.process(sample)
                 lock.lock()
                 switch result {

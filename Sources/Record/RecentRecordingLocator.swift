@@ -10,10 +10,20 @@ enum RecentRecordingLocator {
         let videoURL: URL?
     }
 
-    private struct Candidate: Equatable {
+    struct Candidate: Equatable, Sendable {
         let directory: URL
         let finishedAt: Date
         let videoURL: URL?
+        let manifest: SessionManifest
+        let transcription: TranscriptionCheckpoint?
+        let hasTranscript: Bool
+    }
+
+    static func sessions(under roots: [URL]) -> [Candidate] {
+        var seen = Set<String>()
+        return roots.flatMap { candidates(under: $0, fileManager: .default, includeRecovery: true) }
+            .filter { seen.insert($0.directory.resolvingSymlinksInPath().path).inserted }
+            .sorted { isOlder($1, $0) }
     }
 
     static func snapshot(
@@ -57,7 +67,7 @@ enum RecentRecordingLocator {
 
     private static func candidates(
         under root: URL,
-        fileManager: FileManager
+        fileManager: FileManager, includeRecovery: Bool = false
     ) -> [Candidate] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey]
         guard
@@ -69,14 +79,15 @@ enum RecentRecordingLocator {
         else { return [] }
 
         return entries.compactMap {
-            candidate(at: $0, under: root, fileManager: fileManager)
+            candidate(
+                at: $0, under: root, fileManager: fileManager, includeRecovery: includeRecovery)
         }
     }
 
     private static func candidate(
         at directory: URL,
         under root: URL,
-        fileManager: FileManager
+        fileManager: FileManager, includeRecovery: Bool = false
     ) -> Candidate? {
         let root = root.standardizedFileURL
         let directory = directory.standardizedFileURL
@@ -89,11 +100,10 @@ enum RecentRecordingLocator {
             values.isSymbolicLink != true,
             directory.resolvingSymlinksInPath().deletingLastPathComponent()
                 == root.resolvingSymlinksInPath(),
-            fileManager.fileExists(
-                atPath: directory.appendingPathComponent("session.json").path
-            ),
+            LocalFilePolicy.isNonemptyRegularFile(directory.appendingPathComponent("session.json")),
             let manifest = try? SessionManifest.read(from: directory),
             manifest.state == .finalized || manifest.state == .interrupted
+                || (includeRecovery && manifest.state == .failed)
         else { return nil }
 
         return Candidate(
@@ -103,7 +113,13 @@ enum RecentRecordingLocator {
                 in: directory,
                 manifest: manifest,
                 fileManager: fileManager
-            )
+            ),
+            manifest: manifest,
+            transcription: includeRecovery
+                ? try? TranscriptionCheckpoint.read(from: directory) : nil,
+            hasTranscript: includeRecovery
+                && LocalFilePolicy.isNonemptyRegularFile(
+                    directory.appendingPathComponent("transcript.json"))
         )
     }
 

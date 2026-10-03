@@ -471,3 +471,20 @@ future criterion is not a release gate for the current 30-fps capture profile.
 
 Performance captures contain only generated test patterns and synthetic audio.
 They are never uploaded automatically.
+
+## Record 1.5 workflow acceptance
+
+In addition to the existing capture matrix, exercise these rows on the final
+signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-candidate.md).
+
+| Surface | Acceptance |
+|---|---|
+| Audio sources | Built-in microphone only, system only, and both in audio and screen modes; only enabled files and permissions; separate activity |
+| Input test | Explicit start/stop and ten-second expiry; no files; closing Settings or starting capture stops the test |
+| Selected microphone | Explicit built-in routing; disconnect a selected USB/Bluetooth microphone, confirm safe stop and preserved media, then select another input |
+| Sessions | Current destination plus private recovery only; title/date filter; raw/clean copy; source playback; folder-change refresh; no symlink traversal |
+| Transcription | One track fails, partial label appears, retry preserves the successful track; defer/relaunch/retry preserves media and successful work |
+| Shortcuts | Configure, use from another app, hold without repeated toggles, set Off, reject conflicts, preserve old screenshot assignments |
+| Checklist | New setup, close/reopen, revisit after permission changes, correct required permissions for chosen sources, model remains optional |
+| Model setup | Real byte progress; cancel during transfer; retry; verification/extraction/install stages; invalid download rejected; prior model survives cancellation |
+| Panel | Automatic show and disabled setting; elapsed/pause/stop/saving match menu; keyboard/VoiceOver usable; reduced motion; excluded from recorded frames |

@@ -13,15 +13,13 @@ struct SettingsInteractionAvailability: Equatable {
 
 @MainActor
 final class ShortcutRecorderButton: NSButton {
-    let kind: ScreenshotCaptureKind
     var onRecord: ((ScreenshotShortcut?) -> Void)?
     var onInvalid: ((String) -> Void)?
 
     private var restingTitle = "Off"
     private var isRecordingShortcut = false
 
-    init(kind: ScreenshotCaptureKind) {
-        self.kind = kind
+    init(kind: ScreenshotCaptureKind? = nil) {
         super.init(frame: .zero)
         bezelStyle = .rounded
         target = self
@@ -69,7 +67,7 @@ final class ShortcutRecorderButton: NSButton {
 
         let modifiers = Self.shortcutModifiers(from: event.modifierFlags)
         guard !modifiers.isEmpty else {
-            onInvalid?("A screenshot shortcut must include at least one modifier key.")
+            onInvalid?("A shortcut must include at least one modifier key.")
             NSSound.beep()
             return
         }
@@ -83,7 +81,7 @@ final class ShortcutRecorderButton: NSButton {
             onRecord?(shortcut)
             finishRecording()
         } catch {
-            onInvalid?("That key combination can’t be used as a screenshot shortcut.")
+            onInvalid?("That key combination can’t be used as a shortcut.")
             NSSound.beep()
         }
     }
@@ -119,17 +117,24 @@ final class ShortcutRecorderButton: NSButton {
 /// finished recordings. AppController remains the policy owner; this object
 /// only renders current state and translates controls into narrow callbacks.
 @MainActor
-final class SettingsWindowController: NSWindowController {
+private final class SettingsDocumentView: NSView {
+    override var isFlipped: Bool { true }
+}
+
+@MainActor
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     enum Section: Int, CaseIterable {
         case general
         case screenshots
         case recording
+        case audio
 
         var title: String {
             switch self {
             case .general: "General"
             case .screenshots: "Screenshots"
             case .recording: "Recording"
+            case .audio: "Audio"
             }
         }
     }
@@ -184,6 +189,27 @@ final class SettingsWindowController: NSWindowController {
     private let transcriptRefinementCheckbox = NSButton(
         checkboxWithTitle: "Improve Transcript Readability", target: nil, action: nil)
 
+    private let audioPreferences = RecordingAudioPreferences()
+    private let sourcePopup = NSPopUpButton()
+    private let microphonePopup = NSPopUpButton()
+    private let inputTestButton = NSButton(title: "Test Input", target: nil, action: nil)
+    private let audioStatus = NSTextField(wrappingLabelWithString: "")
+    private let microphoneLevel = NSLevelIndicator()
+    private let systemLevel = NSLevelIndicator()
+    private let panelCheckbox = NSButton(
+        checkboxWithTitle: "Show compact panel while recording", target: nil, action: nil)
+    private let inputTest = AudioInputTest()
+    private var inputTestTask: Task<Void, Never>?
+    private var inputTestGeneration = UUID()
+    private var inputTestTimer: Timer?
+    private let recordingShortcuts = RecordingShortcuts()
+    private var recordingShortcutButtons: [RecordingShortcutAction: ShortcutRecorderButton] = [:]
+    private let recordingShortcutMessage = NSTextField(wrappingLabelWithString: "")
+    var onRecordingShortcutsChanged: (() -> Void)?
+    var onAudioPreferencesChanged: (() -> Void)?
+
+    var onShowRecentSessions: (() -> Void)?
+    var onShowReadiness: (() -> Void)?
     var onShowDiagnostics: (() -> Void)?
     var onChooseExportFolder: (() -> Void)?
     var onScreenshotPreferencesChanged: (() -> Void)?
@@ -231,6 +257,7 @@ final class SettingsWindowController: NSWindowController {
         window.contentMinSize = NSSize(width: 720, height: 500)
         window.isReleasedWhenClosed = false
         super.init(window: window)
+        window.delegate = self
         buildUI()
         refreshScreenshotPreferences()
         select(section: .general)
@@ -242,6 +269,7 @@ final class SettingsWindowController: NSWindowController {
     func show(exportDirectory: URL) {
         updateExportDirectory(exportDirectory)
         refreshScreenshotPreferences()
+        refreshAudioDevices()
         NSApp.activate(ignoringOtherApps: true)
         window?.center()
         showWindow(nil)
@@ -262,6 +290,15 @@ final class SettingsWindowController: NSWindowController {
 
     func updateInteractionAvailability(_ availability: SettingsInteractionAvailability) {
         chooseDestinationButton.isEnabled = availability.destinationSelectionEnabled
+        sourcePopup.isEnabled = availability.capturePrivacyEnabled
+        microphonePopup.isEnabled = availability.capturePrivacyEnabled
+        inputTestButton.isEnabled = availability.capturePrivacyEnabled
+        if !availability.capturePrivacyEnabled {
+            stopInputTest()
+        } else if inputTestTask == nil {
+            microphoneLevel.doubleValue = 0
+            systemLevel.doubleValue = 0
+        }
         for checkbox in [
             hideNotificationsCheckbox,
             hideMenuBarCheckbox,
@@ -373,6 +410,7 @@ final class SettingsWindowController: NSWindowController {
             .general: buildGeneralPage(),
             .screenshots: buildScreenshotsPage(),
             .recording: buildRecordingPage(),
+            .audio: buildAudioPage(),
         ]
         for view in pageViews.values {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -399,6 +437,8 @@ final class SettingsWindowController: NSWindowController {
         ])
     }
 
+    @objc private func showRecentSessions() { onShowRecentSessions?() }
+    @objc private func showReadiness() { onShowReadiness?() }
     @objc private func showDiagnostics() { onShowDiagnostics?() }
 
     private func buildGeneralPage() -> NSView {
@@ -406,6 +446,14 @@ final class SettingsWindowController: NSWindowController {
             title: "General",
             description: "Shared preferences for screenshots and finished recordings."
         ) { stack in
+            stack.addArrangedSubview(
+                NSStackView(views: [
+                    NSButton(
+                        title: "Recent Sessions…", target: self,
+                        action: #selector(showRecentSessions)),
+                    NSButton(
+                        title: "Ready to Record…", target: self, action: #selector(showReadiness)),
+                ]))
             stack.addArrangedSubview(sectionHeading("Files"))
             chooseDestinationButton.target = self
             chooseDestinationButton.action = #selector(chooseExportFolder)
@@ -450,7 +498,9 @@ final class SettingsWindowController: NSWindowController {
             launchAtLoginCheckbox.target = self
             launchAtLoginCheckbox.action = #selector(toggleLaunchAtLogin)
             stack.addArrangedSubview(row(label: "", views: [launchAtLoginCheckbox]))
-            let help = NSButton(title: MenuBarController.diagnosticsMenuTitle, target: self, action: #selector(showDiagnostics))
+            let help = NSButton(
+                title: MenuBarController.diagnosticsMenuTitle, target: self,
+                action: #selector(showDiagnostics))
             stack.addArrangedSubview(row(label: "Support", views: [help]))
         }
     }
@@ -511,12 +561,175 @@ final class SettingsWindowController: NSWindowController {
         }
     }
 
+    func refreshAudioDevices() {
+        microphonePopup.removeAllItems()
+        microphonePopup.addItem(withTitle: "System Default")
+        let devices = AudioInputDevices.available()
+        for device in devices {
+            microphonePopup.addItem(withTitle: device.name)
+            microphonePopup.lastItem?.representedObject = device.uid
+        }
+        if let uid = audioPreferences.microphoneUID {
+            if let item = microphonePopup.itemArray.first(where: {
+                $0.representedObject as? String == uid
+            }) {
+                microphonePopup.select(item)
+            } else {
+                if inputTestTask != nil {
+                    stopInputTest()
+                    audioStatus.stringValue =
+                        "Selected microphone disconnected. Choose another input."
+                }
+                microphonePopup.addItem(withTitle: "Selected microphone unavailable")
+                microphonePopup.lastItem?.representedObject = uid
+                microphonePopup.select(microphonePopup.lastItem)
+            }
+        }
+        sourcePopup.selectItem(
+            at: RecordingAudioSource.allCases.firstIndex(of: audioPreferences.source) ?? 0)
+        panelCheckbox.state = audioPreferences.showsPanel ? .on : .off
+    }
+
+    func updateAudioLevels(
+        _ levels: (microphone: Double, system: Double), configuration: CaptureAudioConfiguration
+    ) {
+        microphoneLevel.doubleValue = configuration.includeMicrophone ? levels.microphone : 0
+        systemLevel.doubleValue = configuration.includeSystemAudio ? levels.system : 0
+    }
+
+    private func buildAudioPage() -> NSView {
+        makePage(
+            title: "Audio",
+            description:
+                "Choose sources for screen and audio-only recordings. Microphone and system audio remain separate files."
+        ) { stack in
+            sourcePopup.addItems(withTitles: RecordingAudioSource.allCases.map(\.title))
+            sourcePopup.target = self
+            sourcePopup.action = #selector(audioSourceChanged)
+            microphonePopup.target = self
+            microphonePopup.action = #selector(microphoneChanged)
+            inputTestButton.target = self
+            inputTestButton.action = #selector(testInput)
+            stack.addArrangedSubview(row(label: "Record", views: [sourcePopup]))
+            stack.addArrangedSubview(row(label: "Microphone", views: [microphonePopup]))
+            stack.addArrangedSubview(row(label: "", views: [inputTestButton]))
+            for (title, level) in [
+                ("Microphone activity", microphoneLevel), ("System activity", systemLevel),
+            ] {
+                level.minValue = 0
+                level.maxValue = 1
+                level.levelIndicatorStyle = .continuousCapacity
+                level.setAccessibilityLabel(title)
+                level.widthAnchor.constraint(equalToConstant: 250).isActive = true
+                stack.addArrangedSubview(row(label: title, views: [level]))
+            }
+            stack.addArrangedSubview(audioStatus)
+            stack.addArrangedSubview(
+                note(
+                    "Test Input listens for 10 seconds without saving audio. System activity appears during recording. In audio-only mode, specific microphones use raw input; System Default retains voice processing. A selected microphone disconnect stops and preserves the session."
+                ))
+            panelCheckbox.target = self
+            panelCheckbox.action = #selector(panelChanged)
+            stack.addArrangedSubview(panelCheckbox)
+            refreshAudioDevices()
+        }
+    }
+
+    @objc private func audioSourceChanged() {
+        stopInputTest()
+        audioPreferences.source = RecordingAudioSource.allCases[sourcePopup.indexOfSelectedItem]
+        onAudioPreferencesChanged?()
+    }
+    @objc private func microphoneChanged() {
+        stopInputTest()
+        audioPreferences.microphoneUID = microphonePopup.selectedItem?.representedObject as? String
+        onAudioPreferencesChanged?()
+    }
+    @objc private func panelChanged() {
+        audioPreferences.showsPanel = panelCheckbox.state == .on
+        onAudioPreferencesChanged?()
+    }
+    @objc private func testInput() {
+        if inputTestTask != nil { stopInputTest(); return }
+        inputTestButton.title = "Stop Test"
+        let generation = UUID()
+        inputTestGeneration = generation
+        inputTestTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.inputTest.start(uid: self.audioPreferences.microphoneUID)
+                self.audioStatus.stringValue =
+                    "Listening — speak to check the microphone. No audio is saved."
+                self.inputTestTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {
+                    [weak self] _ in
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        self.microphoneLevel.doubleValue = self.inputTest.activity.level()
+                    }
+                }
+                try await Task.sleep(for: .seconds(10))
+                guard self.inputTest.activity.hasReceivedSamples else {
+                    self.audioStatus.stringValue =
+                        "No microphone audio received. Choose another input and test again."
+                    if self.inputTestGeneration == generation { self.stopInputTest() }
+                    return
+                }
+                self.audioStatus.stringValue = "Input test finished."
+                UserDefaults.standard.set(
+                    self.audioPreferences.microphoneUID ?? "default",
+                    forKey: "recording.testedInput")
+            } catch is CancellationError {} catch {
+                self.audioStatus.stringValue =
+                    "Input unavailable. Check Microphone permission or choose another device."
+            }
+            if self.inputTestGeneration == generation { self.stopInputTest() }
+        }
+    }
+    private func stopInputTest() {
+        if audioStatus.stringValue.hasPrefix("Listening") {
+            audioStatus.stringValue = "Input test stopped."
+        }
+        inputTestGeneration = UUID()
+        inputTestTask?.cancel()
+        inputTestTask = nil
+        inputTestTimer?.invalidate()
+        inputTestTimer = nil
+        inputTest.stop()
+        inputTestButton.title = "Test Input"
+        microphoneLevel.doubleValue = 0
+    }
+    func windowWillClose(_ notification: Notification) { stopInputTest() }
+
     private func buildRecordingPage() -> NSView {
         makePage(
             title: "Recording",
             description:
                 "Configure finished recording names and the local transcription workflow."
         ) { stack in
+            stack.addArrangedSubview(sectionHeading("Global Shortcuts"))
+            for action in RecordingShortcutAction.allCases {
+                let button = ShortcutRecorderButton()
+                button.update(shortcut: recordingShortcuts[action])
+                button.onRecord = { [weak self, weak button] shortcut in
+                    guard let self else { return }
+                    do {
+                        try self.recordingShortcuts.set(
+                            shortcut, for: action, screenshots: self.screenshotPreferences.shortcuts
+                        )
+                        button?.update(shortcut: shortcut)
+                        self.recordingShortcutMessage.stringValue = ""
+                        self.onRecordingShortcutsChanged?()
+                    } catch {
+                        self.recordingShortcutMessage.stringValue =
+                            "That shortcut is already assigned to another Record action."
+                    }
+                }
+                button.onInvalid = { [weak self] in self?.recordingShortcutMessage.stringValue = $0
+                }
+                recordingShortcutButtons[action] = button
+                stack.addArrangedSubview(row(label: action.title, views: [button]))
+            }
+            stack.addArrangedSubview(recordingShortcutMessage)
             stack.addArrangedSubview(sectionHeading("File Names"))
             renameRecordingCheckbox.target = self
             renameRecordingCheckbox.action = #selector(toggleRecordingName)
@@ -567,7 +780,12 @@ final class SettingsWindowController: NSWindowController {
         description: String,
         build: (NSStackView) -> Void
     ) -> NSView {
-        let page = NSView()
+        let page = SettingsDocumentView()
+        page.translatesAutoresizingMaskIntoConstraints = false
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.documentView = page
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -587,9 +805,20 @@ final class SettingsWindowController: NSWindowController {
             stack.leadingAnchor.constraint(equalTo: page.leadingAnchor, constant: 28),
             stack.trailingAnchor.constraint(equalTo: page.trailingAnchor, constant: -28),
             stack.topAnchor.constraint(equalTo: page.topAnchor, constant: 14),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: page.bottomAnchor, constant: -20),
+            stack.bottomAnchor.constraint(equalTo: page.bottomAnchor, constant: -20),
+            page.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor),
+            page.leadingAnchor.constraint(equalTo: scroll.contentView.leadingAnchor),
+            page.topAnchor.constraint(equalTo: scroll.contentView.topAnchor),
         ])
-        return page
+        return scroll
+    }
+
+    func updateRecordingShortcutFailures(_ failures: [RecordingShortcutAction]) {
+        recordingShortcutMessage.stringValue =
+            failures.isEmpty
+            ? ""
+            : "Unavailable shortcuts: " + failures.map(\.title).joined(separator: ", ")
+                + ". Choose another combination."
     }
 
     private func row(label: String, views: [NSView]) -> NSStackView {
@@ -652,6 +881,9 @@ final class SettingsWindowController: NSWindowController {
         for kind: ScreenshotCaptureKind
     ) {
         do {
+            try RecordingShortcuts.check(
+                shortcut,
+                against: RecordingShortcutAction.allCases.compactMap { recordingShortcuts[$0] })
             try screenshotPreferences.setShortcut(shortcut, for: kind)
             screenshotMessageLabel.stringValue = ""
             refreshScreenshotPreferences()
@@ -714,6 +946,17 @@ final class SettingsWindowController: NSWindowController {
     }
 
     @objc private func restoreScreenshotDefaults() {
+        let recordings = RecordingShortcutAction.allCases.compactMap { recordingShortcuts[$0] }
+        do {
+            for kind in ScreenshotCaptureKind.allCases {
+                try RecordingShortcuts.check(
+                    ScreenshotShortcutSet.defaults[kind], against: recordings)
+            }
+        } catch {
+            screenshotMessageLabel.stringValue =
+                "A default shortcut is assigned to recording. Change that recording shortcut first."
+            return
+        }
         screenshotPreferences.restoreDefaultShortcuts()
         refreshScreenshotPreferences()
         onScreenshotPreferencesChanged?()

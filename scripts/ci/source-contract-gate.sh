@@ -47,6 +47,16 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
     Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoCaptureStartupWaiter.swift \
     Sources/Record/VideoRecordingSession.swift \
+    Sources/Record/Audio/AudioInputDevices.swift \
+    Sources/Record/Audio/RecordingAudioPreferences.swift \
+    Sources/Record/RecordingShortcuts.swift \
+    Sources/Record/SettingsWindowController.swift \
+    Sources/Record/GlobalScreenshotShortcutRegistrar.swift \
+    Sources/Record/RecentRecordingLocator.swift \
+    Sources/Record/UI/ModelSetupWindowController.swift \
+    Sources/Record/UI/ReadyToRecordWindowController.swift \
+    Sources/Record/UI/RecentSessionsWindowController.swift \
+    Sources/Record/UI/RecordingPanelController.swift \
     Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests \
     Tests/RecordModelDownloadTests
 git diff --check

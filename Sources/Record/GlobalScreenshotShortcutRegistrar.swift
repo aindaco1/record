@@ -43,7 +43,9 @@ final class GlobalScreenshotShortcutRegistrar {
     private static let signature: OSType = 0x5245_4344  // "RECD"
 
     private var handler: EventHandlerRef?
-    private var references: [ScreenshotCaptureKind: EventHotKeyRef] = [:]
+    private var references: [UInt32: EventHotKeyRef] = [:]
+    private var pressed = Set<UInt32>()
+    var onRecording: ((RecordingShortcutAction) -> Void)?
     var onCapture: ((ScreenshotCaptureKind) -> Void)?
 
     init() {
@@ -51,41 +53,51 @@ final class GlobalScreenshotShortcutRegistrar {
     }
 
     func apply(_ shortcuts: ScreenshotShortcutSet) -> [GlobalScreenshotShortcutFailure] {
-        for reference in references.values {
-            UnregisterEventHotKey(reference)
+        for id in references.keys.filter({ $0 <= 3 }) {
+            if let reference = references.removeValue(forKey: id) {
+                UnregisterEventHotKey(reference)
+            }
+            pressed.remove(id)
         }
-        references.removeAll()
 
         var failures: [GlobalScreenshotShortcutFailure] = []
         for kind in ScreenshotCaptureKind.allCases {
             guard let shortcut = shortcuts[kind] else { continue }
-            var reference: EventHotKeyRef?
-            let identifier = EventHotKeyID(
-                signature: Self.signature,
-                id: CarbonScreenshotShortcutPlan.identifier(for: kind)
-            )
-            let status = RegisterEventHotKey(
-                shortcut.keyCode,
-                CarbonScreenshotShortcutPlan.modifiers(shortcut.modifiers),
-                identifier,
-                GetApplicationEventTarget(),
-                0,
-                &reference
-            )
-            if status == noErr, let reference {
-                references[kind] = reference
-            } else {
-                failures.append(.init(kind: kind, status: status))
+            let status = register(shortcut, id: CarbonScreenshotShortcutPlan.identifier(for: kind))
+            if status != noErr { failures.append(.init(kind: kind, status: status)) }
+        }
+        return failures
+    }
+
+    func applyRecording(_ shortcuts: RecordingShortcuts) -> [RecordingShortcutAction] {
+        var failures: [RecordingShortcutAction] = []
+        for action in RecordingShortcutAction.allCases {
+            if let old = references.removeValue(forKey: action.rawValue) {
+                UnregisterEventHotKey(old)
+            }
+            pressed.remove(action.rawValue)
+            if let shortcut = shortcuts[action], register(shortcut, id: action.rawValue) != noErr {
+                failures.append(action)
             }
         }
         return failures
     }
 
+    private func register(_ shortcut: ScreenshotShortcut, id: UInt32) -> OSStatus {
+        var reference: EventHotKeyRef?
+        let result = RegisterEventHotKey(
+            shortcut.keyCode,
+            CarbonScreenshotShortcutPlan.modifiers(shortcut.modifiers),
+            EventHotKeyID(signature: Self.signature, id: id), GetApplicationEventTarget(), 0,
+            &reference)
+        if result == noErr, let reference { references[id] = reference }
+        return result
+    }
+
     private func installHandler() {
-        var eventType = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
+        var eventTypes = [kEventHotKeyPressed, kEventHotKeyReleased].map {
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32($0))
+        }
         let callback: EventHandlerUPP = { _, event, context in
             guard let event, let context else { return OSStatus(eventNotHandledErr) }
             let owner = Unmanaged<GlobalScreenshotShortcutRegistrar>
@@ -101,19 +113,26 @@ final class GlobalScreenshotShortcutRegistrar {
                 &identifier
             )
             guard status == noErr,
-                identifier.signature == GlobalScreenshotShortcutRegistrar.signature,
-                let kind = CarbonScreenshotShortcutPlan.kind(for: identifier.id)
+                identifier.signature == GlobalScreenshotShortcutRegistrar.signature
             else { return OSStatus(eventNotHandledErr) }
             MainActor.assumeIsolated {
-                owner.onCapture?(kind)
+                if GetEventKind(event) == UInt32(kEventHotKeyReleased) {
+                    owner.pressed.remove(identifier.id)
+                } else if owner.pressed.insert(identifier.id).inserted {
+                    if let kind = CarbonScreenshotShortcutPlan.kind(for: identifier.id) {
+                        owner.onCapture?(kind)
+                    } else if let action = RecordingShortcutAction(rawValue: identifier.id) {
+                        owner.onRecording?(action)
+                    }
+                }
             }
             return noErr
         }
         InstallEventHandler(
             GetApplicationEventTarget(),
             callback,
-            1,
-            &eventType,
+            eventTypes.count,
+            &eventTypes,
             Unmanaged.passUnretained(self).toOpaque(),
             &handler
         )

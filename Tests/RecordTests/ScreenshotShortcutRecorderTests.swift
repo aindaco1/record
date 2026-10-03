@@ -5,6 +5,18 @@ import XCTest
 
 @MainActor
 final class ScreenshotShortcutRecorderTests: XCTestCase {
+    func testIdleSettingsDoesNotRetainActivityFromAFinishedRecording() throws {
+        let suite = "IdleAudioSettingsTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        controller.updateAudioLevels((microphone: 0.7, system: 0.8), configuration: .init())
+        controller.updateInteractionAvailability(.idle)
+        let meters = allSubviews(of: try XCTUnwrap(controller.window?.contentView))
+            .compactMap { $0 as? NSLevelIndicator }
+        XCTAssertEqual(meters.count, 2)
+        XCTAssertTrue(meters.allSatisfy { $0.doubleValue == 0 })
+    }
     func testRecorderMapsOnlySupportedShortcutModifiers() {
         let modifiers = ShortcutRecorderButton.shortcutModifiers(
             from: [.command, .shift, .capsLock, .function]

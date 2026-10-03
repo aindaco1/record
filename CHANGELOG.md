@@ -4,7 +4,33 @@ All notable changes to Record are documented here. Record follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.4.8] - Unreleased
+## [1.5.0] - Unreleased
+
+### Added
+
+- Microphone selection, source controls for both recording modes, an explicit
+  no-file input test, and independent audio activity indicators. Specific inputs
+  use raw audio-only capture; System Default retains voice processing.
+- Recent Sessions with current-folder and recovery browsing, title/date filtering,
+  raw/clean transcript previews, copy, source playback, reveal, and retry/defer.
+- Configurable global recording shortcuts using the existing native registrar;
+  new assignments start Off and existing screenshot preferences are preserved.
+- A resumable Ready to Record checklist and model setup with received-byte
+  progress, verification/install stages, and cancellation.
+- An automatic compact recording panel with elapsed time, pause/resume, and stop;
+  Audio settings can disable it. The existing recording exclusion covers it.
+
+### Fixed
+
+- Preserve successful transcription tracks when another track fails, explicitly
+  label partial results, and retry unfinished tracks without repeating success.
+  Deferred work stays deferred after relaunch; original media remains intact.
+- Request only permissions needed by the enabled audio sources. A selected
+  microphone disconnect stops safely instead of silently selecting another input.
+- Detect shortcut conflicts by physical key and modifiers, independent of labels.
+
+See [ADR 0026](docs/adr/0026-local-recording-workflow.md) for the local checkpoint,
+source-selection, and content-free model progress contracts.
 
 ### Development
 

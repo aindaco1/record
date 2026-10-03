@@ -98,6 +98,10 @@ public struct ScreenshotShortcut: Codable, Equatable, Hashable, Sendable {
         self.keyLabel = label
     }
 
+    public func matchesKeys(of other: Self) -> Bool {
+        keyCode == other.keyCode && modifiers == other.modifiers
+    }
+
     public var displayString: String {
         var value = ""
         if modifiers.contains(.control) { value += "⌃" }
@@ -176,7 +180,11 @@ public struct ScreenshotShortcutSet: Equatable, Sendable {
 
     public func validate() throws {
         let enabled = ScreenshotCaptureKind.allCases.compactMap { self[$0] }
-        guard Set(enabled).count == enabled.count else {
+        guard
+            !enabled.enumerated().contains(where: { index, shortcut in
+                enabled.prefix(index).contains { $0.matchesKeys(of: shortcut) }
+            })
+        else {
             throw ScreenshotCaptureContractError.duplicateShortcut
         }
     }

@@ -77,6 +77,7 @@ final class MenuBarController {
         return items.first { $0.1.state == .on }?.0
     }
 
+    var onRecordingPresentation: ((RecordingMenuPresentation) -> Void)?
     var onToggle: (() -> Void)?
     var onCaptureScreenshot: ((ScreenshotCaptureKind) -> Void)?
     var onShowSettings: (() -> Void)?
@@ -87,6 +88,8 @@ final class MenuBarController {
     var onRetryTranscription: (() -> Void)?
     var onOpenRecoveryFolder: (() -> Void)?
     var onOpenLastRecording: (() -> Void)?
+    var onShowReadiness: (() -> Void)?
+    var onShowRecentSessions: (() -> Void)?
     var onShowDiagnostics: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
     var onSettingsInteractionAvailabilityChanged: ((SettingsInteractionAvailability) -> Void)?
@@ -184,6 +187,13 @@ final class MenuBarController {
         )
         openLastRecordingItem.isEnabled = false
         menu.addItem(openLastRecordingItem)
+        let recentSessionsItem = NSMenuItem(
+            title: "Recent Sessions…",
+            action: #selector(recentSessionsClicked), keyEquivalent: "")
+        menu.addItem(recentSessionsItem)
+        let readinessItem = NSMenuItem(
+            title: "Ready to Record…", action: #selector(readinessClicked), keyEquivalent: "")
+        menu.addItem(readinessItem)
 
         gifskiItem = NSMenuItem(
             title: "Open Last Video in Gifski",
@@ -257,6 +267,8 @@ final class MenuBarController {
             retryTranscriptionItem,
             recoveryFolderItem,
             openLastRecordingItem,
+            recentSessionsItem,
+            readinessItem,
             settingsItem,
             checkForUpdatesItem,
             quit,
@@ -492,6 +504,7 @@ final class MenuBarController {
         if presentation.clearsCaptureHealth {
             captureHealthNote = nil
         }
+        onRecordingPresentation?(presentation)
         stateLabel.title = presentation.stateTitle
         toggleItem.title = presentation.toggleTitle
         toggleItem.isEnabled = presentation.toggleEnabled
@@ -515,6 +528,9 @@ final class MenuBarController {
         recordingIndicatorIsActive = active
         statusItem.button?.image = Self.menuBarImage()
     }
+
+    @objc private func readinessClicked() { onShowReadiness?() }
+    @objc private func recentSessionsClicked() { onShowRecentSessions?() }
 
     @objc private func toggleClicked() { onToggle?() }
     @objc private func captureScreenshotClicked(_ sender: NSMenuItem) {

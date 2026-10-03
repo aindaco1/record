@@ -22,7 +22,7 @@ The shared evaluator is `@dustwave/test-core` 0.3.0 from
 [Dust Wave Platform](https://github.com/aindaco1/dust-wave-platform), the same
 implementation used by Pool. The default source is the pinned
 `shared/dust-wave-platform` submodule at
-`0affb6c5652611b87947bd87762d8aa17d35ea32`. The adapter checks that revision
+`b32a38b34f83daf142bd42d0c8f80ff4220952ad`. The adapter checks that revision
 and the hashes of all three imported source files before using it. It does not
 download or install dependencies. No JavaScript package enters Record's Swift
 package or app bundle. CutNotes supplies the workflow pattern; Record does not

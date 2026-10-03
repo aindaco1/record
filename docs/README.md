@@ -25,6 +25,8 @@ unless a procedure says otherwise.
   operation for the local gate.
 - [Repository instructions](../AGENTS.md): requirements for automated contributors.
 - [Roadmap](project/roadmap.md): current direction, deferred ideas, and non-goals.
+- [Handy comparison](project/handy-review-2026-10-02.md): October 2 research and
+  prioritized proposals for usability and reliability; not implementation commitments.
 - [GitHub issues](https://github.com/aindaco1/record/issues): live issue status
   and acceptance criteria.
 
@@ -66,7 +68,10 @@ unless a procedure says otherwise.
 - [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
 - [Release notes](releases/): notes for published versions, including
   [Record 1.4.7](releases/1.4.7.md), and the
-  [planned Record 1.4.8](releases/1.4.8.md) (unreleased).
+  [planned Record 1.5.0](releases/1.5.0.md) (unreleased).
+
+- [Record 1.5.0 candidate validation](testing/1.5.0-candidate.md): current checks
+  and the limits of built-in-only hardware acceptance.
 
 ## Historical records
 
