@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
+python3 scripts/localization/compile.py --check
 node --test scripts/qa/jev.test.mjs
 node --test integrations/crash-relay/record-contract.test.mjs
 ./scripts/ci/check-local-only.sh
@@ -59,6 +60,11 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/UI/ModelSetupWindowController.swift \
     Sources/Record/UI/RecentSessionsViewController.swift \
     Sources/Record/UI/RecordingPanelController.swift \
+    Sources/Record/UI/AccessibilityAnnouncements.swift \
+    Sources/Record/UI/VocabularySettingsView.swift \
+    Sources/Record/Transcription/VocabularyPreferences.swift \
+    Sources/Record/Transcription/AudioFileImporter.swift \
+    Sources/Record/Transcription/TranscribeFiles.swift \
     Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests \
     Tests/RecordModelDownloadTests
 git diff --check

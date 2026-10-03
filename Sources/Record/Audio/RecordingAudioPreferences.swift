@@ -5,9 +5,9 @@ enum RecordingAudioSource: String, CaseIterable {
     case both, microphone, system
     var title: String {
         switch self {
-        case .both: "Microphone + System Audio";
-        case .microphone: "Microphone Only";
-        case .system: "System Audio Only"
+        case .both: L10n.text("Microphone + System Audio");
+        case .microphone: L10n.text("Microphone Only");
+        case .system: L10n.text("System Audio Only")
         }
     }
 }

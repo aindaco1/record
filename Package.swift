@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Record",
+    defaultLocalization: "en",
     platforms: [.macOS(.v15)],
     products: [
         .library(name: "RecordCore", targets: ["RecordCore"]),
@@ -30,7 +31,8 @@ let package = Package(
                 .product(name: "DustWaveSpeechCore", package: "native"),
                 .product(name: "DustWaveUpdatePolicy", package: "desktop"),
                 .product(name: "DustWaveDiagnostics", package: "desktop"),
-            ]),
+            ],
+            resources: [.process("Localization")]),
         .target(
             name: "RecordCapture",
             dependencies: ["RecordCore"]

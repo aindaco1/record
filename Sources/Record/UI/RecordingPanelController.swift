@@ -15,7 +15,7 @@ final class RecordingPanelController: NSWindowController {
 
     init() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 390, height: 145),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 175),
             styleMask: [.titled, .closable, .utilityWindow, .nonactivatingPanel],
             backing: .buffered, defer: false)
         panel.title = "Record"
@@ -25,14 +25,15 @@ final class RecordingPanelController: NSWindowController {
         panel.sharingType = .none
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         super.init(window: panel)
-        stop.title = "Stop"
+        stop.title = L10n.text("Stop")
         stop.target = self
         stop.action = #selector(stopClicked)
         pause.target = self
         pause.action = #selector(pauseClicked)
         let controls = NSStackView(views: [pause, stop])
         let stack = NSStackView(views: [
-            label, meterRow("Microphone", microphone), meterRow("System audio", system), controls,
+            label, meterRow(L10n.text("Microphone"), microphone),
+            meterRow(L10n.text("System audio"), system), controls,
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -70,18 +71,20 @@ final class RecordingPanelController: NSWindowController {
         microphone.doubleValue = configuration.includeMicrophone ? levels.microphone : 0
         system.doubleValue = configuration.includeSystemAudio ? levels.system : 0
         microphone.setAccessibilityValue(
-            configuration.includeMicrophone ? "\(Int(levels.microphone * 100)) percent" : "Off")
+            configuration.includeMicrophone
+                ? L10n.format("%ld percent", Int(levels.microphone * 100)) : L10n.text("Off"))
         system.setAccessibilityValue(
-            configuration.includeSystemAudio ? "\(Int(levels.system * 100)) percent" : "Off")
+            configuration.includeSystemAudio
+                ? L10n.format("%ld percent", Int(levels.system * 100)) : L10n.text("Off"))
     }
     private func meterRow(_ title: String, _ meter: NSLevelIndicator) -> NSView {
         meter.minValue = 0
         meter.maxValue = 1
         meter.levelIndicatorStyle = .continuousCapacity
-        meter.setAccessibilityLabel(title + " activity")
+        meter.setAccessibilityLabel(L10n.format("%@ activity", title))
         meter.widthAnchor.constraint(equalToConstant: 220).isActive = true
         let label = NSTextField(labelWithString: title)
-        label.widthAnchor.constraint(equalToConstant: 95).isActive = true
+        label.widthAnchor.constraint(equalToConstant: 140).isActive = true
         return NSStackView(views: [label, meter])
     }
     @objc private func stopClicked() { onStop?() }

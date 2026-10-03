@@ -8,7 +8,9 @@ status; versioned issue-triage files are historical planning snapshots.
 
 ## Next
 
-- First-class microphone and frame-rate selection.
+- Complete 1.5.0 acceptance for microphone selection, Sessions, language controls,
+  vocabulary, file import/CLI, Spanish, and VoiceOver.
+- First-class frame-rate selection.
 - Representative USB, Bluetooth, and call-length microphone-route acceptance.
 - Direct source-selection and pause/resume acceptance tests on real hardware.
 - macOS 27 runtime/TCC and inactive-app transcription acceptance on physical
@@ -30,8 +32,6 @@ umbrella issues until a real use case justifies the complexity.
   contract, with deterministic long-file, two-track, and failure tests; exact
   speaker-count constraints only when a real offline-diarization consumer and
   representative fixtures justify them.
-- A lightweight manifest-derived recording history.
-- Localization and VoiceOver-focused accessibility review.
 
 ## Non-goals
 

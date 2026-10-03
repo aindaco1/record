@@ -499,3 +499,8 @@ signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-ca
 | Checklist | New setup, close/reopen, revisit after permission changes, correct required permissions for chosen sources, model remains optional |
 | Model setup | Real byte progress; cancel during transfer; retry; verification/extraction/install stages; invalid download rejected; prior model survives cancellation |
 | Panel | Automatic show and disabled setting; elapsed/pause/stop/saving match menu; keyboard/VoiceOver usable; reduced motion; excluded from recorded frames |
+| Vocabulary | Add Dust Wave; verify case/space/hyphen variants and explicit aliases across sessions; save/relaunch; original and pre-vocabulary views; remove/reapply restores wording; reject ambiguous aliases |
+| Imported audio | Select several supported files; one corrupt file does not stop others; original bytes unchanged; source label and duration correct; retry/defer; cancelled/failed imports stay out of Sessions |
+| Transcription CLI | Multiple paths and explicit output; saved-folder default; sandbox denial guidance; native --authorize grants; nonzero status on any failure; no recording-control commands or model auto-download |
+| Languages | Follow macOS and English/Spanish overrides on relaunch; all sidebar/menu/setup/error surfaces; Parakeet automatic; MacWhisper selection retained; no mixed-language checkpoint settings |
+| Accessibility | Keyboard-only navigation and vocabulary editing; VoiceOver labels, focus, start/pause/resume/stop/transcription announcements; no timer/meter spam; Spanish at minimum window size |

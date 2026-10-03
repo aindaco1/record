@@ -1,0 +1,57 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captures microphone audio for local recordings and on-device transcription. Audio never leaves this Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captura el micrófono para grabaciones y transcripciones locales. El audio nunca sale de esta Mac."
+          }
+        }
+      }
+    },
+    "NSAudioCaptureUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captures system audio for local recordings and on-device transcription. Audio never leaves this Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captura el audio del sistema para grabaciones y transcripciones locales. El audio nunca sale de esta Mac."
+          }
+        }
+      }
+    },
+    "NSScreenCaptureUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captures screenshots and screen recordings of displays, windows, apps, or areas you select. Images and video never leave this Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record captura imágenes y videos de las pantallas, ventanas, aplicaciones o áreas que eliges. Las imágenes y videos nunca salen de esta Mac."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

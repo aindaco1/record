@@ -22,12 +22,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         case recording, sessions, transcription, screenshots, shortcuts, general
         var title: String {
             switch self {
-            case .recording: "Recording"
-            case .sessions: "Sessions"
-            case .transcription: "Transcription"
-            case .screenshots: "Screenshots"
-            case .shortcuts: "Shortcuts"
-            case .general: "General"
+            case .recording: L10n.text("Recording")
+            case .sessions: L10n.text("Sessions")
+            case .transcription: L10n.text("Transcription")
+            case .screenshots: L10n.text("Screenshots")
+            case .shortcuts: L10n.text("Shortcuts")
+            case .general: L10n.text("General")
             }
         }
         var symbol: String {
@@ -51,15 +51,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
 
     let destinationLabel = NSTextField(labelWithString: "")
     let chooseDestinationButton = NSButton(
-        title: "Change…", target: nil, action: nil)
+        title: L10n.text("Change…"), target: nil, action: nil)
     let hideNotificationsCheckbox = NSButton(
-        checkboxWithTitle: "Hide notifications from capture", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Hide notifications from capture"), target: nil, action: nil)
     let hideMenuBarCheckbox = NSButton(
-        checkboxWithTitle: "Hide menu bar, including the clock", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Hide menu bar, including the clock"), target: nil, action: nil
+    )
     let hideDesktopItemsCheckbox = NSButton(
-        checkboxWithTitle: "Hide Desktop items from capture", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Hide Desktop items from capture"), target: nil, action: nil)
     let launchAtLoginCheckbox = NSButton(
-        checkboxWithTitle: "Open Record at Login", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Open Record at Login"), target: nil, action: nil)
 
     let formatPopup = NSPopUpButton()
     let qualitySlider = NSSlider(
@@ -71,22 +72,25 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     )
     let qualityLabel = NSTextField(labelWithString: "95%")
     let soundCheckbox = NSButton(
-        checkboxWithTitle: "Play shutter sound", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Play shutter sound"), target: nil, action: nil)
     let screenshotMessageLabel = NSTextField(wrappingLabelWithString: "")
     var shortcutButtons: [ScreenshotCaptureKind: ShortcutRecorderButton] = [:]
 
     let renameRecordingCheckbox = NSButton(
-        checkboxWithTitle: "Rename finished recordings", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Rename finished recordings"), target: nil, action: nil)
     let recordingTemplateField = NSTextField(string: "")
     let recordingNamePreview = NSTextField(wrappingLabelWithString: "")
     let refinementDetail = NSTextField(wrappingLabelWithString: "")
     let transcriptionAvailability = NSTextField(wrappingLabelWithString: "")
     let recordingMode = NSSegmentedControl(
-        labels: ["Screen", "Audio only"], trackingMode: .selectOne, target: nil, action: nil)
+        labels: [L10n.text("Screen"), L10n.text("Audio only")], trackingMode: .selectOne,
+        target: nil, action: nil)
     let screenSourcePopup = NSPopUpButton()
     let readinessLabel = NSTextField(wrappingLabelWithString: "")
-    let checkPermissionsButton = NSButton(title: "Check Permissions…", target: nil, action: nil)
-    let startRecordingButton = NSButton(title: "Start Screen Recording", target: nil, action: nil)
+    let checkPermissionsButton = NSButton(
+        title: L10n.text("Check Permissions…"), target: nil, action: nil)
+    let startRecordingButton = NSButton(
+        title: L10n.text("Start Screen Recording"), target: nil, action: nil)
     let captureLockNote = NSTextField(wrappingLabelWithString: "")
     var interactionAvailability = SettingsInteractionAvailability.idle
     var onRefreshReadiness: ((RecordingMode) -> RecordingReadiness)?
@@ -95,21 +99,26 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
     var onSectionChanged: ((Section) -> Void)?
     let transcriptionPopup = NSPopUpButton()
+    let speechLanguagePopup = NSPopUpButton()
+    let speechLanguageDetail = NSTextField(wrappingLabelWithString: "")
+    let interfaceLanguagePopup = NSPopUpButton()
+    let interfaceLanguageDetail = NSTextField(wrappingLabelWithString: "")
     let parakeetStatusLabel = NSTextField(labelWithString: "")
     let parakeetSetupButton = NSButton(
-        title: "Set Up Parakeet Model…", target: nil, action: nil)
+        title: L10n.text("Set Up Parakeet Model…"), target: nil, action: nil)
     let transcriptRefinementCheckbox = NSButton(
-        checkboxWithTitle: "Improve Transcript Readability", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Improve Transcript Readability"), target: nil, action: nil)
 
     let audioPreferences = RecordingAudioPreferences()
     let sourcePopup = NSPopUpButton()
     let microphonePopup = NSPopUpButton()
-    let inputTestButton = NSButton(title: "Test Input", target: nil, action: nil)
+    let inputTestButton = NSButton(title: L10n.text("Test Input"), target: nil, action: nil)
     let audioStatus = NSTextField(wrappingLabelWithString: "")
     let microphoneLevel = NSLevelIndicator()
     let systemLevel = NSLevelIndicator()
     let panelCheckbox = NSButton(
-        checkboxWithTitle: "Show compact panel while recording", target: nil, action: nil)
+        checkboxWithTitle: L10n.text("Show compact panel while recording"), target: nil, action: nil
+    )
     let inputTest = AudioInputTest()
     var inputTestTask: Task<Void, Never>?
     var inputTestGeneration = UUID()
@@ -128,6 +137,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     var onToggleRecordingName: (() -> Void)?
     var onUpdateRecordingNameTemplate: ((String) -> Void)?
     var onSelectTranscriptionEngine: ((TranscriptionEngineOption) -> Void)?
+    var onSelectSpeechLanguage: ((String) -> Void)?
     var onSetUpParakeetModel: (() -> Void)?
     var onToggleTranscriptRefinement: (() -> Void)?
 
@@ -164,7 +174,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             backing: .buffered,
             defer: false
         )
-        window.title = "Record Settings"
+        window.title = L10n.text("Record Settings")
         window.contentMinSize = NSSize(width: 900, height: 620)
         window.isReleasedWhenClosed = false
         super.init(window: window)
@@ -232,7 +242,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         screenSourcePopup.isEnabled =
             selectedRecordingMode == .screen && interactionAvailability.capturePrivacyEnabled
         startRecordingButton.title =
-            selectedRecordingMode == .screen ? "Start Screen Recording" : "Start Audio Recording"
+            selectedRecordingMode == .screen
+            ? L10n.text("Start Screen Recording") : L10n.text("Start Audio Recording")
         refreshReadiness()
     }
     @objc func screenSourceChanged() {
@@ -259,7 +270,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         checkPermissionsButton.isEnabled = startRecordingButton.isEnabled
         captureLockNote.stringValue =
             startRecordingButton.isEnabled
-            ? "" : "Recording controls are locked while capture is starting, running, or saving."
+            ? ""
+            : L10n.text(
+                "Recording controls are locked while capture is starting, running, or saving.")
         captureLockNote.isHidden = startRecordingButton.isEnabled
         sourcePopup.isEnabled = availability.capturePrivacyEnabled
         microphonePopup.isEnabled = availability.capturePrivacyEnabled
@@ -296,10 +309,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             }
         launchAtLoginCheckbox.toolTip =
             switch state {
-            case .disabled: "Open Record automatically after you sign in"
-            case .enabled: "Record will open automatically after you sign in"
-            case .requiresApproval: "Click to approve Record in Login Items"
-            case .unavailable: "Open at Login is unavailable for this copy of Record"
+            case .disabled: L10n.text("Open Record automatically after you sign in")
+            case .enabled: L10n.text("Record will open automatically after you sign in")
+            case .requiresApproval: L10n.text("Click to approve Record in Login Items")
+            case .unavailable: L10n.text("Open at Login is unavailable for this copy of Record")
             }
     }
 
@@ -326,8 +339,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         }
         transcriptionAvailability.stringValue =
             macWhisperAvailable
-            ? "All transcription runs locally on this Mac."
-            : "Transcription runs locally. Parakeet needs a one-time model setup. Install MacWhisper to make its engine available."
+            ? L10n.text("All transcription runs locally on this Mac.")
+            : L10n.text(
+                "Transcription runs locally. Parakeet needs a one-time model setup. Install MacWhisper to make its engine available."
+            )
         if let item = transcriptionPopup.itemArray.first(where: {
             $0.representedObject as? String == engine.rawValue
         }) {
@@ -335,25 +350,79 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         }
         parakeetStatusLabel.stringValue =
             if parakeetModelAvailable {
-                "Installed"
+                L10n.text("Installed")
             } else if parakeetSetupInProgress {
-                "Downloading and verifying…"
+                L10n.text("Downloading and verifying…")
             } else {
-                "Setup required"
+                L10n.text("Setup required")
             }
         parakeetStatusLabel.textColor =
             parakeetModelAvailable ? .secondaryLabelColor : .systemOrange
         parakeetSetupButton.isHidden = parakeetModelAvailable
         parakeetSetupButton.isEnabled = !parakeetSetupInProgress
         parakeetSetupButton.title =
-            parakeetSetupInProgress ? "Downloading…" : "Set Up Parakeet Model…"
+            parakeetSetupInProgress
+            ? L10n.text("Downloading…") : L10n.text("Set Up Parakeet Model…")
     }
 
     func updateTranscriptRefinement(enabled: Bool, available: Bool, detail: String) {
         transcriptRefinementCheckbox.state = enabled ? .on : .off
         transcriptRefinementCheckbox.isEnabled = available
-        transcriptRefinementCheckbox.toolTip = detail
-        refinementDetail.stringValue = detail
+        transcriptRefinementCheckbox.toolTip = L10n.text(detail)
+        refinementDetail.stringValue = L10n.text(detail)
+    }
+
+    func updateSpeechLanguage(engine: TranscriptionEngineOption, preferred: String) {
+        speechLanguagePopup.removeAllItems()
+        let options = [
+            ("auto", L10n.text("Automatic")), ("en", L10n.text("English")),
+            ("es", L10n.text("Spanish")),
+        ]
+        for (code, title) in options {
+            speechLanguagePopup.addItem(withTitle: title)
+            speechLanguagePopup.lastItem?.representedObject = code
+        }
+        if !options.contains(where: { $0.0 == preferred }) {
+            speechLanguagePopup.addItem(
+                withTitle: Locale(identifier: L10n.language.rawValue)
+                    .localizedString(forLanguageCode: preferred) ?? preferred)
+            speechLanguagePopup.lastItem?.representedObject = preferred
+        }
+        let effective = engine == .parakeet ? "auto" : preferred
+        speechLanguagePopup.select(
+            speechLanguagePopup.itemArray.first {
+                $0.representedObject as? String == effective
+            })
+        speechLanguagePopup.isEnabled = engine == .macwhisper
+        speechLanguageDetail.stringValue =
+            engine == .parakeet
+            ? L10n.text(
+                "Parakeet detects language automatically. Your MacWhisper language choice is kept."
+            )
+            : L10n.text(
+                "Applies to the next session processed. Interface language is set separately in General."
+            )
+    }
+
+    @objc func speechLanguageChanged() {
+        guard let language = speechLanguagePopup.selectedItem?.representedObject as? String else {
+            return
+        }
+        onSelectSpeechLanguage?(language)
+    }
+
+    @objc func interfaceLanguageChanged() {
+        guard let choice = interfaceLanguagePopup.selectedItem?.representedObject as? String else {
+            return
+        }
+        UserDefaults.standard.set(choice, forKey: L10n.preferenceKey)
+        if choice == InterfaceLanguage.system.rawValue {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([choice], forKey: "AppleLanguages")
+        }
+        interfaceLanguageDetail.stringValue = L10n.text(
+            "Quit and reopen Record to apply the interface language. Speech language is unchanged.")
     }
 
     func showShortcutRegistrationFailures(
@@ -365,12 +434,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         }
         let names = failures.map(\.kind.displayName).joined(separator: ", ")
         screenshotMessageLabel.stringValue =
-            "Couldn’t register: \(names). Another app or macOS is using the shortcut."
+            L10n.format("Couldn’t register: %@. Another app or macOS is using the shortcut.", names)
     }
 
     func refreshAudioDevices() {
         microphonePopup.removeAllItems()
-        microphonePopup.addItem(withTitle: "System Default")
+        microphonePopup.addItem(withTitle: L10n.text("System Default"))
         let devices = AudioInputDevices.available()
         for device in devices {
             microphonePopup.addItem(withTitle: device.name)
@@ -385,9 +454,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
                 if inputTestTask != nil {
                     stopInputTest()
                     audioStatus.stringValue =
-                        "Selected microphone disconnected. Choose another input."
+                        L10n.text("Selected microphone disconnected. Choose another input.")
                 }
-                microphonePopup.addItem(withTitle: "Selected microphone unavailable")
+                microphonePopup.addItem(withTitle: L10n.text("Selected microphone unavailable"))
                 microphonePopup.lastItem?.representedObject = uid
                 microphonePopup.select(microphonePopup.lastItem)
             }
@@ -423,7 +492,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     }
     @objc func testInput() {
         if inputTestTask != nil { stopInputTest(); return }
-        inputTestButton.title = "Stop Test"
+        inputTestButton.title = L10n.text("Stop Test")
         let generation = UUID()
         inputTestGeneration = generation
         inputTestTask = Task { [weak self] in
@@ -431,7 +500,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             do {
                 try await self.inputTest.start(uid: self.audioPreferences.microphoneUID)
                 self.audioStatus.stringValue =
-                    "Listening — speak to check the microphone. No audio is saved."
+                    L10n.text("Listening — speak to check the microphone. No audio is saved.")
                 self.inputTestTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) {
                     [weak self] _ in
                     MainActor.assumeIsolated {
@@ -442,24 +511,28 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
                 try await Task.sleep(for: .seconds(10))
                 guard self.inputTest.activity.hasReceivedSamples else {
                     self.audioStatus.stringValue =
-                        "No microphone audio received. Choose another input and test again."
-                    if self.inputTestGeneration == generation { self.stopInputTest() }
+                        L10n.text(
+                            "No microphone audio received. Choose another input and test again.")
+                    if self.inputTestGeneration == generation {
+                        self.stopInputTest(preserveMessage: true)
+                    }
                     return
                 }
-                self.audioStatus.stringValue = "Input test finished."
+                self.audioStatus.stringValue = L10n.text("Input test finished.")
                 UserDefaults.standard.set(
                     self.audioPreferences.microphoneUID ?? "default",
                     forKey: "recording.testedInput")
             } catch is CancellationError {} catch {
                 self.audioStatus.stringValue =
-                    "Input unavailable. Check Microphone permission or choose another device."
+                    L10n.text(
+                        "Input unavailable. Check Microphone permission or choose another device.")
             }
-            if self.inputTestGeneration == generation { self.stopInputTest() }
+            if self.inputTestGeneration == generation { self.stopInputTest(preserveMessage: true) }
         }
     }
-    func stopInputTest() {
-        if audioStatus.stringValue.hasPrefix("Listening") {
-            audioStatus.stringValue = "Input test stopped."
+    func stopInputTest(preserveMessage: Bool = false) {
+        if inputTestTask != nil && !preserveMessage {
+            audioStatus.stringValue = L10n.text("Input test stopped.")
         }
         inputTestGeneration = UUID()
         inputTestTask?.cancel()
@@ -467,7 +540,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         inputTestTimer?.invalidate()
         inputTestTimer = nil
         inputTest.stop()
-        inputTestButton.title = "Test Input"
+        inputTestButton.title = L10n.text("Test Input")
         microphoneLevel.doubleValue = 0
         refreshReadiness()
     }
@@ -481,8 +554,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         recordingShortcutMessage.stringValue =
             failures.isEmpty
             ? ""
-            : "Unavailable shortcuts: " + failures.map(\.title).joined(separator: ", ")
-                + ". Choose another combination."
+            : L10n.format(
+                "Unavailable shortcuts: %@. Choose another combination.",
+                failures.map(\.title).joined(separator: ", "))
     }
 
     func configurePrivacyCheckbox(
@@ -525,11 +599,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             onScreenshotPreferencesChanged?()
         } catch ScreenshotCaptureContractError.duplicateShortcut {
             screenshotMessageLabel.stringValue =
-                "That shortcut is already assigned to another Record action."
+                L10n.text("That shortcut is already assigned to another Record action.")
             NSSound.beep()
             refreshScreenshotPreferences()
         } catch {
-            screenshotMessageLabel.stringValue = "That shortcut can’t be saved."
+            screenshotMessageLabel.stringValue = L10n.text("That shortcut can’t be saved.")
             NSSound.beep()
             refreshScreenshotPreferences()
         }
@@ -556,13 +630,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     func updateNamePreview() -> Bool {
         do {
             let template = try RecordingNameTemplate(validating: recordingTemplateField.stringValue)
-            let preview = template.render(at: Date(), clipboard: "Clipboard", wordSeed: 0)
-            recordingNamePreview.stringValue = "Example: " + preview
+            let preview = template.render(
+                at: Date(), clipboard: L10n.text("Clipboard"), wordSeed: 0)
+            recordingNamePreview.stringValue = L10n.text("Example: ") + preview
             recordingNamePreview.textColor = .secondaryLabelColor
             return true
         } catch {
             recordingNamePreview.stringValue =
-                "Use supported tokens and balanced braces. Your last valid template is still saved."
+                L10n.text(
+                    "Use supported tokens and balanced braces. Your last valid template is still saved."
+                )
             recordingNamePreview.textColor = .systemOrange
             return false
         }
@@ -605,7 +682,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             }
         } catch {
             screenshotMessageLabel.stringValue =
-                "A default shortcut is assigned to recording. Change that recording shortcut first."
+                L10n.text(
+                    "A default shortcut is assigned to recording. Change that recording shortcut first."
+                )
             return
         }
         screenshotPreferences.restoreDefaultShortcuts()

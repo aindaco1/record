@@ -119,6 +119,15 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertNil(state.failedDirectory)
     }
 
+    func testDisabledRetryPreservesTheFailureForLater() {
+        var state = TranscriptionRetryState()
+        let directory = URL(fileURLWithPath: "/tmp/record-retry/disabled")
+        state.recordFailure(in: directory)
+        XCTAssertNil(state.takeFailure(when: false))
+        XCTAssertEqual(state.failedDirectory, directory)
+        XCTAssertEqual(state.takeFailure(when: true)?.directory, directory)
+    }
+
     func testRetryKeepsOriginalFolderAccessAfterThePreferenceChanges() {
         let directory = URL(fileURLWithPath: "/tmp/record-retry/original/session")
         var selectedLease: ExportDirectoryLease? = ExportDirectoryLease(

@@ -27,6 +27,10 @@ fi
 required_files=(
     "$app_path/Contents/Info.plist"
     "$app_path/Contents/Resources/Record.icns"
+    "$app_path/Contents/Resources/Record_RecordCore.bundle/Contents/Resources/en.lproj/Localizable.strings"
+    "$app_path/Contents/Resources/Record_RecordCore.bundle/Contents/Resources/es.lproj/Localizable.strings"
+    "$app_path/Contents/Resources/en.lproj/InfoPlist.strings"
+    "$app_path/Contents/Resources/es.lproj/InfoPlist.strings"
     "$app_path/Contents/Resources/Shutter.mp3"
     "$app_path/Contents/Resources/record-macwhisper"
     "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"

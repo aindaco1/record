@@ -5,9 +5,9 @@ enum RecordingShortcutAction: UInt32, CaseIterable, Sendable {
     case screen = 4, audio, pauseResume
     var title: String {
         switch self {
-        case .screen: "Screen start / stop"
-        case .audio: "Audio start / stop"
-        case .pauseResume: "Screen pause / resume"
+        case .screen: L10n.text("Screen start / stop")
+        case .audio: L10n.text("Audio start / stop")
+        case .pauseResume: L10n.text("Screen pause / resume")
         }
     }
 }

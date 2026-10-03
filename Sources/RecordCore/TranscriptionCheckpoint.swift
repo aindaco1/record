@@ -8,11 +8,11 @@ public struct TranscriptionCheckpoint: Codable, Equatable, Sendable {
         case pending, processing, needsRetry, deferred, complete
         public var title: String {
             switch self {
-            case .pending: "Queued"
-            case .processing: "Transcribing"
-            case .needsRetry: "Needs retry"
-            case .deferred: "Deferred"
-            case .complete: "Ready"
+            case .pending: L10n.text("Queued")
+            case .processing: L10n.text("Transcribing")
+            case .needsRetry: L10n.text("Needs retry")
+            case .deferred: L10n.text("Deferred")
+            case .complete: L10n.text("Ready")
             }
         }
     }

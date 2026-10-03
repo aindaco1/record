@@ -3,18 +3,28 @@ import Foundation
 /// Canonical, crash-recoverable session state. `session.json` is written when
 /// a session directory is created and atomically replaced at each transition.
 public struct SessionManifest: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
 
     public enum State: String, Codable, Sendable {
         case recording
         case finalized
         case interrupted
         case failed
+
+        public var displayTitle: String {
+            switch self {
+            case .recording: L10n.text("Recording")
+            case .finalized: L10n.text("Finalized")
+            case .interrupted: L10n.text("Interrupted")
+            case .failed: L10n.text("Failed")
+            }
+        }
     }
 
     public enum TrackKind: String, Codable, Sendable {
         case microphone
         case systemAudio = "system_audio"
+        case importedAudio = "imported_audio"
         case screen
         case camera
     }
@@ -102,6 +112,18 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         }
     }
 
+    public struct ImportedAudio: Codable, Equatable, Sendable {
+        public let originalFilename: String
+        public let byteCount: UInt64
+        public let durationMilliseconds: Int
+        public init(originalFilename: String, byteCount: UInt64, durationMilliseconds: Int) {
+            self.originalFilename = originalFilename
+            self.byteCount = byteCount
+            self.durationMilliseconds = durationMilliseconds
+        }
+    }
+
+    public var importedAudio: ImportedAudio?
     public var schemaVersion: Int
     public var id: UUID
     public var state: State
@@ -125,7 +147,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         failure: CaptureFailure? = nil,
         healthEvents: [CaptureHealthEvent]? = nil,
         captureSegments: [CaptureSegment]? = nil,
-        captureEvents: [CaptureEvent]? = nil
+        captureEvents: [CaptureEvent]? = nil,
+        importedAudio: ImportedAudio? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -138,9 +161,11 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         self.healthEvents = healthEvents
         self.captureSegments = captureSegments
         self.captureEvents = captureEvents
+        self.importedAudio = importedAudio
     }
 
     enum CodingKeys: String, CodingKey {
+        case importedAudio = "imported_audio"
         case schemaVersion = "schema_version"
         case id
         case state
@@ -193,7 +218,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let manifest = try decoder.decode(Self.self, from: data)
-        guard manifest.schemaVersion == currentSchemaVersion else {
+        guard (1...currentSchemaVersion).contains(manifest.schemaVersion) else {
             throw ManifestError.unsupportedSchema(manifest.schemaVersion)
         }
         try manifest.validate()
@@ -209,6 +234,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case invalidCaptureSegment(Int)
         case duplicateCaptureSegment(Int)
         case invalidCaptureEvent
+        case invalidImportedAudio
     }
 
     private func transitioned(to nextState: State, at end: Date, tracks: [Track]) throws -> Self {
@@ -223,6 +249,20 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     }
 
     private func validate() throws {
+        guard (1...Self.currentSchemaVersion).contains(schemaVersion) else {
+            throw ManifestError.unsupportedSchema(schemaVersion)
+        }
+        if let importedAudio {
+            guard schemaVersion >= 2, state == .finalized, endedAt != nil,
+                importedAudio.byteCount > 0, importedAudio.durationMilliseconds > 0,
+                SessionPathPolicy.isSafeRelativeFilename(importedAudio.originalFilename),
+                tracks.count == 1, tracks[0].kind == .importedAudio,
+                tracks[0].startOffsetMilliseconds == 0,
+                captureSegments == nil, captureEvents == nil
+            else { throw ManifestError.invalidImportedAudio }
+        } else if tracks.contains(where: { $0.kind == .importedAudio }) {
+            throw ManifestError.invalidImportedAudio
+        }
         var filenames: Set<String> = []
         for track in tracks {
             try Self.validate(track: track, filenames: &filenames)

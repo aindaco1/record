@@ -9,38 +9,50 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
     private let table = NSTableView()
     private let preview = NSTextView()
     private var displayedTranscript: String?
+    private(set) var activeProgress: (session: String, stage: String)?
     private let variant = NSSegmentedControl(
-        labels: ["Clean transcript", "Raw transcript"],
+        labels: [
+            L10n.text("Transcript"), L10n.text("Before vocabulary"), L10n.text("Raw transcript"),
+        ],
         trackingMode: .selectOne, target: nil, action: nil)
     private let status = NSTextField(wrappingLabelWithString: "")
-    private lazy var revealButton = button("Reveal", #selector(reveal))
-    private lazy var copyButton = button("Copy transcript", #selector(copyTranscript))
-    private lazy var retryButton = button("Retry unfinished tracks", #selector(retry))
-    private lazy var deferButton = button("Transcribe later", #selector(deferWork))
-    private lazy var microphoneButton = button("Play microphone", #selector(playMicrophone))
-    private lazy var systemButton = button("Play system audio", #selector(playSystemAudio))
-    private lazy var videoButton = button("Play video", #selector(playVideo))
+    private lazy var revealButton = button(L10n.text("Reveal"), #selector(reveal))
+    private lazy var copyButton = button(L10n.text("Copy transcript"), #selector(copyTranscript))
+    private lazy var retryButton = button(L10n.text("Retry unfinished tracks"), #selector(retry))
+    private lazy var vocabularyButton = button(
+        L10n.text("Apply Vocabulary"), #selector(applyVocabulary))
+    private lazy var deferButton = button(L10n.text("Transcribe later"), #selector(deferWork))
+    private lazy var microphoneButton = button(
+        L10n.text("Play microphone"), #selector(playMicrophone))
+    private lazy var systemButton = button(
+        L10n.text("Play system audio"), #selector(playSystemAudio))
+    private lazy var importedButton = button(
+        L10n.text("Play imported audio"), #selector(playImportedAudio))
+    private lazy var importButton = button(L10n.text("Import Audio…"), #selector(importAudio))
+    private lazy var videoButton = button(L10n.text("Play video"), #selector(playVideo))
     private var sessions: [RecentRecordingLocator.Candidate] = []
     private var filtered: [RecentRecordingLocator.Candidate] = []
     private var lease: ExportDirectoryLease?
     private var refreshTask: Task<Void, Never>?
     private var previewTask: Task<Void, Never>?
     private var roots: [URL] = []
+    var onImport: (() -> Void)?
     var onRetry: ((URL, ExportDirectoryLease?) -> Void)?
     var onDefer: ((URL) -> Void)?
+    var onApplyVocabulary: ((URL, ExportDirectoryLease?) -> Void)?
 
     init() { super.init(nibName: nil, bundle: nil) }
     override func loadView() {
         view = NSView()
-        search.placeholderString = "Filter by title or date (YYYY-MM-DD)"
+        search.placeholderString = L10n.text("Filter by title or date (YYYY-MM-DD)")
         search.delegate = self
-        search.setAccessibilityLabel("Filter sessions by title or date")
+        search.setAccessibilityLabel(L10n.text("Filter sessions by title or date"))
         table.addTableColumn(NSTableColumn(identifier: .init("session")))
         table.headerView = nil
         table.rowHeight = 54
         table.delegate = self
         table.dataSource = self
-        table.setAccessibilityLabel("Recent recording sessions")
+        table.setAccessibilityLabel(L10n.text("Recent recording sessions"))
         let list = NSScrollView()
         list.documentView = table
         list.hasVerticalScroller = true
@@ -50,7 +62,7 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
         preview.font = .systemFont(ofSize: 13)
         preview.textContainerInset = NSSize(width: 10, height: 10)
         preview.autoresizingMask = [.width]
-        preview.setAccessibilityLabel("Transcript preview")
+        preview.setAccessibilityLabel(L10n.text("Transcript preview"))
         let text = NSScrollView()
         text.documentView = preview
         text.hasVerticalScroller = true
@@ -61,13 +73,14 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
             revealButton, copyButton, retryButton, deferButton,
         ])
         let playback = NSStackView(views: [
-            microphoneButton, systemButton, videoButton, button("Refresh", #selector(refresh)),
+            microphoneButton, systemButton, videoButton, importedButton,
+            button(L10n.text("Refresh"), #selector(refresh)),
         ])
         let stack = NSStackView(views: [
-            SettingsLayout.heading("Sessions", size: 24),
+            SettingsLayout.heading(L10n.text("Sessions"), size: 24),
             SettingsLayout.note(
-                "Recordings in the current save folder and private recovery storage."),
-            search, list, status, playback, variant, text, actions,
+                L10n.text("Recordings in the current save folder and private recovery storage.")),
+            importButton, search, list, status, playback, variant, text, actions, vocabularyButton,
         ])
         stack.orientation = .vertical
         stack.alignment = .leading
@@ -140,22 +153,28 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
         -> NSView?
     {
         let session = filtered[row]
-        let duration = max(
-            0,
-            Int(
-                (session.manifest.endedAt ?? session.manifest.startedAt)
-                    .timeIntervalSince(session.manifest.startedAt)))
-        let kind = session.manifest.tracks.contains { $0.kind == .screen } ? "Screen" : "Audio"
+        let duration =
+            session.manifest.importedAudio.map { $0.durationMilliseconds / 1_000 }
+            ?? max(
+                0,
+                Int(
+                    (session.manifest.endedAt ?? session.manifest.startedAt)
+                        .timeIntervalSince(session.manifest.startedAt)))
+        let kind =
+            session.manifest.importedAudio != nil
+            ? L10n.text("Imported audio")
+            : session.manifest.tracks.contains { $0.kind == .screen }
+                ? L10n.text("Screen") : L10n.text("Audio")
         let transcription =
             session.transcription.map {
                 $0.state.title + " \($0.completedTracks)/\($0.tracks.count)"
             }
-            ?? (session.hasTranscript ? "transcribed" : "no transcript")
+            ?? (session.hasTranscript ? L10n.text("transcribed") : L10n.text("no transcript"))
         let label = NSTextField(
             wrappingLabelWithString: "\(session.directory.lastPathComponent)\n"
                 + "\(session.manifest.startedAt.formatted(date: .numeric, time: .shortened)) · \(duration / 60):"
                 + String(format: "%02d", duration % 60)
-                + " · \(kind) · \(session.manifest.state.rawValue) · \(transcription)")
+                + " · \(kind) · \(session.manifest.state.displayTitle) · \(transcription)")
         return label
     }
     func tableViewSelectionDidChange(_ notification: Notification) { showSelection() }
@@ -187,11 +206,15 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
         displayedTranscript = nil
         copyButton.isEnabled = false
         revealButton.isEnabled = selection != nil
+        vocabularyButton.isEnabled =
+            selection?.hasTranscript == true
+            && selection?.transcription?.state != .processing
         let mayTranscribe =
             selection.map {
                 ($0.manifest.state == .finalized || $0.manifest.state == .interrupted)
                     && $0.manifest.tracks.contains {
                         $0.kind == .microphone || $0.kind == .systemAudio
+                            || $0.kind == .importedAudio
                     }
                     && ($0.transcription.map { $0.state != .complete } ?? !$0.hasTranscript)
             } ?? false
@@ -199,18 +222,21 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
         deferButton.isEnabled = mayTranscribe && selection?.transcription?.state != .deferred
         for (kind, button) in [
             (SessionManifest.TrackKind.microphone, microphoneButton),
-            (.systemAudio, systemButton), (.screen, videoButton),
+            (.systemAudio, systemButton), (.screen, videoButton), (.importedAudio, importedButton),
         ] {
             button.isEnabled = selection?.manifest.tracks.contains { $0.kind == kind } == true
+            button.isHidden = !button.isEnabled
         }
         guard let session = selection else {
             status.stringValue =
                 sessions.isEmpty
-                ? "No sessions in the current save folder or private recovery storage."
-                : "No sessions match this filter."
+                ? L10n.text("No sessions in the current save folder or private recovery storage.")
+                : L10n.text("No sessions match this filter.")
             return
         }
-        let raw = variant.selectedSegment == 1
+        let filename = [
+            "transcript.json", TranscriptVocabulary.cleanFilename, "transcript.raw.json",
+        ][max(0, variant.selectedSegment)]
         let retainedLease = lease
         previewTask = Task { [weak self] in
             let result = await Task.detached(priority: .utility) { () -> (String, String?) in
@@ -220,11 +246,13 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
                     checkpoint.map {
                         "\($0.state.title) · "
                             + $0.tracks.map {
-                                "\($0.source.speaker == "me" ? "Microphone" : "System audio"): \($0.segments != nil ? "complete" : "unfinished")"
+                                "\(TranscriptionCoordinator.trackTitle($0.source.speaker)): \(L10n.text($0.segments != nil ? "complete" : "unfinished"))"
                             }.joined(separator: " · ")
-                    } ?? (session.hasTranscript ? "Transcript ready" : "Transcription not started")
+                    }
+                    ?? (session.hasTranscript
+                        ? L10n.text("Transcript ready") : L10n.text("Transcription not started"))
                 let url = session.directory.appendingPathComponent(
-                    raw ? "transcript.raw.json" : "transcript.json")
+                    filename)
                 guard let size = LocalFilePolicy.regularFileSize(at: url),
                     size <= 8 * 1_024 * 1_024,
                     let data = try? Data(contentsOf: url),
@@ -233,17 +261,30 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
                 return (state, transcript.rendered(title: session.directory.lastPathComponent))
             }.value
             guard !Task.isCancelled else { return }
-            self?.status.stringValue = result.0
+            if self?.activeProgress?.session == session.directory.lastPathComponent {
+                self?.status.stringValue = self?.activeProgress?.stage ?? result.0
+            } else {
+                self?.status.stringValue = result.0
+            }
             self?.displayedTranscript = result.1
             self?.copyButton.isEnabled = result.1 != nil
             self?.preview.string =
                 result.1
-                ?? "No preview is available. Use Reveal to inspect the session and its source files."
+                ?? L10n.text(
+                    "No preview is available. Use Reveal to inspect the session and its source files."
+                )
         }
     }
 
-    func updateProgress(session: String, stage: String) {
-        if selection?.directory.lastPathComponent == session { status.stringValue = stage }
+    func updateTranscription(_ update: TranscriptionCoordinator.Status, isVisible: Bool) {
+        switch update {
+        case .progress(let session, let stage, _):
+            activeProgress = (session, stage)
+            if selection?.directory.lastPathComponent == session { status.stringValue = stage }
+        default:
+            activeProgress = nil
+            if isVisible { refresh() }
+        }
     }
 
     private func button(_ title: String, _ action: Selector) -> NSButton {
@@ -257,6 +298,13 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
         guard let displayedTranscript else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(displayedTranscript, forType: .string)
+    }
+    func setImporting(_ importing: Bool) { importButton.isEnabled = !importing }
+    @objc private func importAudio() { onImport?() }
+    @objc private func playImportedAudio() { play(.importedAudio) }
+    func showMessage(_ message: String) { status.stringValue = message }
+    @objc private func applyVocabulary() {
+        if let selection { onApplyVocabulary?(selection.directory, lease) }
     }
     @objc private func retry() { if let selection { onRetry?(selection.directory, lease) } }
     @objc private func deferWork() { if let selection { onDefer?(selection.directory) } }

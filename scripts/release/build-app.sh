@@ -52,6 +52,16 @@ install -m 0644 Sources/RecordReportSenderService/Info.plist \
 ditto --norsrc --noextattr \
     "$sparkle_framework" \
     "$app_path/Contents/Frameworks/Sparkle.framework"
+# Native localization resources are compiled by SwiftPM from the generated catalogs.
+localization_bundle="$binary_root/Record_RecordCore.bundle"
+if [[ ! -d "$localization_bundle" ]]; then
+    echo "missing Record localization bundle" >&2
+    exit 1
+fi
+ditto --norsrc --noextattr "$localization_bundle" \
+    "$app_path/Contents/Resources/Record_RecordCore.bundle"
+ditto --norsrc --noextattr "$repo_root/Sources/Record/Resources/Localization" \
+    "$app_path/Contents/Resources"
 install -m 0644 Sources/Record/Info.plist "$app_path/Contents/Info.plist"
 install -m 0644 Sources/Record/Resources/Record.icns \
     "$app_path/Contents/Resources/Record.icns"

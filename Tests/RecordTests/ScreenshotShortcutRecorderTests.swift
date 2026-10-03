@@ -5,6 +5,50 @@ import XCTest
 
 @MainActor
 final class ScreenshotShortcutRecorderTests: XCTestCase {
+    @MainActor
+    func testSessionsProgressClearsWhenTranscriptionFinishesOnAnotherPage() {
+        let sessions = RecentSessionsViewController()
+        sessions.updateTranscription(
+            .progress(session: "synthetic", stage: "Loading engine", queued: 0), isVisible: false)
+        XCTAssertEqual(sessions.activeProgress?.session, "synthetic")
+        sessions.updateTranscription(.idle, isVisible: false)
+        XCTAssertNil(sessions.activeProgress)
+    }
+
+    func testSpanishLanguageControlsFitAtMinimumWindowWidth() throws {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        controller.updateSpeechLanguage(engine: .parakeet, preferred: "auto")
+        controller.transcriptionPopup.item(at: 0)?.title = L10n.text(
+            "Parakeet (Default)", language: .spanish)
+        controller.speechLanguagePopup.item(at: 0)?.title = L10n.text(
+            "Automatic", language: .spanish)
+        let window = try XCTUnwrap(controller.window)
+        window.setContentSize(window.contentMinSize)
+        controller.select(section: .transcription)
+        window.contentView?.layoutSubtreeIfNeeded()
+        for popup in [controller.transcriptionPopup, controller.speechLanguagePopup] {
+            let title = try XCTUnwrap(popup.selectedItem?.title)
+            let width = (title as NSString).size(withAttributes: [
+                .font: popup.font ?? NSFont.systemFont(ofSize: 13)
+            ]).width
+            XCTAssertGreaterThanOrEqual(popup.frame.width, width + 24)
+        }
+    }
+
+    func testStoppingInputTestUsesStateInsteadOfEnglishMessageText() async {
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let controller = SettingsWindowController(screenshotPreferences: .init(defaults: defaults))
+        controller.inputTestTask = Task {}
+        controller.audioStatus.stringValue = "Escuchando: prueba sintética"
+        controller.stopInputTest()
+        XCTAssertEqual(controller.audioStatus.stringValue, "Input test stopped.")
+        controller.inputTestTask = Task {}
+        controller.audioStatus.stringValue = "Prueba terminada"
+        controller.stopInputTest(preserveMessage: true)
+        XCTAssertEqual(controller.audioStatus.stringValue, "Prueba terminada")
+    }
+
     func testIdleSettingsDoesNotRetainActivityFromAFinishedRecording() throws {
         let suite = "IdleAudioSettingsTests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

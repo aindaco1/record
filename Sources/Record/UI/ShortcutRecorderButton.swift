@@ -6,7 +6,7 @@ final class ShortcutRecorderButton: NSButton {
     var onRecord: ((ScreenshotShortcut?) -> Void)?
     var onInvalid: ((String) -> Void)?
 
-    private var restingTitle = "Off"
+    private var restingTitle = L10n.text("Off")
     private(set) var isRecordingShortcut = false
 
     init(kind: ScreenshotCaptureKind? = nil) {
@@ -25,13 +25,13 @@ final class ShortcutRecorderButton: NSButton {
     override var acceptsFirstResponder: Bool { true }
 
     func update(shortcut: ScreenshotShortcut?) {
-        restingTitle = shortcut?.displayString ?? "Off"
+        restingTitle = shortcut?.displayString ?? L10n.text("Off")
         if !isRecordingShortcut { title = restingTitle }
     }
 
     @objc private func beginRecording() {
         isRecordingShortcut = true
-        title = "Type shortcut · Delete = Off"
+        title = L10n.text("Type shortcut · Delete = Off")
         window?.makeFirstResponder(self)
     }
 
@@ -57,7 +57,7 @@ final class ShortcutRecorderButton: NSButton {
 
         let modifiers = Self.shortcutModifiers(from: event.modifierFlags)
         guard !modifiers.isEmpty else {
-            onInvalid?("A shortcut must include at least one modifier key.")
+            onInvalid?(L10n.text("A shortcut must include at least one modifier key."))
             NSSound.beep()
             return
         }
@@ -71,7 +71,7 @@ final class ShortcutRecorderButton: NSButton {
             onRecord?(shortcut)
             finishRecording()
         } catch {
-            onInvalid?("That key combination can’t be used as a shortcut.")
+            onInvalid?(L10n.text("That key combination can’t be used as a shortcut."))
             NSSound.beep()
         }
     }

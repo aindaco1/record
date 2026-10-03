@@ -63,6 +63,36 @@ final class TranscriptionPreferencesTests: XCTestCase {
         XCTAssertEqual(selection.engine, .parakeet)
     }
 
+    func testParakeetAlwaysUsesAutomaticLanguageWithoutErasingMacWhisperPreference() throws {
+        let defaults = try makeDefaults()
+        TranscriptionPreferences.setLanguage("es", defaults: defaults)
+        TranscriptionPreferences.select(.parakeet, defaults: defaults)
+        XCTAssertEqual(
+            TranscriptionPreferences.effectiveSelection(configuration: .init(), defaults: defaults)
+                .language, "auto")
+        XCTAssertEqual(
+            TranscriptionPreferences.preferredLanguage(configuration: .init(), defaults: defaults),
+            "es")
+        TranscriptionPreferences.select(.macwhisper, defaults: defaults)
+        XCTAssertEqual(
+            TranscriptionPreferences.effectiveSelection(configuration: .init(), defaults: defaults)
+                .language, "es")
+    }
+
+    func testAdvancedLanguageSurvivesUntilExplicitlyChanged() throws {
+        let defaults = try makeDefaults()
+        let configuration = AppConfiguration.Transcription(engine: "macwhisper", language: "fr")
+        XCTAssertEqual(
+            TranscriptionPreferences.effectiveSelection(
+                configuration: configuration, defaults: defaults
+            ).language, "fr")
+        TranscriptionPreferences.setLanguage("invalid", defaults: defaults)
+        XCTAssertEqual(
+            TranscriptionPreferences.effectiveSelection(
+                configuration: configuration, defaults: defaults
+            ).language, "fr")
+    }
+
     func testRefinementUsesConfigurationAsItsBaseline() throws {
         let defaults = try makeDefaults()
         let configuration = AppConfiguration.Transcription(

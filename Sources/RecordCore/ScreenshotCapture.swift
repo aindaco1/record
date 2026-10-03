@@ -7,9 +7,9 @@ public enum ScreenshotCaptureKind: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .display: "Full Display"
-        case .windowOrApplication: "Window or Application"
-        case .area: "Area"
+        case .display: L10n.text("Full Display")
+        case .windowOrApplication: L10n.text("Window or Application")
+        case .area: L10n.text("Area")
         }
     }
 
@@ -37,7 +37,7 @@ public enum ScreenshotImageFormat: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .png: "PNG (Lossless)"
+        case .png: L10n.text("PNG (Lossless)")
         case .jpeg: "JPEG"
         }
     }

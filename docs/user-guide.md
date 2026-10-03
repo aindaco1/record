@@ -140,7 +140,7 @@ output device or creating a virtual aggregate device for a selected input.
 Choose **Sessions** in the sidebar or **Recent Sessions…** from the menu to
 browse the current approved save folder and private recovery sessions. The list shows title, date, duration, recording type, and state.
 Filter by title or date (`YYYY-MM-DD`), select a session, then preview or copy the
-clean or raw transcript, play a source in its default local application, reveal
+final, pre-vocabulary, or raw transcript, play a source in its default local application, reveal
 its folder, or retry unfinished transcription. **Refresh** picks up folder changes.
 Previous save folders are not indexed or scanned after you change destinations.
 
@@ -167,6 +167,66 @@ track progress in the local `transcription.state.json` sidecar. A partial canoni
 JSON transcript includes `incomplete_tracks`; the Markdown also labels the result.
 Do not treat the mere presence of `transcript.json` as proof that every track is
 complete for these sessions.
+
+### Speech and interface languages
+
+**Transcription → Speech language** offers Automatic, English, and Spanish when
+MacWhisper is selected. Parakeet detects language automatically, so this control
+is disabled for it. Your MacWhisper choice survives engine changes. A language
+change applies to the next session processed, including queued sessions; it does
+not change work already in progress.
+
+**General → Interface language** follows macOS by default. Choose English or
+Español for an override, then quit and reopen Record. Spanish uses neutral Latin
+American wording. Interface language does not change the language spoken in a
+recording or translate transcript content.
+
+### Global vocabulary
+
+In **Transcription → Vocabulary**, choose **Add word**, enter a preferred spelling
+such as `Dust Wave`, then **Save vocabulary**. New transcripts automatically use
+that spelling for `dustwave`, `Dustwave`, `DUST WAVE`, or `dust-wave`. For a different
+recurring mishearing, add explicit aliases separated with semicolons, for example
+`dust waive; dust way`. Record matches complete words and phrases, never guesses
+phonetic corrections, and leaves code spans alone. The list is local to this Mac.
+
+In **Sessions**, **Transcript** shows the result, **Before vocabulary** shows the
+text after optional cleanup, and **Raw transcript** shows original recognition.
+**Apply Vocabulary** applies the current list to an existing session without
+transcribing again. Remove a rule and apply again to restore its earlier wording.
+Wait for queued/active transcription to finish before applying rules manually.
+Older sessions use their current transcript as the baseline on first application.
+
+### Import audio files
+
+Choose **Sessions → Import Audio…** and select one or several audio files. Each
+gets its own session in the current save folder and joins the transcription queue.
+Record copies your originals, validates the copies, and keeps them even if speech
+recognition fails. Imported files use the neutral source label `source`; they
+are not labeled as your microphone or the system audio. Play, copy, retry, defer,
+cleanup, and vocabulary work through the same Sessions controls.
+
+Supported formats are WAV, MP3, M4A, AIFF, CAF, and FLAC, up to 4 GiB and 12 hours
+per file. Symbolic links, empty/corrupt audio, and files changing while copied are
+rejected. One failed file does not stop the remaining imports. Install the chosen
+local transcription engine/model first. Import is an explicit transcription
+request even if automatic transcription is disabled in advanced configuration.
+
+For scripts, invoke the executable inside your installed Record app:
+
+```sh
+record transcribe first.wav second.m4a --output ./sessions
+record transcribe --authorize
+```
+
+Here `record` means `Record.app/Contents/MacOS/record` at your installation path;
+Record does not install a global shell command. The output directory must exist.
+Omit `--output` to use the app's approved save folder. Sandboxed builds can only
+read accessible paths; `--authorize` opens native dialogs to choose files and a
+destination with macOS permission. When this flag is present, those dialog
+selections determine the batch. The command prints preserved session paths and
+returns nonzero if any import or transcription fails. It does not control live
+recording or download a model automatically.
 
 ### MacWhisper
 

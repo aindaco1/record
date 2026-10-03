@@ -118,6 +118,17 @@ Release preparation and the verified CI-app handoff are documented in the
 
 ## Local transcription setup
 
+### Interface strings
+
+Edit `Resources/Localizable.xcstrings` and `Resources/InfoPlist.xcstrings` for
+English and neutral Latin American Spanish. Keep UI language separate from
+recognition language and serialized session data. Regenerate the committed
+SwiftPM and app resources with `python3 scripts/localization/compile.py`.
+The source gate runs the same command with `--check` to verify translations,
+format arguments, literal lookups, and generated files. Check both languages in
+the signed app at its minimum window width; string coverage alone does not
+establish layout or VoiceOver acceptance.
+
 Use the [Parakeet setup guide](models/parakeet.md) for the pinned developer
 installer as well as in-app setup. If MacWhisper and its bundled `mw` CLI are
 installed, a development checkout can provision Record's bridge explicitly:

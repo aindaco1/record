@@ -28,7 +28,8 @@ struct TranscriptionRetryState: Sendable {
 
     mutating func clear() { failedJob = nil }
 
-    mutating func takeFailure() -> PendingTranscription? {
+    mutating func takeFailure(when permitted: Bool = true) -> PendingTranscription? {
+        guard permitted else { return nil }
         defer { clear() }
         return failedJob
     }
@@ -68,6 +69,7 @@ actor TranscriptionCoordinator {
     private let engineFactory: @Sendable (TranscriptionSelection) throws -> any TranscriptionEngine
     private let refinementEnabled: @Sendable () -> Bool
     private let transcriptionEnabled: @Sendable () -> Bool
+    private let vocabulary: @Sendable () -> Vocabulary
 
     init(
         notificationHandler: @escaping @Sendable (RecordNotification) -> Void = { _ in },
@@ -78,13 +80,15 @@ actor TranscriptionCoordinator {
             TranscriptionCoordinator.makeEngine,
         refinementEnabled: @escaping @Sendable () -> Bool = Config
             .refineTranscriptWithAppleIntelligence,
-        transcriptionEnabled: @escaping @Sendable () -> Bool = Config.transcriptionEnabled
+        transcriptionEnabled: @escaping @Sendable () -> Bool = Config.transcriptionEnabled,
+        vocabulary: @escaping @Sendable () -> Vocabulary = { VocabularyPreferences.current() }
     ) {
         self.notificationHandler = notificationHandler
         self.refinementAdviser = refinementAdviser
         self.engineFactory = engineFactory
         self.refinementEnabled = refinementEnabled
         self.transcriptionEnabled = transcriptionEnabled
+        self.vocabulary = vocabulary
     }
 
     func setStatusHandler(_ handler: @escaping @Sendable (Status) -> Void) {
@@ -94,7 +98,7 @@ actor TranscriptionCoordinator {
     /// Queue a finished session. With transcription disabled in config, the
     /// completion hook still fires — it just gets an untranscribed folder.
     func enqueue(_ sessionDir: URL, retaining directoryLease: ExportDirectoryLease? = nil) {
-        guard transcriptionEnabled() else {
+        guard transcriptionEnabled() || Self.isImported(sessionDir) else {
             runHook(for: sessionDir)
             return
         }
@@ -106,7 +110,9 @@ actor TranscriptionCoordinator {
     /// touching the recording. Returns false when there is nothing to retry.
     @discardableResult
     func retryLastFailure() -> Bool {
-        guard transcriptionEnabled(), let failedJob = retryState.takeFailure()
+        guard let directory = retryState.failedDirectory,
+            let failedJob = retryState.takeFailure(
+                when: transcriptionEnabled() || Self.isImported(directory))
         else { return false }
         appendIfNeeded(failedJob.directory, retaining: failedJob.directoryLease)
         drainIfIdle()
@@ -115,7 +121,7 @@ actor TranscriptionCoordinator {
 
     /// Explicit retry also works for a partial or deferred session after relaunch.
     func retry(_ directory: URL, retaining lease: ExportDirectoryLease? = nil) {
-        guard transcriptionEnabled(),
+        guard transcriptionEnabled() || Self.isImported(directory),
             !PendingTranscription.sameDirectory(activeJob?.directory, directory)
         else { return }
         if var checkpoint = try? TranscriptionCheckpoint.read(from: directory) {
@@ -126,6 +132,13 @@ actor TranscriptionCoordinator {
         }
         appendIfNeeded(directory, retaining: lease)
         drainIfIdle()
+    }
+
+    func applyVocabulary(to directory: URL) throws {
+        guard !PendingTranscription.sameDirectory(activeJob?.directory, directory),
+            !queue.contains(where: { PendingTranscription.sameDirectory($0.directory, directory) })
+        else { throw CocoaError(.fileWriteFileExists) }
+        try TranscriptVocabulary.reapply(vocabulary: vocabulary(), to: directory)
     }
 
     func deferSession(_ directory: URL) throws {
@@ -177,8 +190,9 @@ actor TranscriptionCoordinator {
                 FileHandle.standardError.write(Data(message.utf8))
             }
         }
-        guard transcriptionEnabled() else { return }
-        let pending = Self.pendingSessionDirectories(root: root)
+        let pending = Self.pendingSessionDirectories(root: root).filter {
+            transcriptionEnabled() || Self.isImported($0)
+        }
         for dir in pending {
             appendIfNeeded(dir, retaining: directoryLease)
         }
@@ -190,6 +204,18 @@ actor TranscriptionCoordinator {
         }
         drainIfIdle()
     }
+
+    private static func isImported(_ directory: URL) -> Bool {
+        (try? SessionManifest.read(from: directory))?.importedAudio != nil
+    }
+
+    /// The CLI uses the same pipeline and completion-hook claim as the app queue.
+    func transcribeImportedFile(_ directory: URL) async throws {
+        try await transcribe(directory)
+        runHook(for: directory)
+    }
+
+    func releaseEngine() async { await engine?.release(); engine = nil; engineSelection = nil }
 
     static func pendingSessionDirectories(
         root: URL,
@@ -203,6 +229,7 @@ actor TranscriptionCoordinator {
         else { return [] }
 
         return entries.filter { directory in
+            guard !directory.lastPathComponent.hasPrefix(".") else { return false }
             guard
                 let values = try? directory.resourceValues(forKeys: [
                     .isDirectoryKey, .isSymbolicLinkKey,
@@ -241,33 +268,49 @@ actor TranscriptionCoordinator {
         var details: [String] = []
         if interrupted > 0 {
             details.append(
-                "preserved \(interrupted) interrupted recording\(interrupted == 1 ? "" : "s")"
+                L10n.format(
+                    interrupted == 1
+                        ? "preserved %ld interrupted recording"
+                        : "preserved %ld interrupted recordings", interrupted)
             )
         }
         if failed > 0 {
             details.append(
-                "marked \(failed) empty session\(failed == 1 ? "" : "s") as failed"
+                L10n.format(
+                    failed == 1
+                        ? "marked %ld empty session as failed"
+                        : "marked %ld empty sessions as failed", failed)
             )
         }
         if promoted > 0 {
             details.append(
-                "restored \(promoted) playable media file\(promoted == 1 ? "" : "s")"
+                L10n.format(
+                    promoted == 1
+                        ? "restored %ld playable media file" : "restored %ld playable media files",
+                    promoted)
             )
         }
         if quarantined > 0 {
             details.append(
-                "quarantined \(quarantined) partial file\(quarantined == 1 ? "" : "s")"
+                L10n.format(
+                    quarantined == 1
+                        ? "quarantined %ld partial file" : "quarantined %ld partial files",
+                    quarantined)
             )
         }
         if errors > 0 {
             details.append(
-                "found \(errors) session\(errors == 1 ? "" : "s") needing manual review"
+                L10n.format(
+                    errors == 1
+                        ? "found %ld session needing manual review"
+                        : "found %ld sessions needing manual review", errors)
             )
         }
 
         return RecordNotification(
-            title: "Recording recovery finished",
-            body: "Record \(details.joined(separator: ", ")). Click to open temp sessions.",
+            title: L10n.text("Recording recovery finished"),
+            body: L10n.format(
+                "Record %@. Click to open temp sessions.", details.joined(separator: ", ")),
             destinationDirectory: root
         )
     }
@@ -306,8 +349,9 @@ actor TranscriptionCoordinator {
                 try await task.value
                 notificationHandler(
                     RecordNotification(
-                        title: "Transcript ready",
-                        body: "Transcription finished. Click to open the recording folder.",
+                        title: L10n.text("Transcript ready"),
+                        body: L10n.text(
+                            "Transcription finished. Click to open the recording folder."),
                         destinationDirectory: dir
                     )
                 )
@@ -323,9 +367,11 @@ actor TranscriptionCoordinator {
                 retryState.recordFailure(in: dir, retaining: job.directoryLease)
                 notificationHandler(
                     RecordNotification(
-                        title: "Transcription couldn’t finish",
+                        title: L10n.text("Transcription couldn’t finish"),
                         body:
-                            "The recording is safe. Click to open its folder and review transcribe.log.",
+                            L10n.text(
+                                "The recording is safe. Click to open its folder and review transcribe.log."
+                            ),
                         destinationDirectory: dir
                     )
                 )
@@ -350,11 +396,11 @@ actor TranscriptionCoordinator {
         let meta = try SessionMeta.read(from: dir)
         publish(
             .progress(
-                session: dir.lastPathComponent, stage: "Loading transcription engine",
+                session: dir.lastPathComponent, stage: L10n.text("Loading transcription engine"),
                 queued: queue.count))
-        let engine = try await preparedEngine()
-
         let selection = Config.transcriptionSelection()
+        let vocabulary = vocabulary()
+        let engine = try await preparedEngine(selection)
         let previous = try? TranscriptionCheckpoint.read(from: dir)
         var checkpoint = TranscriptionCheckpoint(
             engine: engine.name, model: engine.model, language: selection.language,
@@ -383,7 +429,9 @@ actor TranscriptionCoordinator {
                 .progress(
                     session: dir.lastPathComponent,
                     stage:
-                        "\(source.speaker == "me" ? "Microphone" : "System audio") · \(checkpoint.completedTracks)/\(checkpoint.tracks.count) complete",
+                        L10n.format(
+                            "%@ · %ld/%ld complete", Self.trackTitle(source.speaker),
+                            checkpoint.completedTracks, checkpoint.tracks.count),
                     queued: queue.count))
             do {
                 guard LocalFilePolicy.isNonemptyRegularFile(audio),
@@ -439,11 +487,12 @@ actor TranscriptionCoordinator {
         var finalSegments = suppression.segments
         publish(
             .progress(
-                session: dir.lastPathComponent, stage: "Preparing transcript", queued: queue.count))
+                session: dir.lastPathComponent, stage: L10n.text("Preparing transcript"),
+                queued: queue.count))
         if refinementEnabled() {
             publish(
                 .progress(
-                    session: dir.lastPathComponent, stage: "Cleaning transcript",
+                    session: dir.lastPathComponent, stage: L10n.text("Cleaning transcript"),
                     queued: queue.count))
             let sourceTranscript = TranscriptDocument(
                 engine: rawTranscript.engine,
@@ -453,7 +502,7 @@ actor TranscriptionCoordinator {
             )
             let refinementPass = await Self.refinementPass(
                 source: sourceTranscript,
-                language: Config.transcriptionLanguage(),
+                language: selection.language,
                 adviser: refinementAdviser
             )
             let report = try TranscriptRefinementReport(
@@ -489,8 +538,9 @@ actor TranscriptionCoordinator {
         try Task.checkCancellation()
         publish(
             .progress(
-                session: dir.lastPathComponent, stage: "Saving transcript", queued: queue.count))
-        try transcript.write(to: dir, title: dir.lastPathComponent)
+                session: dir.lastPathComponent, stage: L10n.text("Saving transcript"),
+                queued: queue.count))
+        try TranscriptVocabulary.write(source: transcript, vocabulary: vocabulary, to: dir)
         if !refinementEnabled() {
             try? FileManager.default.removeItem(at: refinementReportURL)
         }
@@ -503,13 +553,21 @@ actor TranscriptionCoordinator {
         log(dir, "done — \(finalSegments.count) segments")
     }
 
+    static func trackTitle(_ speaker: String) -> String {
+        switch speaker {
+        case "me": L10n.text("Microphone")
+        case "them": L10n.text("System audio")
+        default: L10n.text("Imported audio")
+        }
+    }
+
     private func trackProgress(_ fraction: Double, speaker: String, directory: URL) {
         guard fraction.isFinite, !Task.isCancelled, activeTask?.isCancelled != true else { return }
         let percent = Int(min(1, max(0, fraction)) * 100)
         publish(
             .progress(
                 session: directory.lastPathComponent,
-                stage: "\(speaker == "me" ? "Microphone" : "System audio") · \(percent)%",
+                stage: "\(Self.trackTitle(speaker)) · \(percent)%",
                 queued: queue.count))
     }
 
@@ -535,8 +593,9 @@ actor TranscriptionCoordinator {
         )
     }
 
-    private func preparedEngine() async throws -> TranscriptionEngine {
-        let selection = Config.transcriptionSelection()
+    private func preparedEngine(_ selection: TranscriptionSelection) async throws
+        -> TranscriptionEngine
+    {
         if let engine, engineSelection == selection { return engine }
         await engine?.release()
         engine = nil
@@ -685,24 +744,12 @@ private struct SessionMeta {
                 throw MetaError.unreadable(dir.appendingPathComponent("session.json"))
             }
             let tracks = manifest.tracks.compactMap { track -> Track? in
-                switch track.kind {
-                case .microphone:
-                    return Track(
-                        file: track.filename,
-                        speaker: track.speaker
-                            ?? SessionMediaLayout.defaultSpeaker(for: .microphone)!,
-                        offsetMs: track.startOffsetMilliseconds
-                    )
-                case .systemAudio:
-                    return Track(
-                        file: track.filename,
-                        speaker: track.speaker
-                            ?? SessionMediaLayout.defaultSpeaker(for: .systemAudio)!,
-                        offsetMs: track.startOffsetMilliseconds
-                    )
-                case .screen, .camera:
+                guard let speaker = SessionMediaLayout.defaultSpeaker(for: track.kind) else {
                     return nil
                 }
+                return Track(
+                    file: track.filename, speaker: track.speaker ?? speaker,
+                    offsetMs: track.startOffsetMilliseconds)
             }
             return SessionMeta(tracks: tracks)
         }

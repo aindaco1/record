@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Record captura el audio del sistema para grabaciones y transcripciones locales. El audio nunca sale de esta Mac.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record captura el micrófono para grabaciones y transcripciones locales. El audio nunca sale de esta Mac.</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Record captura imágenes y videos de las pantallas, ventanas, aplicaciones o áreas que eliges. Las imágenes y videos nunca salen de esta Mac.</string>
+</dict>
+</plist>

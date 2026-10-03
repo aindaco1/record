@@ -8,6 +8,17 @@ All notable changes to Record are documented here. Record follows
 
 ### Added
 
+- Global automatic vocabulary: preferred spellings such as “Dust Wave” normalize
+  case and spacing variants across sessions; optional aliases handle recurring
+  mishearings. Preserve raw and pre-vocabulary transcripts, and reapply rules to
+  existing sessions without transcribing again.
+- Multiple-file audio import in Sessions and a `record transcribe` CLI using the
+  existing local pipeline. Originals stay untouched; imports retain their own
+  source identity and support retry/defer, cleanup, and vocabulary.
+- Engine-aware speech-language controls and an independent English/Spanish
+  interface preference, including translated setup, permissions, and recovery.
+- Accessible control labels and VoiceOver announcements for recording and
+  transcription transitions without timer or meter chatter.
 - Microphone selection, source controls for both recording modes, an explicit
   no-file input test, and independent audio activity indicators. Specific inputs
   use raw audio-only capture; System Default retains voice processing.
@@ -42,6 +53,8 @@ All notable changes to Record are documented here. Record follows
 
 See [ADR 0026](docs/adr/0026-local-recording-workflow.md) for the local checkpoint,
 source-selection, and content-free model progress contracts.
+[ADR 0027](docs/adr/0027-local-vocabulary-import-and-language.md) describes vocabulary,
+import provenance, language selection, and localization resources.
 
 ### Development
 

@@ -27,22 +27,25 @@ public struct RecordingReadiness: Equatable, Sendable {
 
     public var checklist: [String] {
         [
-            hasSaveFolder ? "✓ Save folder chosen" : "Choose a save folder",
+            hasSaveFolder ? L10n.text("✓ Save folder chosen") : L10n.text("Choose a save folder"),
             !needsMicrophone
-                ? "Microphone: not used"
-                : (microphoneGranted ? "✓ Microphone permission" : "Allow microphone access"),
+                ? L10n.text("Microphone: not used")
+                : (microphoneGranted
+                    ? L10n.text("✓ Microphone permission") : L10n.text("Allow microphone access")),
             !needsScreen
                 ? (needsSystemAudio
-                    ? "System audio permission: checked when you start"
-                    : "Screen access: not needed")
+                    ? L10n.text("System audio permission: checked when you start")
+                    : L10n.text("Screen access: not needed"))
                 : (screenGranted
-                    ? "✓ Screen recording permission" : "Allow screen recording access"),
+                    ? L10n.text("✓ Screen recording permission")
+                    : L10n.text("Allow screen recording access")),
             !needsMicrophone
-                ? "Input test: not needed"
-                : (inputTested ? "✓ Input test completed" : "Test your microphone"),
+                ? L10n.text("Input test: not needed")
+                : (inputTested
+                    ? L10n.text("✓ Input test completed") : L10n.text("Test your microphone")),
             modelInstalled
-                ? "✓ Local transcription model ready"
-                : "Optional: set up local transcription (recording works without it)",
+                ? L10n.text("✓ Local transcription model ready")
+                : L10n.text("Optional: set up local transcription (recording works without it)"),
         ]
     }
 }

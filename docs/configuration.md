@@ -32,7 +32,11 @@ completed recordings.
 Supported transcription engines are `parakeet` and `macwhisper`. Parakeet model
 aliases are `v2` and `v3`; v3 is the default. MacWhisper requires an explicit
 local model identifier and may optionally use an absolute `executable` path.
-`language` is `auto` or a two-letter language code.
+`language` is `auto` or a two-letter language code for MacWhisper. The Settings
+choice overrides this baseline; other valid advanced codes remain visible.
+Parakeet always uses automatic detection with the pinned adapter. Interface
+language is independent and applies on restart. Vocabulary lives in local app
+preferences and is managed in **Transcription → Vocabulary**, not this JSON file.
 
 `mic_voice_processing` enables Apple's local VoiceProcessingIO echo canceller.
 It is on by default and falls back to raw microphone capture when the active
@@ -43,7 +47,7 @@ of system speech are omitted from `transcript.json` and `transcript.md`, while
 modifies the finalized `mic.wav` or `system.wav` tracks or their private CAF
 recovery sources.
 
-`refine_with_apple_intelligence` is an opt-in baseline for the same Recording setting
+`refine_with_apple_intelligence` is an opt-in baseline for the same Transcription setting
 and defaults to `false`. On macOS 26+, Record checks the local Foundation Models
 capability, selected language, device eligibility, Apple Intelligence setting,
 and model readiness before enabling it. The model can advise only whether

@@ -68,7 +68,7 @@ enum SettingsLayout {
     }
 
     static func row(_ label: String, _ views: NSView...) -> NSStackView {
-        let text = NSTextField(labelWithString: label)
+        let text = NSTextField(wrappingLabelWithString: label)
         text.alignment = .right
         text.widthAnchor.constraint(equalToConstant: 170).isActive = true
         let row = NSStackView(views: [text] + views)
@@ -97,6 +97,7 @@ enum SettingsLayout {
         let image = NSImageView(
             image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())
         image.setAccessibilityElement(false)
+        image.setAccessibilityHidden(true)
         let label = NSTextField(labelWithString: title)
         label.font = .systemFont(ofSize: 13)
         cell.imageView = image

@@ -589,7 +589,7 @@ actor VideoRecordingSession {
                 files[.systemAudio] = output.url
             case .microphone:
                 files[.microphone] = output.url
-            case .screen, .camera:
+            case .screen, .camera, .importedAudio:
                 break
             }
         }
