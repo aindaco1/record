@@ -2,15 +2,16 @@
 
 ## Goals
 
-Shared speech and Apple generation mechanics now live in Platform's native
-SwiftPM package. Record retains capture, transcript cleanup policy, UI and local
-storage. [ADR 0022](adr/0022-platform-native-speech.md) records the boundary,
-compatibility exports, validation and rollback.
-
 Record is a menu-bar-first macOS application that captures high-quality media
 without making the recording pipeline depend on the editor, transcription, or
 plugins. The raw session remains recoverable when any downstream component
 fails.
+
+Reusable speech, Apple generation, diagnostics, and update mechanics come from
+the Swift packages in `shared/dust-wave-platform`. Record owns capture,
+transcript cleanup policy, UI, and local storage. The module boundaries are
+documented in [ADR 0022](adr/0022-platform-native-speech.md) and
+[ADR 0024](adr/0024-platform-desktop-updates.md).
 
 ```mermaid
 flowchart LR
@@ -35,16 +36,21 @@ flowchart LR
   lifecycle state.
 - `RecordCapture`: ScreenCaptureKit source resolution, bounded stream
   configuration, microphone/system-audio routing, raw timestamp validation,
-  cursor/click settings, and the future camera adapter.
-- `RecordMedia`: bounded queues, Metal composition, hardware encoding,
-  segmentation, muxing, and non-destructive export.
+  and cursor/click settings.
+- `RecordMedia`: bounded queues, a shared media timeline, hardware encoding,
+  segment writing, and passthrough concatenation.
+- `RecordSpeech`: compatibility exports for shared speech adapters; the app
+  owns transcription scheduling, cleanup policy, and local session outputs.
 - `RecordModelDownload`: the fixed GitHub endpoint, redirect restriction,
   bounded retry/resume, and archive verification used only by the bundled
   model-downloader XPC service.
-- `Record` application target: AppKit menu-bar and unified settings UI, local
+- `Record` executable target, shipped as `record` inside the app: AppKit menu-bar
+  and unified settings UI, local
   transcription adapters, screenshot hotkeys/export/clipboard feedback,
-  built-in capability services, signed updates, and login registration.
-- `record`: diagnostic and automation CLI sharing the same command layer.
+  built-in capability services, signed updates, login registration, App Intents,
+  and the diagnostic/transcription/recording-control CLI.
+- `RecordModelDownloaderService` and `RecordReportSenderService`: separately
+  sandboxed XPC executables for the two fixed network operations described below.
 
 `RecordCore` owns typed capture configuration and the pure command/effect
 lifecycle. `RecordCapture` translates those types into ScreenCaptureKit without
@@ -56,7 +62,7 @@ boundaries rather than moving mutable state into the menu layer.
 ## Application services
 
 Sparkle's standard updater owns one silent signed GitHub feed check at launch
-and the manual fallback. `RecordCore` holds the deterministic launch-check
+and the manual fallback. `RecordCore` exposes the shared deterministic launch-check
 policy; the app adapter alone calls Sparkle. Its downloader and installer run
 in the framework's sandboxed XPC services, while the main Record process retains
 no network entitlement. Automatic installation and system profiling remain
@@ -73,13 +79,15 @@ then repeats archive verification, expands into private temporary storage, and
 reuses the existing per-file manifest validation and atomic installer. The
 main app retains no network entitlement, and FluidAudio remains forced offline.
 
-Help & diagnostics follows Paper's preview/import/save/send workflow. `RecordCore`
-owns the closed report schema, canonical validation and XPC protocol; Platform
-owns crash projection, bounded transport and acknowledgements. The UI persists
+Help & diagnostics offers preview, crash-summary import, local save, and explicit
+send. `RecordCore` owns the closed `record-diagnostic-v1` schema, canonical
+validation, and XPC protocol. Shared diagnostic utilities provide crash
+projection, bounded transport, and acknowledgements. The UI persists
 only the filtered pending report, keeps retries on the same ID, and defers manual
 update checks during sending. `RecordReportSender.xpc` accepts only validated JSON
-and chooses its fixed endpoint. The existing relay reuses Platform's grouping and
-GitHub writer with Record-owned schema and routing. See [ADR 0025](adr/0025-reviewed-diagnostics.md).
+and chooses its fixed endpoint. The reporting service validates Record's schema,
+groups matching reports, and publishes them to Record's public issue tracker.
+See [ADR 0025](adr/0025-reviewed-diagnostics.md).
 
 ## Session format
 
@@ -104,15 +112,23 @@ Optional transcript refinement follows the same rule. `RecordCore` plans a
 bounded set of filled-pause and immediate-repeat candidates, detects
 cross-speaker time overlap, validates advisory decisions, and applies only
 whole-token removals. The app adapter uses Apple's Foundation Models framework
-on supported Macs but cannot rewrite text, timing, or speaker labels. Any
-change preserves the complete pre-refinement transcript in
-`transcript.raw.json`; `transcript.refinement.json` binds a content-free audit
-record to that source with SHA-256. `transcript.json` remains the atomic
-completion marker. Speaker diarization and identity inference are outside this
-pass.
+on supported Macs but cannot rewrite text, timing, or speaker labels. New
+transcription preserves original recognition in `transcript.raw.json` before
+echo suppression and cleanup. `transcript.refinement.json` binds a content-free
+cleanup audit to the raw transcript with SHA-256. Speaker diarization and identity
+inference are outside this pass.
 
-The finalized session is deliberately split into video-only `recording.mov`,
-24-bit PCM `system.wav`, and 24-bit PCM `mic.wav`. Each audio source remains
+Vocabulary runs after cleanup. `transcript.cleaned.json` preserves the
+pre-vocabulary document; `transcript.vocabulary.json` records its hash and changed
+segments. The final `transcript.json` and `transcript.md` may contain partial
+results, explicitly marked with incomplete tracks. The per-track checkpoint in
+`transcription.state.json` reaches `complete` only after every requested track
+succeeds and outputs are written. File existence alone is not a completion test.
+Retry reuses successful recognition only when the source and recognition settings
+match. Reapplying vocabulary uses the preserved baseline without recognizing again.
+
+Finalized recordings contain video-only `recording.mov` for screen capture and
+24-bit PCM `system.wav` and/or `mic.wav` for the enabled audio sources. Each remains
 independently playable and addressable in the manifest. All writers share the
 same capture-clock anchor, and the manifest stores each track's start offset
 for downstream transcription and editing.
@@ -144,6 +160,14 @@ promoted directory. Failed or unexported sessions remain private.
 On startup, playable hidden partials are promoted when their declared target is
 missing. Invalid partial containers move intact to `Recovery/Corrupt Media`;
 Record never truncates or deletes those bytes during recovery.
+
+Imported audio sessions contain an owned, validated `source.<extension>` copy
+and provenance in the manifest; originals remain untouched. Schema 3 adds an
+explicit dictation purpose to microphone-only sessions and continues to read older
+schemas. Dictation and imports use the same transcription queue as recordings.
+Startup and model-setup completion scan private recovery storage and the current
+save folder for pending transcription. Deferred sessions stay deferred, and the
+export scan does not repair interrupted capture manifests.
 
 State transitions are explicit:
 
@@ -178,7 +202,8 @@ recovery states.
 ## DRY boundaries
 
 UI, CLI, shortcuts, and plugins issue the same typed commands. The session
-manifest is the sole canonical session state. CI invokes repository scripts
+manifest owns capture and media state; the transcription checkpoint owns per-track
+recognition progress, retry, and defer state. CI invokes repository scripts
 that developers can run locally; workflow YAML does not duplicate build or
 packaging commands. Release accepts full build/test/package evidence only from
 the exact successful `main` commit, then reuses the provenance-attested unsigned
@@ -205,8 +230,9 @@ Screen recording and screenshots share one ScreenCaptureKit content resolver,
 one Apple picker adapter, one custom-area overlay, and one capture-privacy
 configuration. Still-image sizing is a separate pure contract because native
 screenshots must not inherit the recording writer's 4K/even-dimension bound.
-Global hotkeys translate into the same three typed screenshot commands used by
-the menu; Carbon registration avoids an Accessibility permission request.
+Global hotkeys translate into the same screenshot, recording-toggle,
+dictation-toggle, and screen pause/resume commands used by the menu. Carbon
+registration avoids an Accessibility permission request.
 
 Quick Dictation is an existing microphone recording session with a schema-3
 purpose, followed by the same transcription queue and an explicit-copy preview.

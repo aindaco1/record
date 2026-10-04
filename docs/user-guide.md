@@ -9,8 +9,8 @@ This guide covers everyday capture, settings, and recovery. See the
 Record has no Dock icon. Open its camera in the menu bar for immediate capture,
 source-selection, open, retry, and update commands. **Settings…** groups durable
 preferences and recording tools into one sidebar: General, Recording, Sessions,
-Transcription, Screenshots, and Shortcuts. Reopening
-Record from Finder returns to the same window and last-used section. Use the
+Transcription, Screenshots, and Shortcuts. While Record is running, reopening it
+from Finder returns to the same window and last-used section. Use the
 Up/Down keys in the sidebar to change sections. Text fields support standard
 Command-A, Command-C, Command-X, Command-V, and undo shortcuts. Command-W closes
 the window; it does not quit Record.
@@ -27,7 +27,7 @@ on this page. The inline checklist covers the save folder, required permissions,
 input test, and optional local transcription model. A new setup opens here.
 The save folder is in General; model setup is in Transcription.
 Choose **Start Screen Recording** or **Start Audio Recording** when ready.
-It never begins recording or downloads a model by itself.
+Opening Settings never starts a recording or downloads a model by itself.
 
 ## Screenshots
 
@@ -50,7 +50,7 @@ quality and adjust shutter sound. Edit or disable shortcuts in **Shortcuts**.
 JPEG transparency is flattened onto white. The shutter sound is suppressed
 while recording.
 
-Record 1.4 preserves existing screenshot shortcuts, including Off and the
+Updates preserve existing screenshot shortcuts, including Off and the
 original Command-Shift-4 Area shortcut for users who never customized it.
 Choose **Settings… → Shortcuts → Restore Screenshot Defaults** to adopt the new Area
 shortcut explicitly. Full Display and Window/Application defaults remain
@@ -90,6 +90,10 @@ microphone. Record does not change the Mac's default input. If a specifically
 selected microphone disconnects, Record stops and preserves the session, then
 offers input selection for the next recording. It never silently substitutes a
 microphone for that selection.
+
+In audio-only mode and dictation, a specific microphone uses raw input.
+**System Default** uses voice processing by default to reduce speaker echo,
+with a fallback to raw input if the route cannot provide processed samples.
 
 **Test Input** listens for ten seconds and displays microphone activity without
 saving audio. Stop the test at any time. The two activity indicators show enabled
@@ -143,8 +147,9 @@ For the terminal, use the executable in your installed Record app:
 ```
 
 Adjust the app location if installed elsewhere. CLI commands require Record to
-be open and its save folder, permissions and model already configured. Screen
-starts require Main Display; choose a window or region in the app. Valid modes
+be open with its save folder and required permissions already configured.
+Dictation also requires a ready transcription model. Screen starts require
+Main Display; choose a window or region in the app. Valid modes
 are `screen`, `audio`, and `dictation`. Use `--mode` only with `start`.
 
 Commands confirm acceptance. Stop can return `stopping` or `saving`; poll Status
@@ -155,13 +160,14 @@ Status contains no paths, recording names, audio or transcript content.
 
 ## Save location and recovery
 
-**Settings… → General → Save to** changes the one approved destination shared
-by screenshots and completed screen or audio recordings. Desktop is suggested
+In **Settings… → General**, choose **Change…** beside **Save to** to change the
+destination shared by screenshots and completed sessions. Desktop is suggested
 on first use, and the sandbox grant persists across launches.
 
-Each exported recording session contains an atomic `session.json` manifest,
-the enabled `mic.wav` and/or `system.wav` sources. Screen sessions also contain
-`recording.mov`.
+Each exported recording session contains a `session.json` manifest and the
+enabled `mic.wav` and/or `system.wav` sources. Screen sessions also contain
+`recording.mov`. Dictation contains only microphone audio; an imported session
+contains a copy named `source` with the original file extension.
 Screenshots are individual image files and do not create session manifests.
 
 Record keeps its AAC/CAF capture sources in private recovery storage until it
@@ -175,10 +181,6 @@ Recovery notifications open only Record's temporary recovery folder.
 unexported session material needs inspection. See the
 [testing and inspection guide](testing.md) for structural inspection commands.
 Follow the [support guidance](SUPPORT.md) when reporting a failure.
-
-Specific microphone choices use raw input in audio-only mode. **System Default**
-retains the existing voice-processing option. This avoids changing the system
-output device or creating a virtual aggregate device for a selected input.
 
 ## Recent Sessions
 
@@ -197,6 +199,9 @@ for the model; recording remains available. Download setup reports received byte
 then verification and installation stages. **Cancel** stops the download or waits
 for the current verification/extraction step to finish before cancelling; partial
 setup files are removed and an existing model is preserved.
+After model setup, Record resumes pending transcription in both the current save
+folder and private recovery storage. Sessions marked **Transcribe later** remain
+deferred until you retry them.
 
 Each source is transcribed independently. The menu shows the current source and
 real engine progress where available; engines without progress show the current
@@ -253,25 +258,28 @@ cleanup, and vocabulary work through the same Sessions controls.
 
 Supported formats are WAV, MP3, M4A, AIFF, CAF, and FLAC, up to 4 GiB and 12 hours
 per file. Symbolic links, empty/corrupt audio, and files changing while copied are
-rejected. One failed file does not stop the remaining imports. Install the chosen
-local transcription engine/model first. Import is an explicit transcription
+rejected. One failed file does not stop the remaining imports. You can import
+before setting up a model; Record preserves the copies and resumes pending work
+after model setup. Import is an explicit transcription
 request even if automatic transcription is disabled in advanced configuration.
 
 For scripts, invoke the executable inside your installed Record app:
 
 ```sh
-record transcribe first.wav second.m4a --output ./sessions
-record transcribe --authorize
+"/Applications/Record.app/Contents/MacOS/record" transcribe first.wav second.m4a --output ./sessions
+"/Applications/Record.app/Contents/MacOS/record" transcribe --authorize
 ```
 
-Here `record` means `Record.app/Contents/MacOS/record` at your installation path;
-Record does not install a global shell command. The output directory must exist.
+Adjust the app location if installed elsewhere; Record does not install a global
+shell command. Set up the selected local engine/model before using the CLI.
+The output directory must exist.
 Omit `--output` to use the app's approved save folder. Sandboxed builds can only
 read accessible paths; `--authorize` opens native dialogs to choose files and a
 destination with macOS permission. When this flag is present, those dialog
 selections determine the batch. The command prints preserved session paths and
 returns nonzero if any import or transcription fails. It does not control live
-recording or download a model automatically.
+recording or download a model automatically. If a model is missing, the command
+reports failure and preserves any successfully imported copies for later retry.
 
 ### MacWhisper
 
@@ -290,11 +298,12 @@ Development checkouts can install the same bridge explicitly; see the
 ### Failed transcription and echo reduction
 
 If local transcription fails, **Retry Failed Transcription** appears in the
-Record menu until the job is retried. Record keeps both source audio files
+Record menu until the job is retried. Record keeps all source audio files
 unchanged.
 
-Voice processing reduces speaker-to-microphone echo by default. When aligned
-cross-track speech still duplicates, Record conservatively removes only
+With System Default input, audio-only recording and dictation use voice processing
+to reduce speaker-to-microphone echo. When aligned cross-track speech still
+duplicates, Record conservatively removes only
 high-confidence mic copies from the readable transcript and keeps the
 unsuppressed result in `transcript.raw.json`.
 
@@ -314,9 +323,10 @@ approves for removal. Punctuation boundaries, longer repetition runs and
 overlapping speech remain protected.
 
 If the model is unavailable or generation fails, the ordinary local transcript
-still completes. A changed transcript retains the complete pre-refinement
-result in `transcript.raw.json`; `transcript.refinement.json` records the
-content-free policy decisions and a source hash. See
+still completes. New transcripts keep original recognition in **Raw transcript**
+and the result after optional cleanup in **Before vocabulary**. A local
+`transcript.refinement.json` file records content-free cleanup decisions and a
+source hash. See
 [advanced configuration](configuration.md) for automation settings.
 
 ### Recording names
@@ -327,7 +337,7 @@ and leaves the last valid template saved. The example uses placeholder clipboard
 text and never reads the clipboard. Actual clipboard content is read only when
 a recording name requests `{clipboard}`.
 
-## Built-in plugins
+## Capture privacy and handoff
 
 Settings groups small, capability-specific features by what they affect:
 
@@ -337,7 +347,7 @@ Settings groups small, capability-specific features by what they affect:
   Record menu.
 
 These settings do not modify global macOS display preferences, download
-helpers, or grant plugins network access. See the
+helpers, or upload media. See the
 [local-only boundary](security/local-only-boundary.md) for security details.
 
 ## Help and diagnostics
@@ -351,10 +361,9 @@ workflow and the [privacy policy](PRIVACY.md) for the exact data boundary.
 
 ## Updates, login, and uninstalling
 
-Record silently checks its signed GitHub release feed once at launch. When a
-newer version is available, Sparkle presents its standard update prompt;
-download and installation remain user approved. **Check for Updates…** retains
-the same signed flow as a manual fallback.
+Record checks for updates when it opens and shows a prompt when a newer version
+is available. Downloading and installing remain your choice. Use **Check for
+Updates…** in the menu bar to check manually.
 
 **Settings… → General → Open Record at Login** uses the macOS Login Items
 service and is off by default.

@@ -2,14 +2,18 @@
 
 Record uses Parakeet TDT v3 by default for on-device transcription. The model
 is about 460 MB and is not bundled with Record. Recording remains available
-when the model is absent; only transcription waits for setup.
+when the model is absent. Transcription waits for setup; Quick Dictation requires
+a ready model before it starts.
 
-## Set up in Record 1.3.2 or newer
+## Set up in Record
 
 1. Open **Settings → Transcription → Set Up Parakeet Model…**.
 2. Choose **Download and Install**.
-3. Keep Record open while it downloads and verifies about 466 MB. Pending local
-   transcription resumes automatically after installation.
+3. Keep Record open while it downloads and verifies about 466 MB. Progress shows
+   the download, verification, and installation stages. **Cancel** stops setup
+   safely without replacing an existing model.
+4. After installation, pending transcription resumes in the current save folder
+   and private recovery storage. Sessions marked **Transcribe later** stay deferred.
 
 The dedicated sandboxed downloader can request only the fixed GitHub release
 asset below. It supports bounded retry/resume after a transient connection

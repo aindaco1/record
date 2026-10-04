@@ -31,7 +31,9 @@ flowchart LR
 - SDR capture defaults to 4:2:0 video-range BT.709 for direct hardware-encoder
   handoff. Native click highlighting selects BGRA because ScreenCaptureKit
   applies that effect only to BGRA frames.
-- System and microphone samples come from the same `SCStream` on macOS 15.
+- During screen recording, enabled system and microphone sources come from the
+  same `SCStream` on macOS 15. The selected microphone is passed through
+  `microphoneCaptureDeviceID`; audio-only capture uses separate audio adapters.
   Their original presentation timestamps are retained and checked for
   monotonicity independently. The media writer will choose the shared A/V
   session anchor.
@@ -117,8 +119,9 @@ failure event rather than repeated logs containing private source details.
   Apple-selected window/application, or a display-local dragged area. Only one
   screenshot selection/capture may be active at once; it may otherwise run
   during an active recording.
-- Sixty-fps and first-class microphone controls remain follow-up UI.
+- Settings exposes audio-source and microphone selection, input testing, and
+  activity indicators. Sixty-fps controls remain follow-up work.
 - Camera capture/compositing remains a separate follow-up slice.
 - Hardware/TCC validation is intentionally not part of ordinary CI. It must
   use synthetic, non-sensitive content on the dedicated matrix in
-  `docs/testing.md`.
+  [testing guide](../testing.md).

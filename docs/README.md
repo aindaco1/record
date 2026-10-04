@@ -7,7 +7,8 @@ unless a procedure says otherwise.
 ## Use Record
 
 - [User guide](user-guide.md): screenshots, shortcuts, recording sources,
-  settings, local transcription, recovery, updates, and uninstalling.
+  settings, dictation, audio-file import, local transcription, recording automation,
+  recovery, updates, and uninstalling.
 - [Parakeet model setup](models/parakeet.md): verified in-app download, manual
   import, and developer setup.
 - [Advanced configuration](configuration.md): the versioned JSON schema,
@@ -26,7 +27,7 @@ unless a procedure says otherwise.
 - [Repository instructions](../AGENTS.md): requirements for automated contributors.
 - [Roadmap](project/roadmap.md): current direction, deferred ideas, and non-goals.
 - [Handy comparison](project/handy-review-2026-10-02.md): October 2 research and
-  prioritized proposals for usability and reliability; not implementation commitments.
+  original usability and reliability proposals, with links to the shipped 1.5.0 work.
 - [Settings UX review](project/settings-ux-review-2026-10-03.md): approved sidebar
   layout, direct controls, keyboard behavior and implementation decisions.
 - [GitHub issues](https://github.com/aindaco1/record/issues): live issue status
@@ -49,31 +50,20 @@ unless a procedure says otherwise.
 
 ## Test and release
 
-- [Help and diagnostics validation](testing/help-diagnostics-2026-09-25.md):
-  combined 1.4.6 candidate checks and remaining live acceptance.
 - [Testing strategy and acceptance](testing.md): automated gates, manual smoke
   procedures, hardware matrices, and performance criteria.
-- [Transcript cleanup and Jev](testing/jev.md): default local development tests,
-  synthetic-only semantic evaluation, shared tooling and explicit offline modes.
-- [Shared native migration evidence](testing/shared-native-2026-09-23.md):
-  four-project extraction, baseline comparisons and remaining quality findings.
-- [Apple adviser comparisons](testing/apple-adviser-2026-09-23.md): general-model,
-  Boolean and sentence-context experiments informing the next Record release.
-- [Cleanup improvements](testing/cleanup-fix-2026-09-23.md): preservation fixes,
-  before/after synthetic results and remaining Jev control mismatches.
-- [macOS 27 readiness](testing/macos-27-readiness.md): dated platform findings
-  and the approved Xcode 27 release-toolchain policy.
-- [Release runbook](runbooks/release.md): candidate preparation, signing,
-  publication, and post-release verification.
+- [Record 1.5.0 validation](testing/1.5.0-candidate.md): candidate history, public
+  release and installed-update verification, and remaining manual coverage.
+- [Transcript cleanup and Jev](testing/jev.md): local development tests,
+  synthetic-only semantic evaluation, and explicit offline modes.
+- [Release runbook](runbooks/release.md): preparation, signing, publication,
+  and post-release verification.
 - [GitHub Actions outage runbook](runbooks/github-actions-outage.md): incident
   handling and recovery.
-- [Changelog](../CHANGELOG.md): unreleased work and versioned change history.
-- [Release notes](releases/): notes for published versions, including
-  [Record 1.4.7](releases/1.4.7.md), and the
-  [planned Record 1.5.0](releases/1.5.0.md) (unreleased).
-
-- [Record 1.5.0 candidate validation](testing/1.5.0-candidate.md): current checks
-  and the limits of built-in-only hardware acceptance.
+- [Changelog](../CHANGELOG.md): user-facing changes by version.
+- [Record 1.5.0 release notes](releases/1.5.0.md) and
+  [earlier release notes](releases/). Version 1.4.8 was not published; its planned
+  maintenance was included in 1.5.0.
 
 ## Historical records
 
@@ -82,6 +72,15 @@ was planned or observed at that time; use the live tracker for issue status and
 collect fresh evidence for a new release. Candidate checks, public-asset
 verification, and installed-app or hardware acceptance remain separate claims.
 
+- [Help and diagnostics validation](testing/help-diagnostics-2026-09-25.md):
+  the 1.4.6 candidate checks and coverage limits at that time.
+- [Shared native migration evidence](testing/shared-native-2026-09-23.md):
+  implementation comparisons and validation from September 23.
+- [Apple adviser comparisons](testing/apple-adviser-2026-09-23.md) and
+  [cleanup improvements](testing/cleanup-fix-2026-09-23.md): experiments and
+  preservation checks that informed 1.4.5.
+- [macOS 27 readiness](testing/macos-27-readiness.md): dated platform findings;
+  the contributor guide and release runbook define the current toolchain.
 - [Record 1.4.0 candidate validation](testing/1.4.0-candidate.md): pre-publication
   local evidence and the acceptance still outstanding at that review.
 - [Source selection and pause/recovery review](testing/source-and-recovery-2026-09-07.md):
@@ -104,6 +103,15 @@ contributor guide, and enforcement details in the local-only boundary document.
 Other pages should summarize and link to those guides. The roadmap describes
 future work; the changelog and release notes describe shipped changes. ADRs
 retain decision history, and dated evidence records retain their original scope.
+
+Write changelog entries and release notes around visible features, improvements,
+and fixes. Omit internal project names, dependency wiring, implementation plans,
+and test-run narratives. Keep that detail in architecture, ADRs, or validation
+records. Describe maintenance honestly when it changes no user behavior; do not
+invent a performance or reliability benefit. Keep version dates and shipped
+behavior accurate, and align release descriptions with the changelog. When a
+release ships, update the overview, index, support version, and roadmap together.
+Published signed assets and tags are not rewritten for a documentation edit.
 
 Keep `CONTRIBUTING.md`, `SUPPORT.md`, and `SECURITY.md` directly in this
 directory so GitHub can discover them.

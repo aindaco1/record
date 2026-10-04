@@ -1,6 +1,11 @@
 # Settings UX review and implementation
 
-Date: 2026-10-03. Scope: Record 1.5.0 candidate, unpublished.
+Date: 2026-10-03. Scope: the initial Record 1.5.0 sidebar candidate.
+
+This is a historical review. The sidebar shipped in [1.5.0](../releases/1.5.0.md)
+with General moved to the top and later additions for vocabulary, languages,
+dictation, and file import. The table below records the initial revision;
+see the [user guide](../user-guide.md#menu-bar-and-settings) for the current layout.
 
 ## Findings
 

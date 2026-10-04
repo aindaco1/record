@@ -4,6 +4,10 @@
 
 Accepted on 2026-08-07.
 
+Module ownership was later amended by [ADR 0022](0022-platform-native-speech.md).
+`RecordSpeech` now exports the shared speech adapters; the original extraction
+decision below is retained as history.
+
 ## Context
 
 Record's Parakeet integration was implemented inside the app executable. The

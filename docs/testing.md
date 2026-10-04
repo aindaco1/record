@@ -111,7 +111,7 @@ approved live canary, add `--send-synthetic UUID`; this mode constructs only a
 fixed synthetic crash and never reads preferences, media or crash files. Reuse
 its UUID for a retry, respect the shared relay limiter, and close test issues.
 
-Before releasing 1.4.6, exercise the signed app with synthetic data:
+Before releasing changes to diagnostics, exercise the signed app with synthetic data:
 
 1. Open **Help & diagnostics…** from the menu and General settings; confirm one
    reusable window, readable preview and status, and all buttons fit.
@@ -131,8 +131,9 @@ Before releasing 1.4.6, exercise the signed app with synthetic data:
 
 The current integrated build supports full-display, application/window, and
 area screenshots; main-display, application, window, and region video; screen
-pause/resume; audio-only recording; and the capture-privacy, recording-name,
-and Gifski handoff plugins. Camera overlays, editing, and an external plugin
+pause/resume; audio-only recording; dictation; audio-file import; and the
+capture-privacy, recording-name, and Gifski handoff features. The workflow and
+automation matrices below cover the additional controls. Camera overlays, editing, and an external plugin
 host are not yet integrated, so those rows in the hardware matrix remain
 future acceptance criteria.
 
@@ -148,7 +149,8 @@ Use synthetic or non-sensitive content for development recordings:
    camera should appear in the menu bar. On first launch, allow notifications;
    Record requests access before the first completion event so recording and
    transcript banners cannot be lost to a late authorization prompt.
-2. Choose **Start screen recording**. Record should request microphone access
+2. Select **Microphone + System Audio** and choose **Start screen recording**.
+   Record should request microphone access
    first when needed, followed by **Screen & System Audio Recording**. It must
    not request **System Audio Recording Only** or open System Settings itself.
    While permission or source selection is in progress, recording mode, source,
@@ -188,8 +190,10 @@ Use synthetic or non-sensitive content for development recordings:
    audio-only recording without creating a failed session first.
 7. Inspect the audio-only session with
    `./scripts/qa/inspect-audio-session.sh "/path/to/session"`. It requires a
-   finalized schema-v1 manifest, both named tracks, valid nonempty 24-bit PCM
-   WAV files, readable durations, and nonnegative synchronization offsets.
+   finalized supported-schema manifest, both named tracks, valid nonempty 24-bit
+   PCM WAV files, readable durations, and nonnegative synchronization offsets.
+   This inspector requires both sources; inspect single-source sessions with
+   Sessions and a local media player instead.
 8. Listen to `mic.wav` and `system.wav`. The microphone track should contain
    your voice; the system track should contain the played clip. Note silence,
    channel leakage, distortion, timing drift, or the wrong input device.
@@ -205,8 +209,8 @@ Use synthetic or non-sensitive content for development recordings:
 10. Quit Record from its menu. Rerun with `--logs` for unified process logs or
    `--debug` for LLDB when investigating a failure.
 
-Open **Settings…** and switch through Recording, Sessions, Transcription,
-Screenshots, Shortcuts, and General in the sidebar. Confirm that Recording Setup
+Open **Settings…** and switch through General, Recording, Sessions, Transcription,
+Screenshots, and Shortcuts in the sidebar. Confirm that Recording Setup
 and Recent Sessions menu commands select pages in this same window.
 Confirm every label and control fits at the minimum window size, including
 **Window or Application**, and that there is exactly one **Save to** control.
@@ -295,7 +299,9 @@ for the real test:
 ```
 
 Stop a short audio-only recording and confirm `transcript.json` and
-`transcript.md` appear in its session directory. For the optional MacWhisper
+`transcript.md` appear and `transcription.state.json` reaches `complete`.
+Partial transcripts must be labeled incomplete; file existence alone does not
+establish successful transcription. For the optional MacWhisper
 path, first run `./scripts/setup/install-macwhisper-cli.sh`, then choose
 **Settings → Transcription**, choose **MacWhisper (Small)** from **Engine**, and repeat the
 audio-only check. Switch back with **Parakeet (Default)**. A failed track must
@@ -318,16 +324,18 @@ Inspect the signed bundle to confirm the main app has no network entitlement and
 `RecordModelDownloader.xpc` has exactly sandbox plus outbound-network access.
 Repeat with a manually downloaded pack; modify one byte in a disposable copy
 and confirm Record rejects it without changing an existing installed model. The
-MacWhisper menu choice must be absent when either MacWhisper, its bundled `mw`,
-or Record's user-script bridge is missing.
+MacWhisper menu choice must be absent when MacWhisper or its bundled `mw` is
+missing. Selecting the engine must provision and validate Record's bundled
+user-script bridge without probing MacWhisper when another engine is selected.
 
 On an eligible macOS 26+ test Mac, enable Apple Intelligence and choose
 **Settings → Transcription → Improve Transcript Readability**. Record synthetic speech
 with filled pauses, an immediate repeated word, and a short interval where the
 microphone and system speakers overlap. Confirm the final JSON and Markdown
 retain speaker labels and timestamps, label overlapping segments, and contain
-no unconstrained rewrites. If any token is removed, confirm
-`transcript.raw.json` contains the complete pre-refinement transcript. In all
+no unconstrained rewrites. Confirm `transcript.raw.json` preserves original
+recognition, `transcript.cleaned.json` preserves the result before vocabulary,
+and reapplying vocabulary leaves both unchanged. In all
 enabled cases, inspect `transcript.refinement.json` for policy
 `candidate-removal-and-overlap-v2` within the unchanged v1 report schema, source
 hash, capability outcome, and content-free decisions; it must not duplicate
@@ -497,7 +505,7 @@ signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-ca
 | Transcription | One track fails, partial label appears, retry preserves the successful track; defer/relaunch/retry preserves media and successful work |
 | Shortcuts | Configure, use from another app, hold without repeated toggles, set Off, reject conflicts, preserve old screenshot assignments |
 | Checklist | New setup, close/reopen, revisit after permission changes, correct required permissions for chosen sources, model remains optional |
-| Model setup | Real byte progress; cancel during transfer; retry; verification/extraction/install stages; invalid download rejected; prior model survives cancellation |
+| Model setup | Real byte progress; cancel during transfer; retry; verification/extraction/install stages; invalid download rejected; prior model survives cancellation; pending transcription resumes from save folder and recovery, while deferred work stays deferred |
 | Panel | Automatic show and disabled setting; elapsed/pause/stop/saving match menu; keyboard/VoiceOver usable; reduced motion; excluded from recorded frames |
 | Vocabulary | Add Dust Wave; verify case/space/hyphen variants and explicit aliases across sessions; save/relaunch; original and pre-vocabulary views; remove/reapply restores wording; reject ambiguous aliases |
 | Imported audio | Select several supported files; one corrupt file does not stop others; original bytes unchanged; source label and duration correct; retry/defer; cancelled/failed imports stay out of Sessions |

@@ -1,5 +1,11 @@
 # ADR 0010: Bounded on-device transcript refinement
 
+- Transcript persistence amended in 1.5.0 by
+  [ADR 0026](0026-local-recording-workflow.md) and
+  [ADR 0027](0027-local-vocabulary-import-and-language.md): raw recognition is
+  always preserved, vocabulary has a separate baseline, and per-track checkpoint
+  state determines completion. A canonical transcript can contain partial results.
+
 - Model selection and removal policy amended by
   [ADR 0023](0023-conservative-cleanup-preservation.md): the general model uses
   stricter deterministic preservation; the original decision below is historical.

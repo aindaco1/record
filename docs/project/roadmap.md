@@ -6,15 +6,21 @@ direction and deferred ideas. See the [changelog](../../CHANGELOG.md) and
 [GitHub tracker](https://github.com/aindaco1/record/issues) holds live issue
 status; versioned issue-triage files are historical planning snapshots.
 
-## Next
+## Current release and follow-up
 
-- Complete 1.5.0 acceptance for microphone selection, Sessions, language controls,
-  vocabulary, file import/CLI, Quick Dictation, recording automation, Spanish, and VoiceOver.
-- First-class frame-rate selection.
-- Representative USB, Bluetooth, and call-length microphone-route acceptance.
-- Direct source-selection and pause/resume acceptance tests on real hardware.
-- macOS 27 runtime/TCC and inactive-app transcription acceptance on physical
-  hardware; required hosted Xcode 27 builds do not replace those checks.
+[Record 1.5.0](../releases/1.5.0.md) ships microphone/source selection, Sessions,
+custom vocabulary, multi-file transcription, English/Spanish UI, Quick Dictation,
+and CLI/Apple Shortcuts recording controls. See the
+[validation record](../testing/1.5.0-candidate.md#public-release-verification)
+for what was exercised in the public app.
+
+Remaining acceptance work includes USB/Bluetooth input loss, external displays,
+call-length recording, clean-account and permission-revocation flows, physical
+global shortcuts, full keyboard/VoiceOver coverage, and recorded-frame exclusion
+of the compact panel. Keep these separate from completed automated, built-in
+audio, model-installation, and updater checks.
+
+First-class frame-rate selection remains planned. Shipped capture uses 30 fps.
 
 ## Parked ideas
 
@@ -25,13 +31,11 @@ umbrella issues until a real use case justifies the complexity.
 - Non-destructive trim, crop, mask, and annotation operations.
 - Export presets with transparent format and quality tradeoffs.
 - A capability-limited, out-of-process extension protocol.
-- Optional cursor-click visualization and per-source audio controls.
+- Optional cursor-click visualization and per-source volume controls.
 - Optional first-party Whisper/translation if MacWhisper stops meeting the need.
 - An opt-in local browser speaker-metadata bridge.
-- Content-free, end-to-end local speech progress through one engine-independent
-  contract, with deterministic long-file, two-track, and failure tests; exact
-  speaker-count constraints only when a real offline-diarization consumer and
-  representative fixtures justify them.
+- Offline speaker labeling and speaker-count constraints, when a concrete use
+  case and representative audio justify the added complexity.
 
 ## Non-goals
 

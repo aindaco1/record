@@ -71,12 +71,13 @@ required in addition to source scanning. Dependency updates must be reviewed
 for new network, telemetry, process-launch, file-access, and model-loading
 behavior before merge.
 
-The diagnostic helper validates canonical bytes before invoking Platform's
-`ReviewedReportClient` at one fixed HTTPS endpoint. Main-app source cannot invoke
-Platform's transport; it uses only crash projection and receipt validation.
+The diagnostic helper validates canonical bytes before invoking the shared
+`ReviewedReportClient` at the fixed `https://crash.dustwave.xyz/v1/record/reports`
+endpoint. Main-app source cannot invoke that transport; it uses only crash
+projection and receipt validation from the shared diagnostics package.
 CI checks the immutable dependency pin, helper source, closed schema, bounded
 file reads, retry identity and signed entitlements. Relay intake independently
-rejects unknown fields and bounds actual request bytes; existing Platform-backed
+rejects unknown fields and bounds actual request bytes; shared
 serialization and issue delivery own grouping and retry reconciliation.
 
 ## Local execution and metadata
@@ -149,9 +150,9 @@ the notification.
   runtime boundary is the signed `.app` artifact.
 - Static scanning is a regression tripwire, not a proof. Code review and the
   signed sandbox boundary remain mandatory.
-- Opening a public documentation URL in the user's browser may be considered
-  later, but Record must never place recording data, identifiers, or private
-  metadata in that URL.
+- Public help and submitted-report links open in the user's browser. Record
+  must never put recording content, session identifiers, or private metadata
+  in those URLs.
 
 ## Verification
 
