@@ -4,7 +4,7 @@ All notable changes to Record are documented here. Record follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.5.0] - Unreleased
+## [1.5.0] - 2026-10-04
 
 ### Added
 
@@ -64,7 +64,7 @@ source-selection, and content-free model progress contracts.
 [ADR 0027](docs/adr/0027-local-vocabulary-import-and-language.md) describes vocabulary,
 import provenance, language selection, and localization resources.
 [ADR 0028](docs/adr/0028-dictation-and-local-recording-control.md) adds microphone
-dictation and shared local recording commands to this unpublished candidate.
+dictation and shared local recording commands.
 
 ### Development
 

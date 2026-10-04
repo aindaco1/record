@@ -1,6 +1,6 @@
 # ADR 0028: Dictation and local recording control
 
-- Status: accepted for the unpublished 1.5.0 candidate
+- Status: accepted for 1.5.0
 - Date: 2026-10-04
 
 ## Shared recording and transcription
