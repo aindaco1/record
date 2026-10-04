@@ -25,9 +25,9 @@ automation settings use a versioned JSON file at
 ```
 
 `recordings_directory` controls private working and recovery storage, not the
-finished export folder. Choose **Settings → General → Save to** so macOS can
-issue and persist the one scoped sandbox grant shared by screenshots and
-completed recordings.
+finished export folder. Choose **Settings → General → Change…** beside **Save to**
+so macOS can issue and persist the one scoped sandbox grant shared by screenshots
+and completed recordings.
 
 Supported transcription engines are `parakeet` and `macwhisper`. Parakeet model
 aliases are `v2` and `v3`; v3 is the default. MacWhisper requires an explicit
@@ -38,14 +38,16 @@ Parakeet always uses automatic detection with the pinned adapter. Interface
 language is independent and applies on restart. Vocabulary lives in local app
 preferences and is managed in **Transcription → Vocabulary**, not this JSON file.
 
-`mic_voice_processing` enables Apple's local VoiceProcessingIO echo canceller.
-It is on by default and falls back to raw microphone capture when the active
-route cannot produce live processed samples. `suppress_speaker_echo` is a
+`mic_voice_processing` enables Apple's local VoiceProcessingIO echo canceller
+for System Default input in audio-only recording and dictation. It is on by
+default and falls back to raw capture when the route cannot produce live
+processed samples. A specific microphone uses raw input; screen recording uses
+ScreenCaptureKit's microphone path. `suppress_speaker_echo` is a
 second, transcript-only safeguard: aligned high-confidence microphone copies
 of system speech are omitted from `transcript.json` and `transcript.md`, while
-`transcript.raw.json` retains the unsuppressed local result. Neither option
-modifies the finalized `mic.wav` or `system.wav` tracks or their private CAF
-recovery sources.
+`transcript.raw.json` retains the unsuppressed local result. Voice processing
+affects microphone capture; transcript echo suppression never modifies the
+captured media or private recovery sources.
 
 `refine_with_apple_intelligence` is an opt-in baseline for the same Transcription setting
 and defaults to `false`. On macOS 26+, Record checks the local Foundation Models
@@ -54,12 +56,18 @@ and model readiness before enabling it. The model can advise only whether
 preselected filled pauses and immediate repetitions should be kept or removed;
 deterministic RecordCore policy applies the result and marks cross-speaker time
 overlap. Model unavailability or generation failure leaves transcript wording
-unchanged. When refinement changes the transcript, `transcript.raw.json`
-preserves the complete pre-refinement local result. The content-free
-`transcript.refinement.json` report stores the policy version, source SHA-256,
+unchanged. New transcription writes original recognition to `transcript.raw.json`
+before echo suppression, cleanup, or vocabulary. `transcript.cleaned.json`
+preserves the result before vocabulary, and `transcript.vocabulary.json` records
+the applied corrections. Both contain transcript content and stay local. The
+content-free `transcript.refinement.json` report stores the policy version, source SHA-256,
 candidate decisions, removals, overlap indices, and capability outcome.
 
-Completion hooks run only after successful local transcription. Record invokes
+Completion hooks wait for all requested transcription tracks to succeed. When
+automatic transcription is disabled for an ordinary recording, the hook runs
+after the session is finalized instead. Explicit imports and dictation still
+transcribe before running the hook; failed or deferred transcription waits.
+Record invokes
 the absolute executable directly, never through a shell. The literal
 `{session}` argument expands to the completed session directory. Sandbox rules
 still apply, so a hook is an advanced personal integration rather than a

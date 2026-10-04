@@ -1,6 +1,6 @@
 # ADR 0026: Resumable local recording workflow
 
-- Status: accepted for the 1.5.0 candidate
+- Status: accepted; shipped in 1.5.0
 - Date: 2026-10-02
 
 ## Decision

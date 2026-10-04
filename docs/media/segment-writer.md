@@ -6,15 +6,15 @@ instead of silently falling back to a CPU encoder. The real-time setting, 30/60
 fps hint, disabled frame reordering, two-second keyframe interval, and bounded
 4-50 Mbps rate are explicit and unit tested.
 
-`AVAssetSegmentWriter` owns exactly one independently finalized QuickTime
-segment. Screen, system audio, and microphone have separate writer inputs. When
+`AVAssetSegmentWriter` owns one segment interval with independent writers for
+video-only QuickTime and each enabled AAC/CAF audio source. When
 an input is not ready, the processor reports writer backpressure to the bounded
 ingress instead of blocking or allocating another queue.
 
-Each segment is written to a unique hidden `.partial.mov` in the destination
+Each source is written to a unique hidden partial file in the destination
 directory. Successful AVAssetWriter finalization is followed by a same-volume
-rename to the requested `.mov`. Existing final files are never overwritten. A
-failed promotion preserves the finalized partial for recovery; setup, encode,
+rename to the requested `.mov` or `.caf`. Existing final files are never overwritten.
+A failed promotion preserves the finalized partial for recovery; setup, encode,
 and mux failures remove only their incomplete partial file. Previously finalized
 segments are untouched.
 

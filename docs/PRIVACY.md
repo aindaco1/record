@@ -1,6 +1,6 @@
 # Privacy policy
 
-Effective: September 25, 2026
+Updated: October 4, 2026
 
 Record is local-first software. It does not create an account, collect
 analytics, upload screenshots or recordings, upload transcripts, sell data, or
@@ -11,11 +11,15 @@ where Record runs.
 ## Files and permissions
 
 Record accesses the microphone, screen, and system audio only after the user
-starts the corresponding recording or screenshot command and grants any macOS
-permission that command requires. Full-display and area screenshots use Screen
+starts a recording, screenshot, dictation, or input test and grants any macOS
+permission that action requires. Test Input listens briefly without saving audio.
+Quick Dictation saves microphone audio and transcripts locally; copying its text
+requires an explicit Copy action. Full-display and area screenshots use Screen
 Recording access; window/application screenshots use Apple's selection-scoped
-picker. Record writes screenshots and finished sessions only to one folder the
-user approves. Each screenshot capture independently attempts to write a
+picker. Record writes screenshots and finished sessions to the folder the user approves.
+Import Audio and the transcription CLI copy selected files into local sessions;
+the originals remain unchanged. CLI output also requires access permitted by
+the app sandbox. Each screenshot capture independently attempts to write a
 lossless PNG to the local clipboard. Record reads the clipboard only when an
 enabled recording-name template explicitly contains the `{clipboard}` token.
 
@@ -51,19 +55,20 @@ transcription categories, cleanup/model-setup booleans, and up to 20 event
 categories from this launch. It excludes recordings, screenshots, transcripts,
 clipboard content, names, paths, session identifiers, raw errors and logs.
 
-You may select a Record `.ips` file up to 2 MiB. Platform's allowlisted projection
-retains only exception/signal, a known image and bounded offset, and incident
-versions. The raw file and stack symbols stay local. No automatic crash discovery
-or submission occurs.
+You may select a Record `.ips` crash file up to 2 MiB. Record keeps only a
+filtered crash category, a known code location and offset, and version numbers.
+The raw file and stack symbols stay local. No automatic crash discovery or
+submission occurs.
 
-**Send to public GitHub issues** sends exactly the displayed JSON (up to 8 KiB)
-through a dedicated sandboxed helper to
-`https://crash.dustwave.xyz/v1/record/reports`. The main app remains network-denied.
-The helper has no file grants, validates the closed schema, rejects redirects and
-requires a matching acknowledgement. The relay creates or updates issues only in
-`aindaco1/record`; matching reports share an issue. Retries reuse the report ID
-without counting twice within the relay's bounded receipt retention. Counts are
-submissions, not unique users or proven causes. A new Refresh creates a new ID.
+**Send report to developer** sends exactly the displayed report, up to 8 KiB,
+to Record's reporting service. That service publishes reports in the public
+[Record issue tracker](https://github.com/aindaco1/record/issues) on GitHub and
+groups matching reports together. Retrying the same report reuses its identifier
+to avoid duplicate counting within the service's retry window. Counts represent
+submissions, not unique users or confirmed causes. **Refresh** creates a new report.
+The main app remains network-denied; a dedicated helper submits the validated
+preview. The [security boundary](security/local-only-boundary.md) describes that
+helper and its restrictions.
 
 The relay receives ordinary connection metadata and uses it for abuse prevention,
 not issue content. GitHub issues are public. Use [private security reporting](SECURITY.md)
@@ -72,13 +77,27 @@ for retry across relaunches; Refresh replaces it, and removing the container del
 it. Saved JSON remains until you delete it. Published issues are subject to GitHub's
 retention and moderation; deleting local data does not remove a public submission.
 
+## Vocabulary and automation
+
+Vocabulary, interface language, microphone choices, and shortcuts are stored
+locally. Transcript variants preserve original recognition and the text before
+vocabulary corrections. Applying vocabulary again does not modify source audio.
+
+CLI recording commands and Apple Shortcuts use the same local recording controls.
+Their responses contain the recording state, not audio, transcript text, or
+session paths. A shortcut may open Record and request interactive setup; the
+terminal requires the app to be running already.
+
 ## Retention and deletion
 
 Record keeps exported screenshots and sessions until the user deletes them.
 After a completed session is validated in the approved export folder, Record
 deletes its redundant private working copy. Failed or interrupted sessions
 remain in private session storage for recovery. Removing Record does not
-automatically delete exported screenshots or sessions.
+automatically delete exported screenshots or sessions. Imported source copies and
+dictation sessions follow the same retention rules. Removing the app container
+also removes its preferences, vocabulary, model, and private recovery sessions;
+it does not remove copies exported elsewhere.
 
 ## Changes
 

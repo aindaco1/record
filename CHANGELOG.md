@@ -1,580 +1,237 @@
 # Changelog
 
-All notable changes to Record are documented here. Record follows
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+New features, improvements, and fixes in each Record release. For current
+instructions, see the [user guide](docs/user-guide.md). Technical decisions and
+validation evidence live in the [developer documentation](docs/README.md#contribute).
 
 ## [1.5.0] - 2026-10-04
 
 ### Added
 
-- Quick Dictation uses the selected microphone, existing local transcription and
-  vocabulary, then opens a preview with explicit Copy. Assign a start/stop toggle
-  in Shortcuts; audio and transcripts remain in Sessions for retry.
-- Local recording automation through `record control` and five Apple Shortcuts
-  actions: Start, Stop, Pause, Resume and Status. Repeated commands are idempotent;
-  pause/resume apply to screen recording. Status returns only the capture state.
-- Global automatic vocabulary: preferred spellings such as “Dust Wave” normalize
-  case and spacing variants across sessions; optional aliases handle recurring
-  mishearings. Preserve raw and pre-vocabulary transcripts, and reapply rules to
-  existing sessions without transcribing again.
-- Multiple-file audio import in Sessions and a `record transcribe` CLI using the
-  existing local pipeline. Originals stay untouched; imports retain their own
-  source identity and support retry/defer, cleanup, and vocabulary.
-- Engine-aware speech-language controls and an independent English/Spanish
-  interface preference, including translated setup, permissions, and recovery.
-- Accessible control labels and VoiceOver announcements for recording and
-  transcription transitions without timer or meter chatter.
-- Microphone selection, source controls for both recording modes, an explicit
-  no-file input test, and independent audio activity indicators. Specific inputs
-  use raw audio-only capture; System Default retains voice processing.
-- Recent Sessions with current-folder and recovery browsing, title/date filtering,
-  raw/clean transcript previews, copy, source playback, reveal, and retry/defer.
-- Configurable global recording shortcuts using the existing native registrar;
-  new assignments start Off and existing screenshot preferences are preserved.
-- An inline recording-readiness checklist and model setup with received-byte
-  progress, verification/install stages, and cancellation.
-- An automatic compact recording panel with elapsed time, pause/resume, and stop;
-  Recording settings can disable it. The existing recording exclusion covers it.
+- Quick Dictation: speak into your microphone, review the transcript, and copy it when ready.
+- Apple Shortcuts actions and terminal commands to start, stop, pause, resume, and check recording status.
+- Custom vocabulary that applies preferred spellings across sessions, with original transcripts kept for comparison.
+- Import and transcribe multiple audio files, from Sessions or the terminal, without changing the originals.
+- English and Spanish interface options, plus speech-language selection for MacWhisper.
+- Microphone selection, microphone-only or system-only recording, input testing, and separate audio activity indicators.
+- A Sessions browser with search, transcript previews, copy, playback, and transcription retry controls.
+- Configurable recording shortcuts, a setup checklist, and a compact recording panel.
 
-### Changed
+### Improved
 
-- One sidebar window gives direct access to General, Recording, Sessions,
-  Transcription, Screenshots, and Shortcuts. Recording setup and session browsing no
-  longer require secondary windows. All shortcut assignments share one page.
-- Help & diagnostics uses plain language for sending reports to the developer,
-  with a brief public-visibility notice and matching English/Spanish wording.
-- Recording names can be edited inline with a safe example and validation.
-  Model and cleanup availability explanations stay visible beside their controls.
+- Settings now uses one sidebar, with General first and direct access to recording and sessions.
+- Model setup shows download and installation progress and supports cancellation.
+- Clearer recording-name editing, help text, diagnostic-report wording, and accessibility labels and announcements.
 
 ### Fixed
 
-- Resume pending transcription in both the save folder and private recovery
-  storage after downloading or importing the local model.
-- Standard text-editing shortcuts work in Settings and the session filter.
-- Settings descriptions wrap instead of being clipped to two lines.
-
-- Preserve successful transcription tracks when another track fails, explicitly
-  label partial results, and retry unfinished tracks without repeating success.
-  Deferred work stays deferred after relaunch; original media remains intact.
-- Request only permissions needed by the enabled audio sources. A selected
-  microphone disconnect stops safely instead of silently selecting another input.
-- Detect shortcut conflicts by physical key and modifiers, independent of labels.
-
-See [ADR 0026](docs/adr/0026-local-recording-workflow.md) for the local checkpoint,
-source-selection, and content-free model progress contracts.
-[ADR 0027](docs/adr/0027-local-vocabulary-import-and-language.md) describes vocabulary,
-import provenance, language selection, and localization resources.
-[ADR 0028](docs/adr/0028-dictation-and-local-recording-control.md) adds microphone
-dictation and shared local recording commands.
-
-### Development
-
-- Update the pinned CodeQL initialization and analysis actions to 4.38.2,
-  which defaults to CodeQL bundle 2.27.1 for repository security scanning.
+- Failed transcription tracks can be retried without repeating successful work; deferred sessions stay deferred after relaunch.
+- Model setup resumes pending transcription in both the save folder and recovery storage.
+- Losing a selected microphone stops safely and preserves the recording.
+- Recording requests only the permissions needed by the selected audio sources.
+- Fixed text-editing shortcuts, clipped Settings descriptions, and shortcut-conflict detection.
 
 ## [1.4.7] - 2026-09-25
 
-- Adopt the shared Apple support core through the compatible desktop diagnostics API. Preserve reviewed reports, explicit sending, update consent and existing app behavior.
+### Improved
+
+- Internal maintenance of diagnostic reporting. Report review, explicit sending, and update prompts retain their existing behavior.
 
 ## [1.4.6] - 2026-09-25
 
 ### Added
 
-- Add Paper-style **Help & diagnostics…** in the menu and Settings: review a
-  content-free snapshot, import a filtered crash summary, save JSON locally or
-  explicitly submit it to public Record issues. Reuse Platform's crash filtering,
-  transport and relay grouping. Keep the main app network-denied and confine
-  submission to a fixed-endpoint, schema-validating XPC helper.
-
-### Development
-
-- Share Sparkle controller and framework-free launch policy through the pinned Dust Wave Platform dependency. Preserve existing update consent and product-specific diagnostics behavior. See the [migration record](docs/SHARED_DESKTOP_MIGRATION.md).
-
-- Distinguish product failures, Jev control mistakes and incomplete evaluation
-  in cleanup reports. Add offline regressions proving literal losses stay
-  blocked even when Jev passes them, and missing answers cannot count as passes.
-  Keep the frozen corpora, questions, thresholds and combined exit gate.
+- Help & diagnostics lets you review a filtered report, include a crash summary, save it locally, or send it to the developer.
+- Similar submitted reports are grouped together. Reports are public and are sent only when you choose; recordings, transcripts, and raw logs stay local.
 
 ## [1.4.5] - 2026-09-23
 
 ### Fixed
 
-- Improve disposable-filler cleanup with Apple's general model while enforcing
-  deterministic preservation of quoted segments, meaningful repetition,
-  sentence boundaries and longer repetition runs. Limit stutter candidates to
-  short pronoun/article pairs and revalidate eligibility before removal. Keep
-  source audio, raw transcripts, speaker labels, timing and safe fallback.
-
-### Development
-
-- Add a separate pinned 20-case synthetic cleanup regression suite and record
-  the removal policy in native model evidence. Existing Jev questions, labels,
-  threshold and original 11-case corpus remain unchanged.
-
-- Add isolated Apple adviser comparisons for the general model, Boolean
-  decisions and bounded sentence context. Record Apple model/OS metadata in
-  local evaluation evidence. The first comparisons exposed quotation loss and
-  no improvement in emphasis preservation; the subsequent cleanup fix above
-  combines model selection with deterministic preservation rules.
-
-- Adopt Platform's shared native speech and Apple generation modules while
-  preserving RecordCore/RecordSpeech compatibility names, local-only guards,
-  formatting policy, model allowlist, and the existing FluidAudio version.
-
-- Add default local transcript-cleanup testing with the existing native pipeline
-  and shared Jev evaluator, reviewed synthetic fixtures, paired controls and an
-  explicit offline mode. CI and release gates remain independent of hosted
-  inference. Jev is developer tooling and is not included in the application.
+- Improved optional transcript cleanup to remove unnecessary fillers while preserving quotations, emphasis, meaningful repetition, and overlapping speech.
+- Original audio, raw recognition, speaker labels, and timestamps remain available. Existing sessions are not changed automatically.
 
 ## [1.4.4] - 2026-09-22
 
-### Changed
+### Improved
 
-- Update the reviewed Sparkle updater to 2.10.0, including its macOS 27
-  installer and file-handling improvements. Keep signed update feeds,
-  notarization, stable privacy identity, and the no-network main app.
-- Promote required CI, CodeQL and signed releases to Xcode 27.0 build
-  `27A266a`, using Swift Build and the explicitly approved preview runner.
-  Bind CI app provenance to the exact compiler build while preserving macOS
-  15 support and all signing, notarization and privacy gates.
-- Adopt the current FoundationModels sampling-mode API without changing
-  deterministic transcript refinement or its macOS 26 runtime requirement.
-- Update the CodeQL action to 4.38.1 and preserve shared Podman workloads
-  during local watchdog recovery. Consolidate outstanding manual acceptance
-  in the existing hardware tracker.
+- Updated the app updater with installation and file-handling improvements for macOS 27.
+- Updated build compatibility while retaining support for macOS 15 and newer on Apple Silicon.
 
 ## [1.4.3] - 2026-09-15
 
 ### Fixed
 
-- Keep queued transcription and retry jobs authorized to read and write their
-  original recording folder when the Save to preference changes. Finished
-  audio remains intact, and changing folders no longer interrupts transcription.
+- Changing the save folder no longer interrupts transcription or prevents retrying a session saved in the previous folder.
 
 ## [1.4.2] - 2026-09-15
 
-### Changed
+### Improved
 
-- Update the local Parakeet runtime to FluidAudio 0.15.7. Validate real signed
-  recording, independent audio tracks, repeated pause/resume and inactive-app
-  transcription on an Apple Silicon Mac running macOS 27.
-- Keep Swift Build packaging working under Xcode 27 / Swift 6.4 and restore
-  pinned release package tools before signed-feed generation.
-- Update reviewed GitHub Actions pins while preserving the complete release
-  and security gates.
+- Updated the local transcription engine and macOS 27 build compatibility.
+- Recording and transcription continue to work locally, with microphone and system audio kept separate.
 
 ## [1.4.1] - 2026-09-07
 
 ### Fixed
 
-- Position area-selection overlays correctly on secondary displays, including
-  displays with negative or vertically offset origins. The shared overlay fix
-  applies to region recordings and area screenshots.
-- Preserve application-only capture when macOS reports the picker result as
-  display-bound, preventing unrelated windows from appearing in application
-  recordings or screenshots. On macOS 15.0–15.1, ambiguous picker results fail
-  closed; **Main Display** recording remains available.
-- Stop application/window recording with a recoverable source-unavailable
-  failure when the selected application exits, even if ScreenCaptureKit keeps
-  its audio stream alive. System-picker selections support this additional
-  lifetime check on macOS 15.2 and later.
-- Wait for every requested media writer's first accepted sample before
-  completing Start or Resume, so a pending Stop can finalize the new segment
-  instead of failing on an empty audio/video track. Missing tracks fail startup
-  within five seconds and retain existing recovery media.
+- Application capture no longer includes unrelated windows when macOS reports an ambiguous selection.
+- Recordings stop safely and preserve recoverable media when the selected application exits, with additional detection on macOS 15.2 and newer.
+- Area selection appears correctly on displays positioned above or to the left of the main display.
+- Stopping during recording startup or resume no longer fails because a requested track has not started writing.
 
-### Changed
+### Improved
 
-- Added lightweight local and hosted validation for documentation-only changes,
-  checking Markdown and local links without rebuilding Record. Full checks
-  remain required for code, packaged content, and releases; manual CI/CodeQL
-  runs can supply exact-commit release evidence after a docs-only merge.
-
-- Consolidated documentation under `docs/` with a navigation index and user
-  guide, shorter repository overview, and dedicated contributor, support,
-  privacy, security, and roadmap pages. Kept release history, automation
-  instructions, and bundled notices at their existing root paths.
-- Updated the security-support table for 1.4.x, labeled the 1.3.0 issue triage
-  as historical, and aligned current performance acceptance with the shipped
-  30-fps capture profile while retaining 4K60 as a future criterion.
-
-### Removed
-
-- Removed the standalone code of conduct and its documentation links.
+- Reorganized installation, support, privacy, and developer documentation.
 
 ## [1.4.0] - 2026-09-03
 
-### Changed
+### Improved
 
-- New installations use Option-Command-Shift-4 for **Capture Area…**, avoiding
-  Apple's Command-Shift-4 screenshot shortcut. Existing bindings and Off states
-  are preserved, including the original default on untouched installations.
-  **Restore Defaults** explicitly adopts the new binding.
-- Replaced the vinyl-record app icon with a simple 1980s shoulder-mounted VHS
-  camcorder, retaining the black artwork and rounded white app-icon canvas.
-- The menu bar now uses the same camcorder artwork on a transparent canvas.
-  A prominent red dot blinks at its lower-right corner during screen or audio
-  recording; the camera stays steady and adapts to light/dark menu bars. The
-  dot is hidden while paused and steady red with Reduce Motion enabled.
+- Added a camcorder app and menu-bar icon with a clear red recording indicator. The indicator respects Reduce Motion and hides while paused.
+- New installations use Option-Command-Shift-4 for area screenshots to avoid the macOS shortcut. Existing assignments and disabled shortcuts are preserved.
 
 ## [1.3.2] - 2026-09-02
 
 ### Fixed
 
-- Fixed **Download and Install** so the verified Parakeet model is discovered
-  inside the published pack's attribution-and-license wrapper directory after
-  extraction. Manual import and all archive and per-file verification remain
-  unchanged.
+- Download and Install now finds the model correctly inside the downloaded model pack.
 
 ## [1.3.1] - 2026-09-02
 
 ### Added
 
-- Added **Download and Install** to Parakeet setup in Settings. A dedicated,
-  sandboxed XPC helper downloads only the pinned v3 model pack from Record's
-  GitHub release and supports bounded retry/resume after transient connection
-  loss.
-
-### Changed
-
-- Reused the existing size/SHA-256 manifest and atomic local importer after
-  independently verifying the downloaded archive. Manual folder import remains
-  available.
-- Refreshed current-state, privacy, security, architecture, testing, release,
-  roadmap, and support documentation after the 1.3.0 publication and updater
-  acceptance pass. Historical triage snapshots are now clearly separated from
-  the live tracker.
-
-### Security
-
-- Kept the main Record process network-denied. The model helper receives no
-  caller-provided URL or path and has only App Sandbox plus outbound-network
-  entitlements; it writes through a file descriptor created in Record's private
-  container and sends no recording, transcript, clipboard, diagnostic, or
-  identifier data.
+- Download and Install sets up the local transcription model directly in Record, with recovery from temporary connection interruptions.
+- Downloads are verified before installation; manual model import remains available.
 
 ## [1.3.0] - 2026-09-02
 
 ### Added
 
-- Added native-resolution screenshots for the display under the pointer,
-  Apple-selected windows or applications, and a custom selected area.
-- Added editable global shortcuts, defaulting to Command-Shift-1,
-  Command-Shift-2, and Command-Shift-4, plus a Screenshots section in the
-  unified Settings window with an explicit Off state and shortcut-conflict
-  guidance.
-- Added immediate save to the existing approved export folder and independent
-  lossless-PNG clipboard publication. Disk export defaults to lossless PNG and
-  optionally supports JPEG at a default 95% quality with transparency
-  flattened onto white.
-- Added a brief menu-bar success flash and an optional CC0 shutter sound. The
-  sound is automatically suppressed during active recordings.
+- Native-resolution screenshots of a full display, a selected window or application, or a selected area.
+- Configurable screenshot shortcuts, PNG or JPEG saving, and an independent lossless PNG copy on the clipboard.
+- A brief capture confirmation and optional shutter sound, suppressed while recording.
 
-### Changed
+### Improved
 
-- Reused the existing Apple content picker, custom-area overlay, capture
-  privacy policy, export-folder bookmark, and ScreenCaptureKit filter resolver
-  for screenshots instead of creating parallel selection or storage systems.
-- Screenshots preserve native source dimensions rather than inheriting the
-  bounded 4K/even-dimension video profile.
-- Window/application screenshots use Apple's selection-scoped permission
-  directly; broad Screen Recording access is requested only for full-display
-  and custom-area capture.
-- Consolidated shared export-folder, capture-privacy, screenshot, recording-name,
-  transcription, and login preferences into one Settings window. The menu now
-  keeps immediate actions, retains Screen source, and shows Open Recovery
-  Folder only when private session material exists.
-
-### Fixed
-
-- Full-display, area, and Apple-picker screenshots can include Record's own
-  windows, while screen recordings retain their own-app exclusion and area
-  selection overlays are dismissed before pixels are captured.
-- Regression-tested unified Settings so the complete
-  **Window or Application** label and footer controls remain visible.
-
-### Security
-
-- Screenshot pixels, selected-content filters, clipboard data, filenames, and
-  export diagnostics remain local. The feature adds no account, analytics,
-  upload, cloud processing, model download, or main-app network entitlement.
+- Combined preferences into one Settings window.
+- Window and application screenshots use Apple's selection-specific permission.
+- Screenshots can include Record's own windows; screen recordings continue to exclude them.
 
 ## [1.2.3] - 2026-08-31
 
-### Changed
-
-- Updated the commit-pinned CodeQL action from 4.37.7 to 4.37.9 and its
-  default CodeQL bundle from 2.26.3 to 2.26.4.
-- Centralized canonical session-media filenames, anonymous speaker defaults,
-  local-file metadata checks, capture-kind mapping, and recording-menu
-  presentation so audio-only, screen, recovery, export, transcription, and UI
-  paths consume the same contracts.
-
 ### Fixed
 
-- Restored Sparkle's release-only `generate_appcast` tool from the locked Swift
-  package graph before signed-feed generation when reusing the exact CI app.
-- Kept every conflicting recording configuration command disabled while Record
-  is requesting permission, preparing capture, pausing, resuming, stopping, or
-  saving, without relying on state left over from the previous menu phase.
-
-### Security
-
-- Reject symbolic links, directories, empty files, and non-file URLs through
-  one shared local-artifact policy before audio inspection, Gifski handoff,
-  recent-video restoration, session export, media concatenation, or interrupted
-  session recovery can treat them as preserved recording media.
+- Recording settings stay disabled throughout preparation, pause, resume, and saving when changing them would conflict with the active recording.
+- Invalid or redirected media files are rejected during recovery, export, playback handoff, and transcription.
+- Fixed signed-update feed generation during release packaging.
 
 ## [1.2.2] - 2026-08-27
 
-### Changed
+### Improved
 
-- Finalized microphone and system-audio tracks are now independent uncompressed
-  24-bit PCM `mic.wav` and `system.wav` files. Record retains its AAC/CAF
-  capture sources privately until the complete exported session validates.
-- Reused the provenance-attested, package-tested unsigned app from the exact
-  successful `main` CI commit during signed-tag releases. Release still stamps,
-  signs, notarizes, packages, reads back, Sparkle-signs, checksums, attests, and
-  publishes the same arm64 app contract while avoiding duplicate dependency
-  resolution, tests, and production compilation.
+- Finished recordings now export microphone and system audio as separate, uncompressed 24-bit WAV files for use in editing tools.
+- Original capture files are kept until the complete export has been validated. Existing sessions are unchanged.
 
 ### Fixed
 
-- Preserved the measured microphone and system-audio start offsets when an
-  audio-only session stops, before the live recorder adapters release their
-  writer state.
-
-### Security
-
-- Required exact successful CI and CodeQL push runs, GitHub-hosted artifact
-  provenance, bounded traversal-safe extraction, internal symlink containment,
-  source and executable hashes, Xcode 26.3 identity, and an unsigned handoff
-  before any protected release signing material is imported.
+- Audio-only recordings preserve the measured timing offset between microphone and system audio.
 
 ## [1.2.1] - 2026-08-26
 
 ### Added
 
-- Added one silent, signed Sparkle feed check whenever Record opens. A newer
-  release uses Sparkle's standard prompt, while downloading and installation
-  remain user approved and **Check for Updates…** remains a manual fallback.
-
-### Security
-
-- Kept update networking inside Sparkle's sandboxed services, disabled
-  automatic installation and system profiling, and retained the main app's
-  no-network entitlements. Update requests include no recording, transcript,
-  clipboard, session, diagnostic, model, local-path, or account data.
+- Record checks for updates when it opens and prompts when a newer version is available. Downloading and installing remain your choice.
+- Check for Updates remains available for manual checks.
 
 ## [1.2.0] - 2026-08-25
 
 ### Added
 
-- Added opt-in Apple Intelligence transcript readability refinement on
-  supported macOS 26+ Macs. The on-device model can advise only on bounded
-  filled-pause and immediate-repeat candidates; deterministic policy preserves
-  timestamps and speaker labels and marks simultaneous speakers explicitly.
-- Added reversible `transcript.raw.json` preservation for changed output plus a
-  content-free, source-hashed `transcript.refinement.json` decision report.
-
-### Changed
-
-- Pinned authoritative CI and release jobs to Xcode 26.3 while retaining the
-  macOS 15 deployment target and the advisory Xcode 27 compatibility lane.
-
-### Security
-
-- Kept Foundation Models processing on-device, added no network entitlement or
-  model download path, escaped transcript context as untrusted data, and
-  revalidated every generated decision before applying it.
+- Optional on-device Apple Intelligence cleanup reduces fillers and immediate repetitions on supported Macs running macOS 26 or newer.
+- Cleanup preserves original recognition, timestamps, speaker labels, and audio, and marks overlapping speech.
+- Ordinary transcription still completes when Apple Intelligence is unavailable.
 
 ## [1.1.3] - 2026-08-24
 
-### Changed
+### Improved
 
-- Updated FluidAudio from 0.15.5 to 0.15.6 for the latest offline Parakeet and
-  speaker-diarization maintenance while retaining Record's fail-closed offline
-  policy and verified local-model import.
-- Updated the pinned CodeQL action from 4.37.6 to 4.37.7 and its CodeQL bundle
-  from 2.26.2 to 2.26.3.
-
-### Security
-
-- Updated Sparkle from 2.9.5 to 2.9.6 for upstream installer hardening,
-  including safer archive movement and rejection of package installs after
-  signing validation fails. Record still permits only explicit manual update
-  checks through Sparkle's sandboxed services; the main app retains no network
-  entitlement.
+- Updated the local speech engine and strengthened update-installation security.
 
 ## [1.1.2] - 2026-08-17
 
-### Changed
+### Improved
 
-- Added a standard Applications shortcut to the notarized DMG for a clear
-  drag-to-install flow and compatibility with cautious single-app DMG handlers.
-- Added one shared, fail-closed DMG layout contract used before image creation,
-  during local package checks, and after signing, notarization, and stapling.
-  Final release validation now checks image integrity, the exact mounted layout,
-  the app bundle contract, signatures, entitlements, TCC identity, notarization
-  tickets, and Gatekeeper acceptance before publication.
-- Added a direct Apple Silicon DMG link while retaining the full release page
-  for checksums, release notes, build metadata, and provenance.
+- The disk image includes an Applications shortcut for clearer drag-to-install setup.
+- Added a direct download link and stronger checks of the signed installer before publication.
 
 ## [1.1.1] - 2026-08-07
 
 ### Fixed
 
-- Marshal ScreenCaptureKit picker selection, cancellation, and presentation
-  failure callbacks from ReplayKit's XPC queue onto the main actor. This
-  prevents Swift 6 isolation traps after choosing a display, application, or
-  window and allows the custom-region overlay to open after choosing a display.
-- Resolve custom-region displays without guessing on ambiguous multi-display
-  layouts, and let the borderless selection overlay become key before assigning
-  its first responder so it reliably receives drag and Escape events.
-- Restore the newest valid screen recording after relaunch so **Open Last Video
-  in Gifski** remains available even when the newest session is audio-only.
+- Selecting or cancelling a screen source no longer crashes Record.
+- Custom-region selection opens correctly and responds to dragging and Escape.
+- Open Last Video in Gifski remains available after relaunch, even when a newer recording contains only audio.
 
 ## [1.1.0] - 2026-08-07
 
 ### Added
 
-- A persistent **Screen source** mode with the main-display fast path, Apple's
-  display/application/window picker, and a display-local custom-region overlay.
-- An advisory Xcode 27 / Swift 6.4 CI lane and a signed-app macOS 27 beta/RC
-  compatibility gate without raising Record's macOS 15 deployment target.
-- Crash-safe screen-recording pause/resume with immutable video, system-audio,
-  and microphone segments plus a captured-time menu counter.
-
-### Changed
-
-- Final screen export joins compatible HEVC segments through AVFoundation's
-  passthrough composition and remuxes AAC packets into the canonical CAF files
-  without re-encoding either audio source.
-- The macOS release gate now health-checks rootless Podman through a user-level
-  launchd watchdog, preventing automation process cleanup from terminating the
-  VM or its `gvproxy` bridge.
-
-### Security
-
-- System-picker filters remain memory-only: Record persists only the selection
-  mode and never stores application names, window titles, source identifiers,
-  or region geometry.
-- Pause/resume journals contain only segment indices, relative times, track
-  kinds, and local filenames; captured content and source metadata never enter
-  the manifest or CI logs.
+- Record a selected display, application, window, or custom region.
+- Pause and resume screen recordings while preserving separate video and audio tracks.
+- The elapsed counter reflects recorded time, excluding pauses. Interrupted recordings retain their segments for recovery.
 
 ## [1.0.3] - 2026-08-07
 
 ### Added
 
-- Extracted Record's offline Parakeet runtime and bounded offline speaker
-  diarization adapter into the reusable `RecordSpeech` library product. Record
-  continues to use the same local-only implementation through a thin app
-  adapter, and sibling Dust Wave tools can reuse it without forking model code.
-- Content-free per-track capture health events for missing callbacks, digital
-  silence, route recovery, bounded-queue pressure, and write failures.
-- Crash recovery that validates media containers, promotes playable partials,
-  and quarantines invalid partials without deleting their bytes.
-- Conservative cross-track transcript echo suppression with the unsuppressed
-  result retained locally as `transcript.raw.json`.
-
-### Changed
-
-- Microphone and system-audio callbacks now hand buffers to fixed-capacity
-  writer queues instead of performing codec and filesystem work inline.
-- Microphone voice processing is enabled by default; input-device changes
-  debounce, restart into the same track, retry on failure, and pad route gaps
-  to keep the recorded timeline monotonic.
-- Completion hooks use a local exclusive claim marker for at-most-once launch
-  across crash recovery.
-- Renamed the menu labels to **Transcript model** and **Select export folder…**.
+- Local capture diagnostics identify silence, device changes, and writing failures.
+- Recovery validates interrupted media, restores playable partial files, and preserves damaged files for inspection.
+- Voice processing and conservative transcript echo reduction, with original audio and unsuppressed text preserved.
 
 ### Fixed
 
-- Preserve source audio duration when FluidAudio reports a zero-duration
-  Parakeet result.
-- Stop repeated microphone graph restarts after a headphone route change;
-  unhealthy VoiceProcessingIO routes now fall back once to raw capture and
-  retain the full timeline.
-- Remove exact one- or two-word echo fragments when longer aligned echo
-  segments prove they belong to one continuous speaker-bleed run.
-- Start audio-only capture with the process tap that successfully requested
-  permission, and ignore the microphone graph's own startup configuration
-  notification instead of rebuilding both Core Audio paths before recording.
-
-### Security
-
-- Registered the existing local release-signing public key with GitHub as an
-  SSH signing key; no private key material was copied or uploaded.
+- Improved recovery when the default audio input changes and prevented repeated microphone restarts after headset changes.
+- Reduced unnecessary audio startup restarts and preserved timing across input interruptions.
+- Preserved audio duration when the speech engine reports a zero-length result.
+- Local completion actions are not launched twice during recovery.
 
 ## [1.0.2] - 2026-08-07
 
 ### Added
 
-- **Open last recording** reveals the newest finalized or interrupted session
-  from approved storage without maintaining a separate history database.
-- Interrupted-session recovery posts one content-free summary notification with
-  direct access to temporary recovery storage.
-- Failed local transcriptions expose an explicit one-click retry action without
-  requiring Record to restart or modifying the recording.
-
-### Changed
-
-- Consolidated speculative feature epics into the ROADMAP so the active issue
-  backlog represents concrete reliability and distribution work.
-- Removed the final stale LaunchAgent reference from the SwiftPM manifest.
+- Open last recording finds the newest finished or interrupted session after relaunch.
+- Recovery notifications provide access to preserved interrupted recordings.
+- Retry failed transcription without restarting Record or modifying the audio.
 
 ## [1.0.1] - 2026-08-07
 
 ### Added
 
-- Missing-model detection plus a guided, verified Parakeet v3 local import.
-- A release gate that preserves Record's bundle identifier, Apple signing
-  team, hardened runtime, and designated requirement across updates.
+- Guided setup when the local transcription model is missing, with verification before import.
+- Release checks preserve Record's identity so macOS can retain existing permissions across updates.
 
 ### Fixed
 
-- Open at Login remains actionable when ServiceManagement initially reports
-  `.notFound` for an app that is already installed in Applications.
-- MacWhisper appears only when MacWhisper, its `mw` CLI, and Record's sandbox
-  helper are all present; an unavailable saved selection returns to Parakeet.
-
-### Upstream
-
-- Submitted a FluidAudio manifest fix so its Parakeet benchmark Markdown file
-  can be excluded from SwiftPM source discovery in the next dependency update.
+- Open at Login works when an installed app has not yet been registered with macOS.
+- MacWhisper is offered only when the required local app and command-line integration are available.
 
 ## [1.0.0] - 2026-08-07
 
 ### Added
 
-- Native Apple-Silicon menu-bar app for macOS 15 and newer.
-- Main-display screen capture with a video-only HEVC MOV plus independent
-  microphone and system-audio CAF tracks.
-- Audio-only recording with the same independently recoverable audio tracks.
-- Command-scoped permission requests and one-shot recovery after a privacy
-  setting restarts the app.
-- Atomic Desktop export through a persisted security-scoped folder grant.
-- Local Parakeet v3 transcription and optional, explicitly selected
-  MacWhisper integration.
-- Capture-privacy, recording-name, and Gifski handoff plugins.
-- Human-readable local notifications that open the exported session in Finder.
-- Manual signed update checks through Sparkle and an optional native Open at
-  Login setting.
-- Developer ID signing, Apple notarization, checksums, provenance attestations,
-  CodeQL, dependency review, sanitizer tests, and Podman-based linting.
+- A native menu-bar recorder for Apple Silicon Macs running macOS 15 or newer.
+- Screen and audio-only recording with separate microphone and system-audio files.
+- Export to Desktop or another approved folder, with recovery after interruptions.
+- Local transcription with Parakeet and optional MacWhisper integration.
+- Capture privacy controls, custom recording names, and handoff to Gifski.
+- Signed updates, optional Open at Login, and a notarized installer.
+- Local storage and processing without accounts, analytics, or media uploads.
 
-### Security
-
-- App Sandbox with no main-app network entitlement, app-scoped bookmarks, and
-  narrowly scoped Sparkle XPC services for explicit update checks.
-- Ed25519 signatures for the update archive and feed, in addition to Developer
-  ID signing and notarization.
-- Offline model enforcement and fail-closed validation for optional external
-  tools.
-
-[Unreleased]: https://github.com/aindaco1/record/compare/v1.4.4...HEAD
+[1.5.0]: https://github.com/aindaco1/record/compare/v1.4.7...v1.5.0
+[1.4.7]: https://github.com/aindaco1/record/compare/v1.4.6...v1.4.7
+[1.4.6]: https://github.com/aindaco1/record/compare/v1.4.5...v1.4.6
+[1.4.5]: https://github.com/aindaco1/record/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/aindaco1/record/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/aindaco1/record/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/aindaco1/record/compare/v1.4.1...v1.4.2

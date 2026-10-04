@@ -23,10 +23,10 @@ each independent writer starts at its own first sample instead of treating the
 first callback as a shared lower bound.
 
 The media processor creates separate atomic recovery destinations for the
-three queues: video-only MOV plus independent AAC/CAF system and microphone
+enabled queues: video-only MOV plus independent AAC/CAF system and microphone
 tracks. This preserves source separation and prevents players from treating
 system and microphone audio as alternative MOV tracks. After capture finishes,
-one shared finalizer converts the two CAF sources into the canonical 24-bit PCM
+one shared finalizer converts enabled CAF sources into the canonical 24-bit PCM
 `system.wav` and `mic.wav` files. The manifest records each track's offset from
 the earliest first sample so downstream processing can restore alignment.
 

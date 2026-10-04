@@ -41,14 +41,17 @@ main-app network entitlement without a user-approved replacement for
 [ADR 0004](adr/0004-signed-updates-and-login.md).
 [ADR 0017](adr/0017-sandboxed-parakeet-model-download.md) separately permits the
 fixed-asset Parakeet XPC downloader; changes to its URL, allowed hosts, protocol,
-or exact entitlement set require renewed privacy review. The
-[local-only boundary](security/local-only-boundary.md) documents enforcement.
+or exact entitlement set require renewed privacy review.
+[ADR 0025](adr/0025-reviewed-diagnostics.md) permits the separate report sender
+to submit only the reviewed, validated diagnostic preview to its fixed endpoint.
+The [local-only boundary](security/local-only-boundary.md) documents enforcement.
 
 ## Build and validate
 
 For standard local development testing, run `node scripts/test.mjs`. It runs
-the full gate below, native Apple transcript cleanup on synthetic examples, and
-Jev semantic review. See [setup and interpretation](testing/jev.md). Use
+`validate.sh --full`, native Apple transcript cleanup on synthetic examples, and
+Jev semantic review. It does not replace the package and sanitizer checks in
+`local-gate.sh`. See [setup and interpretation](testing/jev.md). Use
 `node scripts/test.mjs --offline` explicitly for the deterministic subset. Node
 20.9+ is required for the offline adapter tests; no npm dependencies are added.
 
@@ -116,9 +119,7 @@ Release preparation and the verified CI-app handoff are documented in the
 [release runbook](runbooks/release.md) and
 [ADR 0012](adr/0012-verified-ci-app-reuse.md).
 
-## Local transcription setup
-
-### Interface strings
+## Interface strings
 
 Edit `Resources/Localizable.xcstrings` and `Resources/InfoPlist.xcstrings` for
 English and neutral Latin American Spanish. Keep UI language separate from
@@ -128,6 +129,8 @@ The source gate runs the same command with `--check` to verify translations,
 format arguments, literal lookups, and generated files. Check both languages in
 the signed app at its minimum window width; string coverage alone does not
 establish layout or VoiceOver acceptance.
+
+## Local transcription setup
 
 Use the [Parakeet setup guide](models/parakeet.md) for the pinned developer
 installer as well as in-app setup. If MacWhisper and its bundled `mw` CLI are

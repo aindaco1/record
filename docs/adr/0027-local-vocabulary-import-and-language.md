@@ -1,7 +1,11 @@
 # ADR 0027: Shared local vocabulary, import, and language policy
 
-- Status: accepted for the 1.5.0 candidate
+- Status: accepted; shipped in 1.5.0
 - Date: 2026-10-03
+
+This decision covers vocabulary, file import, and languages. The later
+[ADR 0028](0028-dictation-and-local-recording-control.md) adds schema-3 dictation
+and recording-control IPC to the same release; it extends the scope recorded here.
 
 ## Vocabulary
 

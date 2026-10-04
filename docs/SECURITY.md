@@ -4,8 +4,8 @@
 
 | Version | Security updates |
 |---|---|
-| 1.4.x | Yes |
-| 1.3.x and earlier | No |
+| 1.5.x | Yes |
+| 1.4.x and earlier | No |
 
 Use the latest release in the supported series. See the
 [changelog](../CHANGELOG.md) for versioned changes.

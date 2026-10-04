@@ -1,7 +1,15 @@
 # Handy review: improvements for Record
 
-Review date: October 2, 2026. This is a proposal, not an implementation or a
-change to Record's accepted architecture or roadmap commitments.
+Review date: October 2, 2026. This historical proposal describes the baseline
+and recommendations at that date, not the current app.
+
+Status on October 4: [Record 1.5.0](../releases/1.5.0.md) shipped all six
+high-priority items, language and accessibility improvements, global vocabulary,
+audio-file import, Quick Dictation, and CLI/Apple Shortcuts recording controls.
+Live transcript preview remains exploratory. Use the [user guide](../user-guide.md)
+for current behavior and the [validation record](../testing/1.5.0-candidate.md)
+for exercised workflows and remaining acceptance. The original analysis below
+is retained as research history.
 
 Record would benefit most from clearer audio controls, visible transcription
 outcomes, a small session browser, and recording shortcuts. Handy provides useful
