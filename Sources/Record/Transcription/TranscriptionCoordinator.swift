@@ -157,6 +157,17 @@ actor TranscriptionCoordinator {
         publish(.deferred(session: directory.lastPathComponent))
     }
 
+    /// Relaunch and model setup must resume the same locally accessible sessions.
+    /// Only private recovery storage may contain interrupted capture artifacts.
+    func resumePending(recoveryRoot: URL, exportDirectory: ExportDirectoryLease?) {
+        resumePending(root: recoveryRoot)
+        if let exportDirectory {
+            resumePending(
+                root: exportDirectory.url, recoverInterrupted: false,
+                retaining: exportDirectory)
+        }
+    }
+
     /// Scan the recordings root for finalized sessions that were never
     /// transcribed. Legacy Quill `meta.json` sessions remain readable.
     func resumePending(

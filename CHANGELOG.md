@@ -49,6 +49,8 @@ All notable changes to Record are documented here. Record follows
 
 ### Fixed
 
+- Resume pending transcription in both the save folder and private recovery
+  storage after downloading or importing the local model.
 - Standard text-editing shortcuts work in Settings and the session filter.
 - Settings descriptions wrap instead of being clipped to two lines.
 
