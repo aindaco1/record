@@ -149,8 +149,8 @@ final class RecordDiagnostics: ObservableObject {
             issueNumber = receipt.issueNumber
             status =
                 receipt.duplicate
-                ? L10n.text("This report was already received. Its count is unchanged.")
-                : L10n.text("Report received. Matching reports share the same issue.")
+                ? L10n.text("This report has already been received.")
+                : L10n.text("Report received. Similar reports are grouped together.")
         } catch {
             status =
                 L10n.text(
@@ -176,12 +176,14 @@ struct RecordDiagnosticsView: View {
             Text(L10n.text("Help & diagnostics")).font(.title2)
             Text(
                 L10n.text(
-                    "Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together."
+                    "Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record."
                 )
             )
             .fixedSize(horizontal: false, vertical: true)
             Text(
-                "Includes app/system versions, broad capture settings, recent event categories and an optional crash summary. Excludes media, transcripts, names, paths, clipboard content and raw logs. Use private security reporting for vulnerabilities."
+                L10n.text(
+                    "Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately."
+                )
             )
             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ScrollView {
@@ -195,7 +197,7 @@ struct RecordDiagnosticsView: View {
             Text(model.status).font(.callout).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("record.reportStatus")
             if model.issueNumber != nil {
-                Button(L10n.text("View GitHub issue")) { model.openIssue() }
+                Button(L10n.text("View submitted report")) { model.openIssue() }
             }
             HStack(spacing: 8) {
                 Group {
@@ -208,7 +210,7 @@ struct RecordDiagnosticsView: View {
                             model.bytes == nil)
                 }.disabled(model.sending)
                 Spacer(minLength: 16)
-                Button(L10n.text("Send to public GitHub issues")) { Task { await model.send() } }
+                Button(L10n.text("Send report to developer")) { Task { await model.send() } }
                     .disabled(!model.canSend).buttonStyle(.borderedProminent)
             }.controlSize(.regular)
         }.padding(24).frame(width: 640).onAppear { model.prepare() }

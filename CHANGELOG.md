@@ -33,9 +33,11 @@ All notable changes to Record are documented here. Record follows
 
 ### Changed
 
-- One sidebar window gives direct access to Recording, Sessions, Transcription,
-  Screenshots, Shortcuts, and General. Recording setup and session browsing no
+- One sidebar window gives direct access to General, Recording, Sessions,
+  Transcription, Screenshots, and Shortcuts. Recording setup and session browsing no
   longer require secondary windows. All shortcut assignments share one page.
+- Help & diagnostics uses plain language for sending reports to the developer,
+  with a brief public-visibility notice and matching English/Spanish wording.
 - Recording names can be edited inline with a safe example and validation.
   Model and cleanup availability explanations stay visible beside their controls.
 

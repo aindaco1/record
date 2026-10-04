@@ -456,8 +456,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Rename finished recordings</string>
 	<key>Report preview</key>
 	<string>Report preview</string>
-	<key>Report received. Matching reports share the same issue.</key>
-	<string>Report received. Matching reports share the same issue.</string>
+	<key>Report received. Similar reports are grouped together.</key>
+	<string>Report received. Similar reports are grouped together.</string>
 	<key>Report saved locally.</key>
 	<string>Report saved locally.</string>
 	<key>Requires macOS 26 or later.</key>
@@ -478,8 +478,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Reveal</string>
 	<key>Reveal the most recently finished recording in Finder</key>
 	<string>Reveal the most recently finished recording in Finder</string>
-	<key>Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together.</key>
-	<string>Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together.</string>
+	<key>Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.</key>
+	<string>Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.</string>
 	<key>Review the report before sending.</key>
 	<string>Review the report before sending.</string>
 	<key>Save location</key>
@@ -544,10 +544,12 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Selected microphone disconnected. Choose another input.</string>
 	<key>Selected microphone unavailable</key>
 	<string>Selected microphone unavailable</string>
-	<key>Send to public GitHub issues</key>
-	<string>Send to public GitHub issues</string>
+	<key>Send report to developer</key>
+	<string>Send report to developer</string>
 	<key>Sending the reviewed report…</key>
 	<string>Sending the reviewed report…</string>
+	<key>Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.</key>
+	<string>Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.</string>
 	<key>Sessions</key>
 	<string>Sessions</string>
 	<key>Set Up Local Parakeet Transcription</key>
@@ -642,8 +644,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>The verified model was installed locally. Pending recordings will now be transcribed.</string>
 	<key>These exclusions apply to screenshots and screen recordings. Notification sounds require Focus to silence.</key>
 	<string>These exclusions apply to screenshots and screen recordings. Notification sounds require Focus to silence.</string>
-	<key>This report was already received. Its count is unchanged.</key>
-	<string>This report was already received. Its count is unchanged.</string>
+	<key>This report has already been received.</key>
+	<string>This report has already been received.</string>
 	<key>Tokens: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. The example uses placeholder clipboard text; actual clipboard content is read only for recording names that request it.</key>
 	<string>Tokens: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. The example uses placeholder clipboard text; actual clipboard content is read only for recording names that request it.</string>
 	<key>Transcribe later</key>
@@ -696,8 +698,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Verifying and installing the local model…</string>
 	<key>Verifying the download…</key>
 	<string>Verifying the download…</string>
-	<key>View GitHub issue</key>
-	<string>View GitHub issue</string>
+	<key>View submitted report</key>
+	<string>View submitted report</string>
 	<key>Vocabulary</key>
 	<string>Vocabulary</string>
 	<key>Vocabulary saved. New transcripts will use these spellings.</key>

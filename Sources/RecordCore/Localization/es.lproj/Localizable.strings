@@ -456,8 +456,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Renombrar grabaciones finalizadas</string>
 	<key>Report preview</key>
 	<string>Vista previa del informe</string>
-	<key>Report received. Matching reports share the same issue.</key>
-	<string>Informe recibido. Los informes similares se agrupan en el mismo reporte.</string>
+	<key>Report received. Similar reports are grouped together.</key>
+	<string>Informe recibido. Los informes similares se agrupan.</string>
 	<key>Report saved locally.</key>
 	<string>Informe guardado en tu Mac.</string>
 	<key>Requires macOS 26 or later.</key>
@@ -478,8 +478,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Mostrar en Finder</string>
 	<key>Reveal the most recently finished recording in Finder</key>
 	<string>Mostrar la última grabación finalizada en Finder</string>
-	<key>Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together.</key>
-	<string>Revisa un informe filtrado, guárdalo en tu Mac o envíalo a los reportes públicos de Record en GitHub. Los informes similares se agrupan.</string>
+	<key>Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.</key>
+	<string>Revisa un informe de diagnóstico, guárdalo en tu Mac o envíalo al desarrollador para ayudar a mejorar Record.</string>
 	<key>Review the report before sending.</key>
 	<string>Revisa el informe antes de enviarlo.</string>
 	<key>Save location</key>
@@ -544,10 +544,12 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Se desconectó el micrófono seleccionado. Elige otra entrada.</string>
 	<key>Selected microphone unavailable</key>
 	<string>Micrófono seleccionado no disponible</string>
-	<key>Send to public GitHub issues</key>
-	<string>Enviar a los reportes públicos de GitHub</string>
+	<key>Send report to developer</key>
+	<string>Enviar al desarrollador</string>
 	<key>Sending the reviewed report…</key>
 	<string>Enviando el informe revisado…</string>
+	<key>Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.</key>
+	<string>Los informes enviados son públicos. Incluyen las versiones de la app y del sistema, ajustes generales de grabación, tipos de eventos recientes y un resumen opcional del fallo. Excluyen archivos multimedia, transcripciones, nombres, rutas de archivos, contenido del portapapeles y registros sin filtrar. Reporta las vulnerabilidades de seguridad de forma privada.</string>
 	<key>Sessions</key>
 	<string>Sesiones</string>
 	<key>Set Up Local Parakeet Transcription</key>
@@ -642,8 +644,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>El modelo verificado se instaló en tu Mac. Ahora se transcribirán las grabaciones pendientes.</string>
 	<key>These exclusions apply to screenshots and screen recordings. Notification sounds require Focus to silence.</key>
 	<string>Estas exclusiones afectan a capturas de imagen y video. Para silenciar notificaciones, usa un modo de concentración.</string>
-	<key>This report was already received. Its count is unchanged.</key>
-	<string>Ya se había recibido este informe. No se contó de nuevo.</string>
+	<key>This report has already been received.</key>
+	<string>Este informe ya se recibió.</string>
 	<key>Tokens: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. The example uses placeholder clipboard text; actual clipboard content is read only for recording names that request it.</key>
 	<string>Variables: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. El ejemplo usa texto de muestra; el portapapeles solo se lee si la plantilla lo solicita.</string>
 	<key>Transcribe later</key>
@@ -696,8 +698,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Verificando e instalando el modelo local…</string>
 	<key>Verifying the download…</key>
 	<string>Verificando la descarga…</string>
-	<key>View GitHub issue</key>
-	<string>Ver reporte en GitHub</string>
+	<key>View submitted report</key>
+	<string>Ver informe enviado</string>
 	<key>Vocabulary</key>
 	<string>Vocabulario</string>
 	<key>Vocabulary saved. New transcripts will use these spellings.</key>

@@ -8,8 +8,8 @@ This guide covers everyday capture, settings, and recovery. See the
 
 Record has no Dock icon. Open its camera in the menu bar for immediate capture,
 source-selection, open, retry, and update commands. **Settings…** groups durable
-preferences and recording tools into one sidebar: Recording, Sessions,
-Transcription, Screenshots, Shortcuts, and General. Reopening
+preferences and recording tools into one sidebar: General, Recording, Sessions,
+Transcription, Screenshots, and Shortcuts. Reopening
 Record from Finder returns to the same window and last-used section. Use the
 Up/Down keys in the sidebar to change sections. Text fields support standard
 Command-A, Command-C, Command-X, Command-V, and undo shortcuts. Command-W closes
@@ -299,8 +299,8 @@ helpers, or grant plugins network access. See the
 
 Choose **Help & diagnostics…** in the menu or **Settings… → General → Help & diagnostics…**.
 Review the filtered JSON, import an optional Record `.ips` crash summary, save a
-local copy, or explicitly send the preview to Record's public GitHub issues.
-Nothing is sent automatically. Retry an unconfirmed submission with the same
+local copy, or choose **Send report to developer**. Sent reports are public;
+nothing is sent automatically. Retry an unconfirmed submission with the same
 preview; **Refresh** creates a new report. See [Support](SUPPORT.md) for the full
 workflow and the [privacy policy](PRIVACY.md) for the exact data boundary.
 

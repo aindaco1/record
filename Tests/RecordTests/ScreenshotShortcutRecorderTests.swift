@@ -121,6 +121,15 @@ final class ScreenshotShortcutRecorderTests: XCTestCase {
         )
 
         XCTAssertEqual(controller.selectedSection, .recording)
+        let firstRow = try XCTUnwrap(
+            controller.tableView(controller.sidebar, viewFor: nil, row: 0))
+        XCTAssertTrue(
+            allSubviews(of: firstRow).compactMap { ($0 as? NSTextField)?.stringValue }
+                .contains("General"))
+        controller.sidebar.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        XCTAssertEqual(controller.selectedSection, .general)
+        XCTAssertFalse(try XCTUnwrap(controller.pageViews[.general]).isHidden)
+        XCTAssertTrue(try XCTUnwrap(controller.pageViews[.recording]).isHidden)
         controller.select(section: .screenshots)
         XCTAssertEqual(controller.selectedSection, .screenshots)
         controller.select(section: .recording)

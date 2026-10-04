@@ -3826,19 +3826,19 @@
         }
       }
     },
-    "Report received. Matching reports share the same issue.": {
+    "Report received. Similar reports are grouped together.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Report received. Matching reports share the same issue."
+            "value": "Report received. Similar reports are grouped together."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Informe recibido. Los informes similares se agrupan en el mismo reporte."
+            "value": "Informe recibido. Los informes similares se agrupan."
           }
         }
       }
@@ -4013,19 +4013,19 @@
         }
       }
     },
-    "Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together.": {
+    "Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together."
+            "value": "Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Revisa un informe filtrado, guárdalo en tu Mac o envíalo a los reportes públicos de Record en GitHub. Los informes similares se agrupan."
+            "value": "Revisa un informe de diagnóstico, guárdalo en tu Mac o envíalo al desarrollador para ayudar a mejorar Record."
           }
         }
       }
@@ -4574,19 +4574,19 @@
         }
       }
     },
-    "Send to public GitHub issues": {
+    "Send report to developer": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Send to public GitHub issues"
+            "value": "Send report to developer"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enviar a los reportes públicos de GitHub"
+            "value": "Enviar al desarrollador"
           }
         }
       }
@@ -4604,6 +4604,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enviando el informe revisado…"
+          }
+        }
+      }
+    },
+    "Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los informes enviados son públicos. Incluyen las versiones de la app y del sistema, ajustes generales de grabación, tipos de eventos recientes y un resumen opcional del fallo. Excluyen archivos multimedia, transcripciones, nombres, rutas de archivos, contenido del portapapeles y registros sin filtrar. Reporta las vulnerabilidades de seguridad de forma privada."
           }
         }
       }
@@ -5407,19 +5424,19 @@
         }
       }
     },
-    "This report was already received. Its count is unchanged.": {
+    "This report has already been received.": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This report was already received. Its count is unchanged."
+            "value": "This report has already been received."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ya se había recibido este informe. No se contó de nuevo."
+            "value": "Este informe ya se recibió."
           }
         }
       }
@@ -5866,19 +5883,19 @@
         }
       }
     },
-    "View GitHub issue": {
+    "View submitted report": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "View GitHub issue"
+            "value": "View submitted report"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ver reporte en GitHub"
+            "value": "Ver informe enviado"
           }
         }
       }

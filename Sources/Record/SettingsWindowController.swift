@@ -19,7 +19,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     NSTableViewDelegate, NSTextFieldDelegate
 {
     enum Section: Int, CaseIterable {
-        case recording, sessions, transcription, screenshots, shortcuts, general
+        case general, recording, sessions, transcription, screenshots, shortcuts
         var title: String {
             switch self {
             case .recording: L10n.text("Recording")
