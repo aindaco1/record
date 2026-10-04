@@ -97,3 +97,8 @@ public enum ParakeetModelDownloadVerifier {
     )
     func cancelDownload()
 }
+
+/// Content-free progress in the service-to-app direction only.
+@objc public protocol ParakeetModelDownloadProgressXPCProtocol {
+    func receivedBytes(_ count: Int64)
+}

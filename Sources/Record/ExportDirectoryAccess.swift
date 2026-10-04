@@ -70,9 +70,9 @@ final class ExportDirectoryAccess {
     /// the real Desktop rather than the app container's Desktop symlink.
     func choose() throws -> ExportDirectoryLease? {
         let panel = NSOpenPanel()
-        panel.title = "Choose Export Folder"
-        panel.message = "Finished Record sessions will be saved in this folder."
-        panel.prompt = "Choose"
+        panel.title = L10n.text("Choose Export Folder")
+        panel.message = L10n.text("Finished Record sessions will be saved in this folder.")
+        panel.prompt = L10n.text("Choose")
         panel.directoryURL = suggestedDirectory
         panel.canChooseDirectories = true
         panel.canChooseFiles = false

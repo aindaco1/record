@@ -1,3 +1,4 @@
+import RecordCore
 import Foundation
 
 enum ScreenCaptureSourcePreference: String, CaseIterable, Sendable {
@@ -7,9 +8,9 @@ enum ScreenCaptureSourcePreference: String, CaseIterable, Sendable {
 
     var displayName: String {
         switch self {
-        case .mainDisplay: "Main Display"
-        case .systemPicker: "Display, Application, or Window…"
-        case .region: "Custom Region…"
+        case .mainDisplay: L10n.text("Main Display")
+        case .systemPicker: L10n.text("Display, Application, or Window…")
+        case .region: L10n.text("Custom Region…")
         }
     }
 }

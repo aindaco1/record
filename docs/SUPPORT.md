@@ -4,13 +4,14 @@
 
 Choose **Help & diagnostics…** from the menu bar or **Settings… → General**.
 Review the preview, optionally import a Record `.ips` crash log (up to 2 MiB),
-and choose **Save report…** for a local JSON copy or **Send to public GitHub issues**.
+and choose **Save report…** for a local JSON copy or **Send report to developer**.
 Only the preview is sent. Opening the window, importing, refreshing and saving
-never submit anything. A confirmed result offers **View GitHub issue**.
+never submit anything. Sent reports are public. A confirmed result offers
+**View submitted report**.
 
 If delivery is not confirmed, retry the same preview, including after relaunch.
-Refresh replaces the pending report and creates a new submission ID. Matching
-reports join an existing issue. Raw incidents, recordings, transcripts, names,
+Refresh replaces the pending report and creates a new submission ID. Similar
+reports are grouped together. Raw incidents, recordings, transcripts, names,
 paths and logs are excluded; see the [privacy policy](PRIVACY.md#reviewed-diagnostic-reports).
 
 ## Questions and bugs

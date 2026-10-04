@@ -4,7 +4,67 @@ All notable changes to Record are documented here. Record follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the structure of
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.4.8] - Unreleased
+## [1.5.0] - 2026-10-04
+
+### Added
+
+- Quick Dictation uses the selected microphone, existing local transcription and
+  vocabulary, then opens a preview with explicit Copy. Assign a start/stop toggle
+  in Shortcuts; audio and transcripts remain in Sessions for retry.
+- Local recording automation through `record control` and five Apple Shortcuts
+  actions: Start, Stop, Pause, Resume and Status. Repeated commands are idempotent;
+  pause/resume apply to screen recording. Status returns only the capture state.
+- Global automatic vocabulary: preferred spellings such as “Dust Wave” normalize
+  case and spacing variants across sessions; optional aliases handle recurring
+  mishearings. Preserve raw and pre-vocabulary transcripts, and reapply rules to
+  existing sessions without transcribing again.
+- Multiple-file audio import in Sessions and a `record transcribe` CLI using the
+  existing local pipeline. Originals stay untouched; imports retain their own
+  source identity and support retry/defer, cleanup, and vocabulary.
+- Engine-aware speech-language controls and an independent English/Spanish
+  interface preference, including translated setup, permissions, and recovery.
+- Accessible control labels and VoiceOver announcements for recording and
+  transcription transitions without timer or meter chatter.
+- Microphone selection, source controls for both recording modes, an explicit
+  no-file input test, and independent audio activity indicators. Specific inputs
+  use raw audio-only capture; System Default retains voice processing.
+- Recent Sessions with current-folder and recovery browsing, title/date filtering,
+  raw/clean transcript previews, copy, source playback, reveal, and retry/defer.
+- Configurable global recording shortcuts using the existing native registrar;
+  new assignments start Off and existing screenshot preferences are preserved.
+- An inline recording-readiness checklist and model setup with received-byte
+  progress, verification/install stages, and cancellation.
+- An automatic compact recording panel with elapsed time, pause/resume, and stop;
+  Recording settings can disable it. The existing recording exclusion covers it.
+
+### Changed
+
+- One sidebar window gives direct access to General, Recording, Sessions,
+  Transcription, Screenshots, and Shortcuts. Recording setup and session browsing no
+  longer require secondary windows. All shortcut assignments share one page.
+- Help & diagnostics uses plain language for sending reports to the developer,
+  with a brief public-visibility notice and matching English/Spanish wording.
+- Recording names can be edited inline with a safe example and validation.
+  Model and cleanup availability explanations stay visible beside their controls.
+
+### Fixed
+
+- Standard text-editing shortcuts work in Settings and the session filter.
+- Settings descriptions wrap instead of being clipped to two lines.
+
+- Preserve successful transcription tracks when another track fails, explicitly
+  label partial results, and retry unfinished tracks without repeating success.
+  Deferred work stays deferred after relaunch; original media remains intact.
+- Request only permissions needed by the enabled audio sources. A selected
+  microphone disconnect stops safely instead of silently selecting another input.
+- Detect shortcut conflicts by physical key and modifiers, independent of labels.
+
+See [ADR 0026](docs/adr/0026-local-recording-workflow.md) for the local checkpoint,
+source-selection, and content-free model progress contracts.
+[ADR 0027](docs/adr/0027-local-vocabulary-import-and-language.md) describes vocabulary,
+import provenance, language selection, and localization resources.
+[ADR 0028](docs/adr/0028-dictation-and-local-recording-control.md) adds microphone
+dictation and shared local recording commands.
 
 ### Development
 

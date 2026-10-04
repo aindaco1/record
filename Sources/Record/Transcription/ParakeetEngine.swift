@@ -45,9 +45,15 @@ actor ParakeetEngine: TranscriptionEngine {
     }
 
     func transcribe(_ audio: URL) async throws -> [TranscriptSegment] {
+        try await transcribe(audio, progress: { _ in })
+    }
+
+    func transcribe(_ audio: URL, progress: @escaping @Sendable (Double) async -> Void) async throws
+        -> [TranscriptSegment]
+    {
         let result: ParakeetTranscriptResult
         do {
-            result = try await transcriber.transcribe(audio)
+            result = try await transcriber.transcribe(audio, progress: progress)
         } catch let error as ParakeetTranscriber.TranscriberError {
             switch error {
             case .notPrepared: throw EngineError.notPrepared
@@ -78,11 +84,12 @@ actor ParakeetEngine: TranscriptionEngine {
 
         func flush() {
             guard let first = current.first, let last = current.last else { return }
-            out.append(TranscriptSegment(
-                start: first.startsAtSeconds,
-                end: last.endsAtSeconds,
-                text: current.map(\.text).joined(separator: " ")
-            ))
+            out.append(
+                TranscriptSegment(
+                    start: first.startsAtSeconds,
+                    end: last.endsAtSeconds,
+                    text: current.map(\.text).joined(separator: " ")
+                ))
             current = []
         }
 
@@ -91,7 +98,8 @@ actor ParakeetEngine: TranscriptionEngine {
                 flush()
             }
             current.append(word)
-            let endsSentence = word.text.hasSuffix(".")
+            let endsSentence =
+                word.text.hasSuffix(".")
                 || word.text.hasSuffix("?")
                 || word.text.hasSuffix("!")
             if endsSentence || current.count >= 60 {

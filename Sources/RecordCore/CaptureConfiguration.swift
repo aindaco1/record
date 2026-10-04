@@ -79,10 +79,15 @@ public enum CaptureFrameRate: Int, Codable, CaseIterable, Sendable {
 public struct CaptureAudioConfiguration: Codable, Equatable, Sendable {
     public var includeSystemAudio: Bool
     public var includeMicrophone: Bool
+    public var microphoneDeviceID: String?
 
-    public init(includeSystemAudio: Bool = true, includeMicrophone: Bool = true) {
+    public init(
+        includeSystemAudio: Bool = true, includeMicrophone: Bool = true,
+        microphoneDeviceID: String? = nil
+    ) {
         self.includeSystemAudio = includeSystemAudio
         self.includeMicrophone = includeMicrophone
+        self.microphoneDeviceID = microphoneDeviceID
     }
 }
 

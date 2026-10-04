@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 python3 -B -m unittest discover -s scripts/ci/tests -p 'test_*.py'
+python3 scripts/localization/compile.py --check
 node --test scripts/qa/jev.test.mjs
 node --test integrations/crash-relay/record-contract.test.mjs
 ./scripts/ci/check-local-only.sh
@@ -22,6 +23,8 @@ swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/RecordModelDownload Sources/RecordModelDownloaderService \
     Sources/Record/Diagnostics Sources/RecordReportSenderService \
+    Sources/Record/Automation Sources/Record/UI/DictationPreviewController.swift \
+    Sources/Record/UI/TranscriptPreviewReader.swift \
     Sources/Record/AppUpdateController.swift \
     Sources/Record/Audio/SessionAudioFinalizer.swift \
     Sources/Record/AudioSessionInspector.swift \
@@ -47,6 +50,23 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/Transcription/TranscriptionPreferences.swift \
     Sources/Record/VideoCaptureProfile.swift Sources/Record/VideoCaptureStartupWaiter.swift \
     Sources/Record/VideoRecordingSession.swift \
+    Sources/Record/Audio/AudioInputDevices.swift \
+    Sources/Record/Audio/RecordingAudioPreferences.swift \
+    Sources/Record/RecordingShortcuts.swift \
+    Sources/Record/SettingsWindowController.swift \
+    Sources/Record/UI/SettingsLayout.swift \
+    Sources/Record/UI/SettingsWindowController+Pages.swift \
+    Sources/Record/UI/ShortcutRecorderButton.swift \
+    Sources/Record/GlobalScreenshotShortcutRegistrar.swift \
+    Sources/Record/RecentRecordingLocator.swift \
+    Sources/Record/UI/ModelSetupWindowController.swift \
+    Sources/Record/UI/RecentSessionsViewController.swift \
+    Sources/Record/UI/RecordingPanelController.swift \
+    Sources/Record/UI/AccessibilityAnnouncements.swift \
+    Sources/Record/UI/VocabularySettingsView.swift \
+    Sources/Record/Transcription/VocabularyPreferences.swift \
+    Sources/Record/Transcription/AudioFileImporter.swift \
+    Sources/Record/Transcription/TranscribeFiles.swift \
     Tests/RecordCoreTests Tests/RecordTests Tests/RecordCaptureTests Tests/RecordMediaTests \
     Tests/RecordModelDownloadTests
 git diff --check

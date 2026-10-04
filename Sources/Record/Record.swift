@@ -5,6 +5,7 @@ import Foundation
 import RecordCapture
 import RecordCore
 import RecordMedia
+import UniformTypeIdentifiers
 
 @main
 struct RecordCommand: ParsableCommand {
@@ -12,7 +13,9 @@ struct RecordCommand: ParsableCommand {
         commandName: "record",
         abstract:
             "Local meeting recorder + transcriber. Records mic and system audio as two tracks, then transcribes on-device.",
-        subcommands: [Run.self, Doctor.self, InspectSession.self],
+        subcommands: [
+            Run.self, Doctor.self, InspectSession.self, TranscribeFiles.self, ControlRecording.self,
+        ],
         defaultSubcommand: Run.self
     )
 }
@@ -28,8 +31,8 @@ struct Run: ParsableCommand {
 
     func run() throws {
         FluidAudioOfflinePolicy.enforce()
-        // ArgumentParser invokes run() on the main thread; promote that fact
-        // to the type system so AppKit calls are cleanly isolated.
+        // Keep AppKit's run loop outside a Swift-concurrency job so queued
+        // MainActor work (capture, import, progress) can execute normally.
         try MainActor.assumeIsolated { try runMain() }
     }
 
@@ -48,12 +51,23 @@ struct Run: ParsableCommand {
             throw ExitCode(1)
         }
 
+        let commandServer = try RecordingControlServer()
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
 
         let controller = AppController(root: root, screenshotPreferences: screenshotPreferences)
+        controller.commandServer = commandServer
         let applicationDelegate = RecordApplicationDelegate(controller: controller)
         app.delegate = applicationDelegate
+        try commandServer.start { [weak controller] request in
+            controller?.performRecordingCommand(request, interactive: false)
+                ?? .init(id: request.id, snapshot: .init(phase: .idle), failure: .unavailable)
+        }
+        RecordingIntentBridge.handler = { [weak controller] request in
+            controller?.performRecordingCommand(request, interactive: true)
+                ?? .init(id: request.id, snapshot: .init(phase: .idle), failure: .unavailable)
+        }
+        RecordAppShortcuts.updateAppShortcutParameters()
 
         let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
         sigint.setEventHandler {
@@ -67,7 +81,7 @@ struct Run: ParsableCommand {
             Data(
                 "Record up · recordings → \(root.path) · ^C to quit\n".utf8
             ))
-        withExtendedLifetime(applicationDelegate) {
+        withExtendedLifetime((applicationDelegate, commandServer)) {
             app.run()
         }
     }
@@ -83,6 +97,13 @@ final class RecordApplicationDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller?.prepareNotifications()
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
+        -> Bool
+    {
+        controller?.showSettings()
+        return true
     }
 
     func applicationShouldTerminate(
@@ -118,6 +139,7 @@ struct Doctor: ParsableCommand {
 /// ticker. All state transitions happen on the main actor.
 @MainActor
 final class AppController {
+    weak var commandServer: RecordingControlServer?
     private enum ActiveRecording {
         case audio(RecordingSession)
         case video(VideoRecordingSession)
@@ -131,7 +153,7 @@ final class AppController {
 
         var mode: RecordingMode {
             switch self {
-            case .audio: .audioOnly
+            case .audio(let session): session.purpose == .dictation ? .dictation : .audioOnly
             case .video: .screen
             }
         }
@@ -144,6 +166,11 @@ final class AppController {
 
     private let root: URL
     private let menuBar = MenuBarController()
+    private let accessibilityAnnouncements = AccessibilityAnnouncements()
+    private lazy var recentSessions = RecentSessionsViewController()
+    private lazy var modelSetupWindow = ModelSetupWindowController()
+    private var audioImportTask: Task<Void, Never>?
+    private var modelSetupTask: Task<Void, Never>?
     private let updateController = AppUpdateController()
     private var diagnosticEvents: [RecordDiagnosticReport.Event] = [.launch]
     private lazy var diagnostics = RecordDiagnostics(
@@ -159,6 +186,13 @@ final class AppController {
     private let pendingScreenshotIntentStore: PendingScreenshotIntentStore
     private let exportDirectoryAccess = ExportDirectoryAccess()
     private let capturePrivacyPreferences = CapturePrivacyPreferences()
+    private let audioPreferences = RecordingAudioPreferences()
+    private let audioDeviceMonitor = AudioInputDeviceMonitor()
+    private lazy var recordingPanel = RecordingPanelController()
+    private var requestedRecordingMode: RecordingMode?
+    private var recordingAudio = CaptureAudioConfiguration()
+    private lazy var dictationPreview = DictationPreviewController()
+    private var selectedMicrophoneRecovery = SelectedMicrophoneRecovery()
     private let recordingNamePreferences = RecordingNamePreferences()
     private let screenCaptureSourcePreferences = ScreenCaptureSourcePreferences()
     private let systemScreenCapturePicker = SystemScreenCapturePicker()
@@ -170,7 +204,7 @@ final class AppController {
         regionSelector: regionSelectionController
     )
     private lazy var settingsController = SettingsWindowController(
-        screenshotPreferences: screenshotPreferences
+        screenshotPreferences: screenshotPreferences, sessions: recentSessions
     )
     private var exportDirectoryLease: ExportDirectoryLease?
     private var activeRecording: ActiveRecording?
@@ -182,6 +216,7 @@ final class AppController {
     private var sessionPublishTask: Task<Void, Never>?
     private var recentRecordingRefreshTask: Task<Void, Never>?
     private var permissionTask: Task<Void, Never>?
+    private var pendingPermissionStop = false
     private var screenshotCaptureTask: Task<Void, Never>?
     private var pendingScreenshotPermission: ScreenshotCaptureKind?
     private var permissionFlow = RecordingPermissionFlowState()
@@ -218,6 +253,32 @@ final class AppController {
             notifications.post(notification)
         }
         menuBar.onToggle = { [weak self] in self?.toggle() }
+        menuBar.onRecordingPresentation = { [weak self] presentation in
+            guard let self else { return }
+            self.accessibilityAnnouncements.update(presentation)
+            self.recordingPanel.render(
+                presentation,
+                enabled: self.audioPreferences.showsPanel
+                    || self.requestedRecordingMode == .dictation)
+            if presentation == .idle,
+                self.selectedMicrophoneRecovery.handle(.recordingPreserved) == .offerInput,
+                !self.quitAfterStop
+            {
+                DispatchQueue.main.async { [weak self] in
+                    self?.offerAnotherMicrophone(afterRecording: true)
+                }
+            }
+        }
+        dictationPreview.onShowSessions = { [weak self] in self?.showRecentSessions() }
+        menuBar.onDictation = { [weak self] in self?.toggleDictation() }
+        settingsController.onStartDictation = { [weak self] in self?.toggleDictation() }
+        recordingPanel.onStop = { [weak self] in self?.stopSession() }
+        recordingPanel.onPauseResume = { [weak self] in self?.toggleVideoPause() }
+        audioDeviceMonitor.start { [weak self] in self?.audioDevicesChanged() }
+        settingsController.onAudioPreferencesChanged = { [weak self] in
+            guard let self else { return }
+            if !self.audioPreferences.showsPanel { self.recordingPanel.close() }
+        }
         menuBar.onCaptureScreenshot = { [weak self] in self?.requestScreenshot($0) }
         menuBar.onShowSettings = { [weak self] in
             self?.showSettings()
@@ -233,13 +294,113 @@ final class AppController {
         menuBar.onRetryTranscription = { [weak self] in self?.retryTranscription() }
         menuBar.onOpenRecoveryFolder = { [weak self] in self?.openRecoveryFolder() }
         menuBar.onOpenLastRecording = { [weak self] in self?.openLastRecording() }
+        menuBar.onShowReadiness = { [weak self] in self?.showSettings(section: .recording) }
+        settingsController.onRefreshReadiness = { [unowned self] mode in
+            RecordingReadiness(
+                hasSaveFolder: self.exportDirectoryLease != nil,
+                audio: self.audioPreferences.configuration, screenRecording: mode == .screen,
+                microphoneGranted: SystemMicrophonePermissionProvider().state == .authorized,
+                screenGranted: self.recordingPermission.isScreenCaptureGranted,
+                inputTested: UserDefaults.standard.string(forKey: "recording.testedInput")
+                    == (self.audioPreferences.microphoneUID ?? "default"),
+                modelInstalled: Config.transcriptionSelection().engine == .parakeet
+                    ? ParakeetModelInstaller.isInstalled(.v3)
+                    : MacWhisperExecutable.resolve(configuredPath: Config.transcriptionExecutable())
+                        != nil)
+        }
+        settingsController.onSelectScreenSource = { [weak self] in
+            self?.selectScreenCaptureSource($0)
+        }
+        settingsController.onStartRecording = { [weak self] in self?.requestRecording($0) }
+        settingsController.onCheckPermissions = { [weak self] mode in
+            guard let self, self.activeRecording == nil, self.permissionTask == nil,
+                self.videoStartTask == nil, self.sessionPublishTask == nil
+            else { return }
+            self.settingsController.updateInteractionAvailability(
+                .init(destinationSelectionEnabled: false, capturePrivacyEnabled: false))
+            self.permissionTask = Task { [weak self] in
+                guard let self else { return }
+                let result = await self.recordingPermission.prepare(
+                    for: mode, audio: self.audioPreferences.configuration)
+                self.permissionTask = nil
+                self.pendingPermissionStop = false
+                if !Task.isCancelled {
+                    switch result {
+                    case .ready: break
+                    case .needsSettings(let blocker), .waitingForRestart(let blocker):
+                        _ = self.recordingPermission.presentSettingsRequired(for: blocker)
+                    }
+                }
+                // Setup does not retain a live tap or begin capture.
+                _ = self.recordingPermission.takePreparedSystemAudioTap()
+                self.settingsController.refreshReadiness()
+                self.menuBar.update(recording: false, elapsed: nil)
+                self.refreshSettingsInteractionAvailability()
+            }
+        }
+        modelSetupWindow.onCancel = { [weak self] in self?.modelSetupTask?.cancel() }
+        menuBar.onShowRecentSessions = { [weak self] in self?.showRecentSessions() }
+        recentSessions.onImport = { [weak self] in self?.importAudioFiles() }
+        recentSessions.onRetry = { [weak self] directory, lease in
+            Task { await self?.transcription.retry(directory, retaining: lease) }
+        }
+        recentSessions.onApplyVocabulary = { [weak self] directory, lease in
+            Task {
+                defer { withExtendedLifetime(lease) {} }
+                do {
+                    try await self?.transcription.applyVocabulary(to: directory)
+                    self?.recentSessions.refresh()
+                } catch {
+                    self?.recentSessions.showMessage(
+                        L10n.text(
+                            "Couldn’t apply vocabulary. Wait for transcription to finish and try again."
+                        ))
+                }
+            }
+        }
+        recentSessions.onDefer = { [weak self] directory in
+            Task {
+                do { try await self?.transcription.deferSession(directory) } catch {
+                    self?.postNotification(
+                        title: L10n.text("Couldn’t defer transcription"),
+                        body:
+                            L10n.text(
+                                "The recording is preserved. Try again after the current track finishes."
+                            ),
+                        directory: directory)
+                }
+            }
+        }
         menuBar.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
+        settingsController.onSectionChanged = { [weak self] section in
+            guard let self, section == .sessions else { return }
+            self.recentSessions.update(
+                roots: self.recentRecordingRoots, retaining: self.exportDirectoryLease)
+        }
         settingsController.onShowDiagnostics = { [weak self] in self?.diagnosticsWindow.show() }
         menuBar.onCheckForUpdates = { [weak self] in self?.checkForUpdates() }
-        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] availability in
-            self?.settingsController.updateInteractionAvailability(availability)
+        menuBar.onSettingsInteractionAvailabilityChanged = { [weak self] _ in
+            self?.refreshSettingsInteractionAvailability()
         }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
+        screenshotShortcutRegistrar.onRecording = { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .screen, .audio:
+                let mode: RecordingMode = action == .screen ? .screen : .audioOnly
+                if self.activeRecording?.mode == mode {
+                    self.stopSession()
+                } else if self.activeRecording == nil {
+                    self.requestRecording(mode)
+                }
+            case .dictation: self.toggleDictation()
+            case .pauseResume: self.toggleVideoPause()
+            }
+        }
+        settingsController.onRecordingShortcutsChanged = { [weak self] in
+            self?.refreshRecordingShortcuts()
+        }
+        refreshRecordingShortcuts()
         screenshotShortcutRegistrar.onCapture = { [weak self] in
             self?.requestScreenshot($0)
         }
@@ -258,8 +419,14 @@ final class AppController {
         settingsController.onToggleRecordingName = { [weak self] in
             self?.toggleRecordingName()
         }
-        settingsController.onEditRecordingNameTemplate = { [weak self] in
-            self?.editRecordingNameTemplate()
+        settingsController.onUpdateRecordingNameTemplate = { [weak self] template in
+            guard let self else { return }
+            // The field validates first; preferences remain the final policy boundary.
+            try? self.recordingNamePreferences.setTemplate(template)
+        }
+        settingsController.onSelectSpeechLanguage = { [weak self] language in
+            TranscriptionPreferences.setLanguage(language)
+            self?.refreshTranscriptionSettings()
         }
         settingsController.onSelectTranscriptionEngine = { [weak self] in
             self?.selectTranscriptionEngine($0)
@@ -303,6 +470,11 @@ final class AppController {
             refreshRecentRecordingMenu()
         }
 
+        if recordingToResume == nil, screenshotToResume == nil, exportDirectoryLease == nil,
+            !UserDefaults.standard.bool(forKey: "recording.checklistDismissed")
+        {
+            DispatchQueue.main.async { [weak self] in self?.showSettings(section: .recording) }
+        }
         if let recordingToResume {
             DispatchQueue.main.async { [weak self] in
                 self?.requestRecording(recordingToResume, resumingAfterRestart: true)
@@ -328,6 +500,7 @@ final class AppController {
     func shutdown() {
         quitAfterStop = true
         screenshotCaptureTask?.cancel()
+        audioImportTask?.cancel()
         if activeRecording == nil, let videoStartTask {
             videoStartTask.cancel()
             self.videoStartTask = nil
@@ -335,7 +508,7 @@ final class AppController {
         }
         guard
             activeRecording != nil || sessionPublishTask != nil || videoRotationTask != nil
-                || screenshotCaptureTask != nil
+                || screenshotCaptureTask != nil || audioImportTask != nil
         else {
             NSApp.terminate(nil)
             return
@@ -352,6 +525,7 @@ final class AppController {
         guard
             activeRecording != nil || sessionPublishTask != nil || videoStartTask != nil
                 || videoRotationTask != nil || screenshotCaptureTask != nil
+                || audioImportTask != nil
         else {
             return true
         }
@@ -395,9 +569,11 @@ final class AppController {
         // every recording mode.
         if activeRecording != nil, !recordingPermission.isScreenCaptureGranted {
             postNotification(
-                title: "Screen access needed for screenshots",
+                title: L10n.text("Screen access needed for screenshots"),
                 body:
-                    "Stop the current recording, take one screenshot to grant access, then try again.",
+                    L10n.text(
+                        "Stop the current recording, take one screenshot to grant access, then try again."
+                    ),
                 directory: exportDirectory
             )
             return
@@ -467,8 +643,9 @@ final class AppController {
                         Data("screenshot capture failed: \(error)\n".utf8)
                     )
                     self.postNotification(
-                        title: "Screenshot capture failed",
-                        body: "No screenshot was saved or copied. Try the capture again.",
+                        title: L10n.text("Screenshot capture failed"),
+                        body: L10n.text(
+                            "No screenshot was saved or copied. Try the capture again."),
                         directory: exportDirectory
                     )
                 }
@@ -491,20 +668,22 @@ final class AppController {
             menuBar.flashScreenshotSuccess()
         } else if output.savedURL != nil {
             postNotification(
-                title: "Screenshot saved, clipboard unavailable",
-                body: "The image is safe in the export folder. Copy it from Finder if needed.",
+                title: L10n.text("Screenshot saved, clipboard unavailable"),
+                body: L10n.text(
+                    "The image is safe in the export folder. Copy it from Finder if needed."),
                 directory: exportDirectory
             )
         } else if output.copiedToClipboard {
             postNotification(
-                title: "Screenshot copied, save failed",
-                body: "Paste the image now to preserve it, then check the export folder.",
+                title: L10n.text("Screenshot copied, save failed"),
+                body: L10n.text(
+                    "Paste the image now to preserve it, then check the export folder."),
                 directory: exportDirectory
             )
         } else {
             postNotification(
-                title: "Screenshot couldn’t be saved or copied",
-                body: "Check the export folder and try the capture again.",
+                title: L10n.text("Screenshot couldn’t be saved or copied"),
+                body: L10n.text("Check the export folder and try the capture again."),
                 directory: exportDirectory
             )
         }
@@ -532,7 +711,7 @@ final class AppController {
         } else if let activeRecording {
             activity = activeRecording.mode == .screen ? .screenRecording : .audioRecording
         } else if permissionTask != nil || videoStartTask != nil || sessionPublishTask != nil
-            || screenshotCaptureTask != nil
+            || screenshotCaptureTask != nil || audioImportTask != nil
         {
             activity = .busy
         } else {
@@ -555,14 +734,21 @@ final class AppController {
         )
     }
 
-    private func showSettings() {
+    private func refreshSettingsInteractionAvailability() {
         settingsController.updateInteractionAvailability(
-            menuBar.settingsInteractionAvailability
-        )
+            permissionTask == nil
+                ? menuBar.settingsInteractionAvailability
+                : .init(destinationSelectionEnabled: false, capturePrivacyEnabled: false))
+    }
+
+    func showSettings(section: SettingsWindowController.Section? = nil) {
+        refreshSettingsInteractionAvailability()
         refreshCapturePrivacySettings()
         refreshRecordingNameSettings()
         refreshTranscriptionSettings()
         refreshLaunchAtLoginSettings()
+        settingsController.updateScreenSource(screenCaptureSourcePreferences.selected)
+        if let section { settingsController.select(section: section) }
         settingsController.show(
             exportDirectory: exportDirectoryLease?.url
                 ?? exportDirectoryAccess.suggestedDirectory
@@ -585,11 +771,138 @@ final class AppController {
         }
     }
 
+    private func refreshRecordingShortcuts() {
+        settingsController.updateRecordingShortcutFailures(
+            screenshotShortcutRegistrar.applyRecording(RecordingShortcuts()))
+    }
+
+    private var controlSnapshot: RecordingControl.Snapshot {
+        let mode = activeRecording?.mode.controlMode ?? requestedRecordingMode?.controlMode
+        if sessionPublishTask != nil { return .init(phase: .saving, mode: mode) }
+        if audioStopTask != nil || videoStopTask != nil || pendingVideoStop || pendingPermissionStop
+        {
+            return .init(phase: .stopping, mode: mode)
+        }
+        if permissionTask != nil || videoStartTask != nil || permissionFlow.pendingMode != nil {
+            return .init(phase: .preparing, mode: mode)
+        }
+        if videoRotationTask != nil {
+            return .init(phase: videoPaused ? .resuming : .pausing, mode: mode)
+        }
+        if activeRecording != nil {
+            return .init(phase: videoPaused ? .paused : .recording, mode: mode)
+        }
+        return .init(phase: .idle)
+    }
+
+    func performRecordingCommand(
+        _ request: RecordingControl.Request, interactive: Bool
+    ) -> RecordingControl.Response {
+        do {
+            let effect = try RecordingControl.effect(
+                for: request.action, mode: request.mode, in: controlSnapshot)
+            switch effect {
+            case .none: break
+            case .start(let mode):
+                let recordingMode: RecordingMode =
+                    switch mode {
+                    case .screen: .screen
+                    case .audio: .audioOnly
+                    case .dictation: .dictation
+                    }
+                guard !quitAfterStop, screenshotCaptureTask == nil else {
+                    throw RecordingControl.Failure.busy
+                }
+                if mode == .dictation {
+                    guard !dictationPreview.isProcessing else {
+                        throw RecordingControl.Failure.busy
+                    }
+                    guard dictationModelIsReady else {
+                        throw RecordingControl.Failure.setupRequired
+                    }
+                }
+                if !interactive {
+                    let audio = audioConfiguration(for: recordingMode)
+                    guard exportDirectoryLease != nil,
+                        MicrophoneSelectionPolicy.isAvailable(
+                            audio, deviceIDs: Set(AudioInputDevices.available().map(\.uid))),
+                        !audio.includeMicrophone
+                            || SystemMicrophonePermissionProvider().state == .authorized,
+                        !(mode == .screen || audio.includeSystemAudio)
+                            || recordingPermission.isScreenCaptureGranted,
+                        mode != .screen || screenCaptureSourcePreferences.selected == .mainDisplay
+                    else { throw RecordingControl.Failure.setupRequired }
+                }
+                requestRecording(recordingMode)
+                guard controlSnapshot.phase != .idle else {
+                    throw RecordingControl.Failure.unavailable
+                }
+            case .stop:
+                // Permission preparation can exist before a session. Invalidate
+                // it first so a late permission callback cannot start capture.
+                if permissionTask != nil {
+                    pendingPermissionStop = true
+                    permissionTask?.cancel()
+                    menuBar.updateSavingRecording()
+                } else if permissionFlow.pendingMode != nil {
+                    permissionFlow.clear()
+                    pendingRecordingIntentStore.clear()
+                    menuBar.update(recording: false, elapsed: nil)
+                } else if activeRecording == nil, let task = videoStartTask {
+                    task.cancel()
+                    // Keep the task marked busy until its cancellation unwinds.
+                } else {
+                    stopSession()
+                }
+            case .pause, .resume: toggleVideoPause()
+            }
+            return .init(id: request.id, snapshot: controlSnapshot)
+        } catch {
+            return .init(
+                id: request.id, snapshot: controlSnapshot,
+                failure: (error as? RecordingControl.Failure) ?? .unavailable)
+        }
+    }
+
+    private func audioConfiguration(for mode: RecordingMode) -> CaptureAudioConfiguration {
+        mode.controlMode.audioConfiguration(using: audioPreferences.configuration)
+    }
+
+    private var dictationModelIsReady: Bool {
+        let selection = Config.transcriptionSelection()
+        switch selection.engine {
+        case .parakeet: return ParakeetModelInstaller.isInstalled(.v3)
+        case .macwhisper:
+            return MacWhisperExecutable.resolve(configuredPath: selection.executable) != nil
+        }
+    }
+
+    private func toggleDictation() {
+        if controlSnapshot.mode == .dictation {
+            _ = performRecordingCommand(.init(instance: UUID(), action: .stop), interactive: true)
+            return
+        }
+        guard controlSnapshot.phase == .idle else { return }
+        if dictationPreview.isProcessing { dictationPreview.show(); return }
+        guard dictationModelIsReady else { showSettings(section: .transcription); return }
+        requestRecording(.dictation)
+    }
+
+    private func queueFinishedRecording(
+        _ directory: URL, mode: RecordingMode, lease: ExportDirectoryLease?
+    ) {
+        if mode == .dictation {
+            dictationPreview.begin(directory: directory, retaining: lease)
+            dictationPreview.show()
+        }
+        Task { [transcription] in await transcription.enqueue(directory, retaining: lease) }
+    }
+
     private func requestRecording(
         _ mode: RecordingMode,
         resumingAfterRestart: Bool = false
     ) {
-        guard activeRecording == nil,
+        guard !quitAfterStop, activeRecording == nil,
             permissionTask == nil,
             sessionPublishTask == nil,
             videoStartTask == nil
@@ -606,20 +919,34 @@ final class AppController {
             return
         }
 
+        requestedRecordingMode = mode
+        recordingAudio = audioConfiguration(for: mode)
+        if !selectedMicrophoneIsAvailable {
+            permissionFlow.clear()
+            offerAnotherMicrophone()
+            return
+        }
         menuBar.updateRequestingPermissions(for: mode)
         recordDiagnosticEvent(.recordingRequested)
         permissionTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let preparation = await self.recordingPermission.prepare(for: mode)
-            guard !Task.isCancelled else { return }
+            let preparation = await self.recordingPermission.prepare(
+                for: mode, audio: self.recordingAudio)
             self.permissionTask = nil
+            if Task.isCancelled {
+                self.pendingPermissionStop = false
+                self.permissionFlow.clear()
+                _ = self.recordingPermission.takePreparedSystemAudioTap()
+                self.menuBar.update(recording: false, elapsed: nil)
+                return
+            }
 
             switch preparation {
             case .ready:
                 self.permissionFlow.clear()
                 switch mode {
                 case .screen: self.startVideoSessionAfterPermission()
-                case .audioOnly:
+                case .audioOnly, .dictation:
                     self.startAudioSessionAfterPermission(
                         preparedSystemAudioTap: self.recordingPermission
                             .takePreparedSystemAudioTap()
@@ -647,9 +974,14 @@ final class AppController {
         guard activeRecording == nil else { return }
         ensureExportFolderAccess()
         do {
+            guard selectedMicrophoneIsAvailable else {
+                throw AudioInputDevices.InputError.unavailable
+            }
             let newSession = try RecordingSession(
                 root: root,
-                preparedSystemAudioTap: preparedSystemAudioTap
+                preparedSystemAudioTap: preparedSystemAudioTap,
+                audio: recordingAudio,
+                purpose: requestedRecordingMode == .dictation ? .dictation : nil
             ) { [weak self] event in
                 Task { @MainActor [weak self] in self?.handleCaptureHealth(event) }
             }
@@ -662,16 +994,17 @@ final class AppController {
             FileHandle.standardError.write(Data("● recording → \(newSession.dir.path)\n".utf8))
         } catch {
             recordingExportName = nil
+            menuBar.update(recording: false, elapsed: nil)
             FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
             postNotification(
-                title: "Audio recording couldn’t start",
-                body: "Check the microphone permission and try again.",
+                title: L10n.text("Audio recording couldn’t start"),
+                body: L10n.text("Check the microphone permission and try again."),
                 directory: root
             )
             return
         }
 
-        menuBar.update(recording: true, elapsed: "0:00", mode: .audioOnly)
+        menuBar.update(recording: true, elapsed: "0:00", mode: requestedRecordingMode ?? .audioOnly)
         startTicker()
     }
 
@@ -684,7 +1017,11 @@ final class AppController {
             guard let self else { return }
             var newSession: VideoRecordingSession?
             do {
-                let prepared = try await self.prepareVideoCaptureSource()
+                var prepared = try await self.prepareVideoCaptureSource()
+                prepared.configuration.audio = self.recordingAudio
+                guard self.selectedMicrophoneIsAvailable else {
+                    throw AudioInputDevices.InputError.unavailable
+                }
                 try Task.checkCancellation()
                 let session = try VideoRecordingSession(root: self.root) { [weak self] event in
                     Task { @MainActor [weak self] in self?.handleVideoEvent(event) }
@@ -764,7 +1101,7 @@ final class AppController {
 
     private func startTicker() {
         ticker?.invalidate()
-        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+        ticker = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
     }
@@ -821,8 +1158,8 @@ final class AppController {
                 Data("recording finalization failed: \(error)\n".utf8)
             )
             postNotification(
-                title: "Audio recording needs recovery",
-                body: "The audio is safe. Click to open the recording folder.",
+                title: L10n.text("Audio recording needs recovery"),
+                body: L10n.text("The audio is safe. Click to open the recording folder."),
                 directory: session.dir
             )
         }
@@ -832,7 +1169,6 @@ final class AppController {
                 "○ stopped · \(elapsed) · \(session.dir.path)\n".utf8
             ))
         activeRecording = nil
-        menuBar.update(recording: false, elapsed: nil)
 
         if finalized {
             let preferredExportName =
@@ -841,13 +1177,14 @@ final class AppController {
             recordingExportName = nil
             beginSessionPublication(
                 sessionDirectory: session.dir,
-                mode: .audioOnly,
+                mode: session.purpose == .dictation ? .dictation : .audioOnly,
                 originalVideoURL: nil,
                 preferredBaseName: preferredExportName
             )
             return
         }
         recordingExportName = nil
+        menuBar.update(recording: false, elapsed: nil)
         refreshRecentRecordingMenu()
         terminateIfRequested()
     }
@@ -889,8 +1226,6 @@ final class AppController {
         if case .video(let active) = activeRecording, active === session {
             activeRecording = nil
         }
-        menuBar.update(recording: false, elapsed: nil)
-
         switch result {
         case .success(let outcome):
             logIngress(outcome.ingress)
@@ -904,19 +1239,20 @@ final class AppController {
                 return
             } else {
                 postNotification(
-                    title: "Screen recording preserved",
-                    body: "Capture stopped early, but the available video is safe.",
+                    title: L10n.text("Screen recording preserved"),
+                    body: L10n.text("Capture stopped early, but the available video is safe."),
                     directory: outcome.sessionDirectory
                 )
             }
         case .failure(let error):
             FileHandle.standardError.write(Data("video finalization failed: \(error)\n".utf8))
             postNotification(
-                title: "Screen recording needs recovery",
-                body: "The available media is safe. Click to open the recording folder.",
+                title: L10n.text("Screen recording needs recovery"),
+                body: L10n.text("The available media is safe. Click to open the recording folder."),
                 directory: session.dir
             )
         }
+        menuBar.update(recording: false, elapsed: nil)
         refreshRecentRecordingMenu()
         terminateIfRequested()
     }
@@ -928,6 +1264,7 @@ final class AppController {
         preferredBaseName: String
     ) {
         guard let exportDirectoryLease else {
+            menuBar.update(recording: false, elapsed: nil)
             if let originalVideoURL {
                 lastFinishedVideoURL = originalVideoURL
             }
@@ -935,10 +1272,10 @@ final class AppController {
             refreshGifskiMenu()
             postNotification(
                 title: Self.readyNotificationTitle(for: mode),
-                body: "Saved locally. Click to open the recording folder.",
+                body: L10n.text("Saved locally. Click to open the recording folder."),
                 directory: sessionDirectory
             )
-            Task { [transcription] in await transcription.enqueue(sessionDirectory) }
+            queueFinishedRecording(sessionDirectory, mode: mode, lease: nil)
             refreshRecentRecordingMenu()
             terminateIfRequested()
             return
@@ -1011,8 +1348,12 @@ final class AppController {
                 title: Self.readyNotificationTitle(for: mode),
                 body:
                     cleanupWarning == nil
-                    ? "Saved to \(exportRoot.lastPathComponent). Click to open the recording folder."
-                    : "Saved to \(exportRoot.lastPathComponent), but the private working copy could not be removed.",
+                    ? L10n.format(
+                        "Saved to %@. Click to open the recording folder.",
+                        exportRoot.lastPathComponent)
+                    : L10n.format(
+                        "Saved to %@, but the private working copy could not be removed.",
+                        exportRoot.lastPathComponent),
                 directory: export.directoryURL
             )
         case .exportFailed(let message):
@@ -1023,16 +1364,14 @@ final class AppController {
             FileHandle.standardError.write(Data("recording export failed: \(message)\n".utf8))
             postNotification(
                 title: Self.savedLocallyNotificationTitle(for: mode),
-                body: "The export failed, but the original recording is safe.",
+                body: L10n.text("The export failed, but the original recording is safe."),
                 directory: originalSessionDirectory
             )
         }
         setLastFinishedRecordingDirectory(publishedDirectory)
         refreshGifskiMenu()
         refreshRecentRecordingMenu()
-        Task { [transcription] in
-            await transcription.enqueue(publishedDirectory, retaining: exportDirectoryLease)
-        }
+        queueFinishedRecording(publishedDirectory, mode: mode, lease: exportDirectoryLease)
         terminateIfRequested()
     }
 
@@ -1125,6 +1464,37 @@ final class AppController {
         }
     }
 
+    private func updateAudioLevels(_ levels: (microphone: Double, system: Double)) {
+        recordingPanel.updateAudio(levels, configuration: recordingAudio)
+        settingsController.updateAudioLevels(levels, configuration: recordingAudio)
+    }
+
+    private var selectedMicrophoneIsAvailable: Bool {
+        MicrophoneSelectionPolicy.isAvailable(
+            recordingAudio, deviceIDs: Set(AudioInputDevices.available().map(\.uid)))
+    }
+
+    private func audioDevicesChanged() {
+        settingsController.refreshAudioDevices()
+        guard activeRecording != nil, !selectedMicrophoneIsAvailable else { return }
+        if selectedMicrophoneRecovery.handle(.deviceLost) == .stopRecording { stopSession() }
+    }
+
+    private func offerAnotherMicrophone(afterRecording: Bool = false) {
+        let alert = NSAlert()
+        alert.messageText = L10n.text("Selected microphone unavailable")
+        alert.informativeText =
+            (afterRecording
+                ? L10n.text("Record stopped and preserved the available media. ")
+                : L10n.text("No recording was started. "))
+            + L10n.text("Choose another microphone before starting a new recording.")
+        alert.addButton(withTitle: L10n.text("Choose Input"))
+        alert.addButton(withTitle: L10n.text("Later"))
+        if alert.runModal() == .alertFirstButtonReturn {
+            showSettings(section: .recording)
+        }
+    }
+
     private func handleCaptureHealth(_ event: CaptureHealthEvent) {
         menuBar.updateCaptureHealth(event)
         let line =
@@ -1159,7 +1529,7 @@ final class AppController {
     private func reportRecordingStartFailure(_ error: Error, directory: URL? = nil) {
         FileHandle.standardError.write(Data("recording start failed: \(error)\n".utf8))
         postNotification(
-            title: "Screen recording couldn’t start",
+            title: L10n.text("Screen recording couldn’t start"),
             body: Self.startFailureMessage(for: error),
             directory: directory ?? root
         )
@@ -1181,29 +1551,33 @@ final class AppController {
     static func startFailureMessage(for error: Error) -> String {
         switch captureFailure(from: error)?.code {
         case .sourceUnavailable:
-            "The selected screen or window is no longer available. Choose it again and retry."
+            L10n.text(
+                "The selected screen or window is no longer available. Choose it again and retry.")
         case .deviceDisconnected:
-            "An audio device became unavailable. Reconnect it and try again."
+            L10n.text("An audio device became unavailable. Reconnect it and try again.")
         case .encoderFailed, .writerFailed:
-            "Record couldn’t prepare the local video file. The failed session was preserved."
+            L10n.text(
+                "Record couldn’t prepare the local video file. The failed session was preserved.")
         case .permissionDenied:
-            "Screen Recording permission is required. Audio-only recording still works."
+            L10n.text("Screen Recording permission is required. Audio-only recording still works.")
         case .internalFailure, nil:
-            "Record couldn’t prepare screen capture. The failed session was preserved."
+            L10n.text("Record couldn’t prepare screen capture. The failed session was preserved.")
         }
     }
 
     static func readyNotificationTitle(for mode: RecordingMode) -> String {
         switch mode {
-        case .screen: "Screen recording ready"
-        case .audioOnly: "Audio recording ready"
+        case .screen: L10n.text("Screen recording ready")
+        case .audioOnly: L10n.text("Audio recording ready")
+        case .dictation: L10n.text("Dictation saved")
         }
     }
 
     static func savedLocallyNotificationTitle(for mode: RecordingMode) -> String {
         switch mode {
-        case .screen: "Screen recording saved locally"
-        case .audioOnly: "Audio recording saved locally"
+        case .screen: L10n.text("Screen recording saved locally")
+        case .audioOnly: L10n.text("Audio recording saved locally")
+        case .dictation: L10n.text("Dictation saved")
         }
     }
 
@@ -1213,6 +1587,7 @@ final class AppController {
         guard activeRecording == nil, videoStartTask == nil else { return }
         screenCaptureSourcePreferences.selected = source
         menuBar.updateScreenCaptureSource(source)
+        settingsController.updateScreenSource(source)
     }
 
     private func toggleCapturePrivacy(_ feature: CapturePrivacyFeature) {
@@ -1228,34 +1603,6 @@ final class AppController {
     private func toggleRecordingName() {
         recordingNamePreferences.isEnabled.toggle()
         refreshRecordingNameSettings()
-    }
-
-    private func editRecordingNameTemplate() {
-        let input = NSTextField(string: recordingNamePreferences.template.rawValue)
-        input.frame = NSRect(x: 0, y: 0, width: 420, height: 24)
-        input.placeholderString = "{date} at {time} - {color} {animal}"
-
-        let alert = NSAlert()
-        alert.messageText = "Recording Name Template"
-        alert.informativeText =
-            "Tokens: {date}, {time}, {clipboard}, {color}, {adjective}, {animal}, "
-            + "{country}, {name}, {starWars}. Clipboard is read only when requested."
-        alert.accessoryView = input
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-
-        do {
-            try recordingNamePreferences.setTemplate(input.stringValue)
-            recordingNamePreferences.isEnabled = true
-            refreshRecordingNameSettings()
-        } catch {
-            let failure = NSAlert()
-            failure.alertStyle = .warning
-            failure.messageText = "Invalid Recording Name Template"
-            failure.informativeText = "Use only the supported tokens and balanced braces."
-            failure.runModal()
-        }
     }
 
     private func refreshRecordingNameSettings() {
@@ -1278,16 +1625,16 @@ final class AppController {
             try GifskiHandoff.open(videoURL: lastFinishedVideoURL) { [weak self] result in
                 if case .failure = result, let self {
                     self.postNotification(
-                        title: "Gifski couldn’t open the video",
-                        body: "The recording is safe and can be opened manually.",
+                        title: L10n.text("Gifski couldn’t open the video"),
+                        body: L10n.text("The recording is safe and can be opened manually."),
                         directory: self.recordingDirectory(for: lastFinishedVideoURL)
                     )
                 }
             }
         } catch {
             postNotification(
-                title: "Gifski is unavailable",
-                body: "Install Gifski, then try opening the recording again.",
+                title: L10n.text("Gifski is unavailable"),
+                body: L10n.text("Install Gifski, then try opening the recording again."),
                 directory: recordingDirectory(for: lastFinishedVideoURL)
             )
         }
@@ -1308,30 +1655,92 @@ final class AppController {
             sessionPublishTask == nil,
             videoStartTask == nil,
             videoRotationTask == nil,
-            screenshotCaptureTask == nil
+            screenshotCaptureTask == nil, audioImportTask == nil
         {
             NSApp.terminate(nil)
         }
     }
 
+    private func importAudioFiles() {
+        guard audioImportTask == nil else { return }
+        ensureExportFolderAccess()
+        guard let lease = exportDirectoryLease else { return }
+        let panel = NSOpenPanel()
+        panel.title = L10n.text("Import Audio")
+        panel.message = L10n.text(
+            "Choose audio files to copy into Sessions and transcribe locally. Your originals stay in place."
+        )
+        panel.prompt = L10n.text("Import")
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = AudioImportPolicy.extensions.compactMap {
+            UTType(filenameExtension: $0)
+        }
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        recentSessions.setImporting(true)
+        audioImportTask = Task { [weak self] in
+            defer {
+                self?.audioImportTask = nil
+                self?.recentSessions.setImporting(false)
+                urls.forEach { $0.stopAccessingSecurityScopedResource() }
+                self?.terminateIfRequested()
+            }
+            var failures: [String] = []
+            for url in urls {
+                if Task.isCancelled { break }
+                self?.recentSessions.showMessage(
+                    L10n.format("Importing %@…", url.lastPathComponent))
+                do {
+                    let directory = try await AudioFileImporter.importInBackground(
+                        url, into: lease.url)
+                    await self?.transcription.enqueue(directory, retaining: lease)
+                } catch is CancellationError { break } catch {
+                    failures.append(url.lastPathComponent + ": " + error.localizedDescription)
+                }
+            }
+            self?.recentSessions.refresh()
+            if !Task.isCancelled && !failures.isEmpty {
+                let alert = NSAlert()
+                alert.messageText = L10n.text("Some files couldn’t be imported")
+                alert.informativeText = failures.joined(separator: "\n")
+                alert.runModal()
+            }
+        }
+    }
+
+    private func showRecentSessions() {
+        showSettings(section: .sessions)
+    }
+
     private func showTranscription(_ status: TranscriptionCoordinator.Status) {
+        dictationPreview.update(status)
+        accessibilityAnnouncements.update(status)
+        recentSessions.updateTranscription(status, isVisible: settingsController.isShowingSessions)
         switch status {
+        case .finished: break
         case .idle:
             menuBar.updateTranscription(nil)
         case .transcribing(let name, let queued):
             menuBar.updateTranscription(
-                queued > 0 ? "transcribing \(name) · \(queued) queued" : "transcribing \(name)"
+                L10n.format("Transcribing %@", name)
+                    + (queued > 0 ? L10n.format(" · %ld queued", queued) : "")
             )
+        case .progress(let name, let stage, let queued):
+            menuBar.updateTranscription(
+                "\(stage) · \(name)" + (queued > 0 ? L10n.format(" · %ld queued", queued) : ""))
+        case .deferred:
+            menuBar.updateTranscription(L10n.text("Transcription deferred · recording preserved"))
         case .failed(let name):
             menuBar.updateTranscription(
-                "transcription failed · \(name)",
+                L10n.format("Transcription needs retry · %@", name),
                 retryAvailable: true
             )
         }
     }
 
     private func retryTranscription() {
-        menuBar.updateTranscription("retrying transcription…")
+        menuBar.updateTranscription(L10n.text("retrying transcription…"))
         Task { [weak self, transcription] in
             if !(await transcription.retryLastFailure()) {
                 self?.menuBar.updateTranscription(nil)
@@ -1355,14 +1764,16 @@ final class AppController {
     }
 
     private func refreshTranscriptionSettings() {
-        if MacWhisperExecutable.installedApplicationCLI() != nil {
+        if Config.transcriptionSelection().engine == .macwhisper,
+            MacWhisperExecutable.installedApplicationCLI() != nil
+        {
             try? MacWhisperExecutable.installBundledApplicationScriptIfNeeded()
         }
-        let macWhisperAvailable =
-            MacWhisperExecutable.resolve(
-                configuredPath: Config.transcriptionExecutable()
-            ) != nil
         var engine = Config.transcriptionSelection().engine
+        let macWhisperAvailable =
+            engine == .macwhisper
+            ? MacWhisperExecutable.resolve(configuredPath: Config.transcriptionExecutable()) != nil
+            : MacWhisperExecutable.installedApplicationCLI() != nil
         if engine == .macwhisper, !macWhisperAvailable {
             TranscriptionPreferences.select(.parakeet)
             engine = .parakeet
@@ -1371,6 +1782,10 @@ final class AppController {
             (try? ParakeetModelID(
                 configurationValue: TranscriptionPreferences.defaultParakeetModel
             )) ?? .v3
+        settingsController.updateSpeechLanguage(
+            engine: engine,
+            preferred: TranscriptionPreferences.preferredLanguage(
+                configuration: Config.current.transcription))
         settingsController.updateTranscriptionEngine(
             engine,
             macWhisperAvailable: macWhisperAvailable,
@@ -1401,14 +1816,16 @@ final class AppController {
 
     private func presentParakeetModelSetup() {
         let alert = NSAlert()
-        alert.messageText = "Set Up Local Parakeet Transcription"
+        alert.messageText = L10n.text("Set Up Local Parakeet Transcription")
         alert.informativeText =
-            "Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. "
-            + "Record can download the pinned model from its GitHub release and verify it "
-            + "before local installation. Recording continues to work without the model."
-        alert.addButton(withTitle: "Download and Install")
-        alert.addButton(withTitle: "Import Existing Model…")
-        alert.addButton(withTitle: "Later")
+            L10n.text(
+                "Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. ")
+            + L10n.text(
+                "Record can download the pinned model from its GitHub release and verify it ")
+            + L10n.text("before local installation. Recording continues to work without the model.")
+        alert.addButton(withTitle: L10n.text("Download and Install"))
+        alert.addButton(withTitle: L10n.text("Import Existing Model…"))
+        alert.addButton(withTitle: L10n.text("Later"))
         NSApp.activate(ignoringOtherApps: true)
         switch alert.runModal() {
         case .alertFirstButtonReturn:
@@ -1424,16 +1841,22 @@ final class AppController {
         guard !modelSetupInProgress else { return }
         modelSetupInProgress = true
         refreshTranscriptionSettings()
-        menuBar.updateTranscription("downloading Parakeet model…")
-        Task { [weak self, transcription, root] in
+        menuBar.updateTranscription(L10n.text("downloading Parakeet model…"))
+        modelSetupWindow.begin()
+        modelSetupTask = Task { [weak self, transcription, root] in
             let result: Result<ParakeetModelInstaller.InstallResult, Error>
             do {
-                result = .success(try await ParakeetModelInstaller.downloadAndInstallV3())
+                result = .success(
+                    try await ParakeetModelInstaller.downloadAndInstallV3 { [weak self] progress in
+                        Task { @MainActor [weak self] in self?.modelSetupWindow.update(progress) }
+                    })
             } catch {
                 result = .failure(error)
             }
             guard let self else { return }
             self.modelSetupInProgress = false
+            self.modelSetupTask = nil
+            self.modelSetupWindow.close()
             self.menuBar.updateTranscription(nil)
             self.refreshTranscriptionSettings()
             switch result {
@@ -1441,15 +1864,16 @@ final class AppController {
                 self.presentParakeetModelReady()
                 await transcription.resumePending(root: root)
             case .failure(let error):
+                if Task.isCancelled || error is CancellationError { return }
                 let alert = NSAlert()
                 alert.alertStyle = .warning
-                alert.messageText = "Record Couldn’t Download the Parakeet Model"
+                alert.messageText = L10n.text("Record Couldn’t Download the Parakeet Model")
                 alert.informativeText =
                     (error as NSError).localizedDescription
-                    + " You can retry or use the manual import option."
-                alert.addButton(withTitle: "Retry")
-                alert.addButton(withTitle: "Manual Setup…")
-                alert.addButton(withTitle: "Cancel")
+                    + L10n.text(" You can retry or use the manual import option.")
+                alert.addButton(withTitle: L10n.text("Retry"))
+                alert.addButton(withTitle: L10n.text("Manual Setup…"))
+                alert.addButton(withTitle: L10n.text("Cancel"))
                 NSApp.activate(ignoringOtherApps: true)
                 switch alert.runModal() {
                 case .alertFirstButtonReturn:
@@ -1466,8 +1890,8 @@ final class AppController {
     private func chooseAndImportParakeetModel() {
         guard !modelSetupInProgress else { return }
         let panel = NSOpenPanel()
-        panel.title = "Choose the Downloaded Parakeet v3 Model Folder"
-        panel.prompt = "Import Model"
+        panel.title = L10n.text("Choose the Downloaded Parakeet v3 Model Folder")
+        panel.prompt = L10n.text("Import Model")
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
@@ -1476,7 +1900,7 @@ final class AppController {
         modelSetupInProgress = true
         refreshTranscriptionSettings()
         let accessed = source.startAccessingSecurityScopedResource()
-        menuBar.updateTranscription("verifying Parakeet model…")
+        menuBar.updateTranscription(L10n.text("verifying Parakeet model…"))
         Task { [weak self, transcription, root] in
             let result = await Task.detached(priority: .userInitiated) {
                 Result { try ParakeetModelInstaller.installV3(from: source) }
@@ -1493,12 +1917,12 @@ final class AppController {
             case .failure(let error):
                 let alert = NSAlert()
                 alert.alertStyle = .warning
-                alert.messageText = "Record Couldn’t Import This Model"
+                alert.messageText = L10n.text("Record Couldn’t Import This Model")
                 alert.informativeText =
                     String(describing: error)
-                    + " Download it again from the verified source and retry."
-                alert.addButton(withTitle: "Open Verified Source")
-                alert.addButton(withTitle: "Cancel")
+                    + L10n.text(" Download it again from the verified source and retry.")
+                alert.addButton(withTitle: L10n.text("Open Verified Source"))
+                alert.addButton(withTitle: L10n.text("Cancel"))
                 NSApp.activate(ignoringOtherApps: true)
                 if alert.runModal() == .alertFirstButtonReturn {
                     NSWorkspace.shared.open(ParakeetModelInstaller.verifiedSource)
@@ -1509,15 +1933,28 @@ final class AppController {
 
     private func presentParakeetModelReady() {
         let alert = NSAlert()
-        alert.messageText = "Parakeet Is Ready"
+        alert.messageText = L10n.text("Parakeet Is Ready")
         alert.informativeText =
-            "The verified model was installed locally. Pending recordings will now be transcribed."
+            L10n.text(
+                "The verified model was installed locally. Pending recordings will now be transcribed."
+            )
         alert.addButton(withTitle: "OK")
         NSApp.activate(ignoringOtherApps: true)
         alert.runModal()
     }
 
     private func tick() {
+        switch activeRecording {
+        case .audio(let session): updateAudioLevels(session.audioLevels)
+        case .video(let session):
+            Task { [weak self] in
+                let levels = await session.audioLevels()
+                guard case .video(let current) = self?.activeRecording, current.id == session.id
+                else { return }
+                self?.updateAudioLevels(levels)
+            }
+        case nil: break
+        }
         guard let activeRecording else { return }
         let elapsed: TimeInterval
         switch activeRecording {
@@ -1572,9 +2009,14 @@ final class AppController {
         recentRecordingRefreshTask?.cancel()
         let roots = recentRecordingRoots
         let recoveryRoot = root
+        if settingsController.isShowingSessions {
+            recentSessions.update(roots: roots, retaining: exportDirectoryLease)
+        }
+        let retainedLease = exportDirectoryLease
         recentRecordingRefreshTask = Task { [weak self] in
             let (snapshot, hasRecoveryMaterial) = await Task.detached(priority: .utility) {
-                (
+                defer { withExtendedLifetime(retainedLease) {} }
+                return (
                     RecentRecordingLocator.snapshot(under: roots),
                     RecoveryMaterialLocator.hasMaterial(under: recoveryRoot)
                 )
@@ -1605,12 +2047,14 @@ final class AppController {
             refreshLaunchAtLoginSettings()
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Record couldn’t change Login Items"
+            alert.messageText = L10n.text("Record couldn’t change Login Items")
             alert.informativeText =
                 error.localizedDescription
-                + "\n\nYou can manage Record manually in System Settings → General → Login Items."
-            alert.addButton(withTitle: "Open Login Items")
-            alert.addButton(withTitle: "Cancel")
+                + L10n.text(
+                    "\n\nYou can manage Record manually in System Settings → General → Login Items."
+                )
+            alert.addButton(withTitle: L10n.text("Open Login Items"))
+            alert.addButton(withTitle: L10n.text("Cancel"))
             NSApp.activate(ignoringOtherApps: true)
             if alert.runModal() == .alertFirstButtonReturn {
                 launchAtLoginController.openSystemSettings()
@@ -1624,11 +2068,12 @@ final class AppController {
 
     private func presentLaunchAtLoginApproval() {
         let alert = NSAlert()
-        alert.messageText = "Approve Record at Login"
+        alert.messageText = L10n.text("Approve Record at Login")
         alert.informativeText =
-            "macOS needs your approval before Record can open automatically after sign-in."
-        alert.addButton(withTitle: "Open Login Items")
-        alert.addButton(withTitle: "Later")
+            L10n.text(
+                "macOS needs your approval before Record can open automatically after sign-in.")
+        alert.addButton(withTitle: L10n.text("Open Login Items"))
+        alert.addButton(withTitle: L10n.text("Later"))
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
             launchAtLoginController.openSystemSettings()
@@ -1690,53 +2135,37 @@ final class AppController {
         permissionTask = nil
         pendingRecordingIntentStore.save(mode)
 
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = false
-        configuration.createsNewApplicationInstance = true
-        let applicationURL = Bundle.main.bundleURL
-
-        Task { @MainActor [weak self] in
-            do {
-                _ = try await NSWorkspace.shared.openApplication(
-                    at: applicationURL,
-                    configuration: configuration
-                )
-                NSApp.terminate(nil)
-            } catch {
-                self?.pendingRecordingIntentStore.clear()
-                self?.postNotification(
-                    title: "Record couldn’t restart",
-                    body: "Quit Record from the menu bar, then open it again.",
-                    directory: self?.root
-                )
-            }
-        }
+        relaunch { [weak self] in self?.pendingRecordingIntentStore.clear() }
     }
 
     private func restart(resumingScreenshot kind: ScreenshotCaptureKind) {
         guard activeRecording == nil, screenshotCaptureTask == nil else { return }
         pendingScreenshotPermission = nil
         pendingScreenshotIntentStore.save(kind)
+        relaunch { [weak self] in self?.pendingScreenshotIntentStore.clear() }
+    }
 
+    private func relaunch(clearingPendingIntent: @escaping @MainActor () -> Void) {
+        quitAfterStop = true
+        commandServer?.suspend()
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = false
         configuration.createsNewApplicationInstance = true
         let applicationURL = Bundle.main.bundleURL
-
         Task { @MainActor [weak self] in
             do {
                 _ = try await NSWorkspace.shared.openApplication(
-                    at: applicationURL,
-                    configuration: configuration
-                )
+                    at: applicationURL, configuration: configuration)
                 NSApp.terminate(nil)
             } catch {
-                self?.pendingScreenshotIntentStore.clear()
-                self?.postNotification(
-                    title: "Record couldn’t restart",
-                    body: "Quit Record from the menu bar, then open it again.",
-                    directory: self?.root
-                )
+                clearingPendingIntent()
+                guard let self else { return }
+                self.quitAfterStop = false
+                do { try self.commandServer?.resume() } catch { NSApp.terminate(nil); return }
+                self.postNotification(
+                    title: L10n.text("Record couldn’t restart"),
+                    body: L10n.text("Quit Record from the menu bar, then open it again."),
+                    directory: self.root)
             }
         }
     }
@@ -1794,7 +2223,7 @@ final class AppController {
             sessionPublishTask == nil,
             videoStartTask == nil,
             permissionTask == nil,
-            screenshotCaptureTask == nil
+            screenshotCaptureTask == nil, audioImportTask == nil
         else { return }
         do {
             guard let selection = try exportDirectoryAccess.choose() else { return }
@@ -1812,8 +2241,9 @@ final class AppController {
         } catch {
             FileHandle.standardError.write(Data("export folder selection failed: \(error)\n".utf8))
             postNotification(
-                title: "Export folder unavailable",
-                body: "Choose the export folder again. Existing recordings are unaffected.",
+                title: L10n.text("Export folder unavailable"),
+                body: L10n.text(
+                    "Choose the export folder again. Existing recordings are unaffected."),
                 directory: root
             )
         }

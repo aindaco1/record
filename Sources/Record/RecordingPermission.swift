@@ -90,20 +90,26 @@ enum RecordingPermissionBlocker: Equatable, Sendable {
 
     fileprivate var alertTitle: String {
         switch self {
-        case .microphone: "Allow Microphone Access"
-        case .screenAndSystemAudio: "Allow Screen Recording"
-        case .systemAudioOnly: "Allow System Audio Recording"
+        case .microphone: L10n.text("Allow Microphone Access")
+        case .screenAndSystemAudio: L10n.text("Allow Screen Recording")
+        case .systemAudioOnly: L10n.text("Allow System Audio Recording")
         }
     }
 
     fileprivate var guidance: String {
         switch self {
         case .microphone:
-            "Enable Record under Privacy & Security › Microphone. Record will restart after you change the permission."
+            L10n.text(
+                "Enable Record under Privacy & Security › Microphone. Record will restart after you change the permission."
+            )
         case .screenAndSystemAudio:
-            "Enable Record under Privacy & Security › Screen & System Audio Recording. Record will restart after you change the permission."
+            L10n.text(
+                "Enable Record under Privacy & Security › Screen & System Audio Recording. Record will restart after you change the permission."
+            )
         case .systemAudioOnly:
-            "Enable Record under Privacy & Security › Screen & System Audio Recording › System Audio Recording Only. Record will restart after you change the permission."
+            L10n.text(
+                "Enable Record under Privacy & Security › Screen & System Audio Recording › System Audio Recording Only. Record will restart after you change the permission."
+            )
         }
     }
 
@@ -180,25 +186,30 @@ final class RecordingPermissionController {
 
     var isScreenCaptureGranted: Bool { screen.isGranted }
 
-    func prepare(for mode: RecordingMode) async -> RecordingPermissionPreparation {
-        switch microphone.state {
-        case .authorized:
-            break
-        case .notDetermined:
-            guard await microphone.requestAccess() else {
+    func prepare(for mode: RecordingMode, audio: CaptureAudioConfiguration = .init()) async
+        -> RecordingPermissionPreparation
+    {
+        if audio.includeMicrophone {
+            switch microphone.state {
+            case .authorized:
+                break
+            case .notDetermined:
+                guard await microphone.requestAccess() else {
+                    return .needsSettings(.microphone)
+                }
+            case .denied:
                 return .needsSettings(.microphone)
             }
-        case .denied:
-            return .needsSettings(.microphone)
-        }
 
+        }
         switch mode {
         case .screen:
             if screen.isGranted { return .ready }
             return screen.requestAccess()
                 ? .ready
                 : .waitingForRestart(.screenAndSystemAudio)
-        case .audioOnly:
+        case .audioOnly, .dictation:
+            guard audio.includeSystemAudio else { return .ready }
             let status = systemAudio.registerAccessRequest()
             guard status == noErr else {
                 FileHandle.standardError.write(
@@ -240,8 +251,8 @@ final class RecordingPermissionController {
         alert.alertStyle = .informational
         alert.messageText = blocker.alertTitle
         alert.informativeText = blocker.guidance
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Not Now")
+        alert.addButton(withTitle: L10n.text("Open System Settings"))
+        alert.addButton(withTitle: L10n.text("Not Now"))
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
         NSWorkspace.shared.open(blocker.settingsURL)
         return true

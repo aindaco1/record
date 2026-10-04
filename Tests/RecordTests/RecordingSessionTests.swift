@@ -5,6 +5,32 @@ import XCTest
 
 @MainActor
 final class RecordingSessionTests: XCTestCase {
+    func testSingleSourceDoesNotStartOrFinalizeTheDisabledTrack() async throws {
+        for microphoneEnabled in [true, false] {
+            let root = try makeDirectory()
+            defer { try? FileManager.default.removeItem(at: root) }
+            let microphone = FakeSessionAudioRecorder()
+            let system = FakeSessionAudioRecorder()
+            let session = try RecordingSession(
+                root: root,
+                audio: .init(
+                    includeSystemAudio: !microphoneEnabled, includeMicrophone: microphoneEnabled),
+                mic: microphone, system: system, audioFinalizer: FakeSessionAudioFinalizer())
+            try session.start()
+            try await session.stop()
+            let manifest = try SessionManifest.read(from: session.dir)
+            XCTAssertEqual(
+                manifest.tracks.map(\.kind), [microphoneEnabled ? .microphone : .systemAudio])
+            XCTAssertEqual(microphone.stopCount, microphoneEnabled ? 1 : 0)
+            XCTAssertEqual(system.stopCount, microphoneEnabled ? 0 : 1)
+            XCTAssertFalse(
+                FileManager.default.fileExists(
+                    atPath: session.dir.appendingPathComponent(
+                        microphoneEnabled ? "system.caf" : "mic.caf"
+                    ).path))
+        }
+    }
+
     func testCleanStopFinalizesAudioOnlyManifestWithWaveTracks() async throws {
         let root = try makeDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

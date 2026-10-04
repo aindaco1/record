@@ -7,9 +7,9 @@ public enum ScreenshotCaptureKind: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .display: "Full Display"
-        case .windowOrApplication: "Window or Application"
-        case .area: "Area"
+        case .display: L10n.text("Full Display")
+        case .windowOrApplication: L10n.text("Window or Application")
+        case .area: L10n.text("Area")
         }
     }
 
@@ -37,7 +37,7 @@ public enum ScreenshotImageFormat: String, CaseIterable, Codable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .png: "PNG (Lossless)"
+        case .png: L10n.text("PNG (Lossless)")
         case .jpeg: "JPEG"
         }
     }
@@ -96,6 +96,10 @@ public struct ScreenshotShortcut: Codable, Equatable, Hashable, Sendable {
         self.keyCode = keyCode
         self.modifiers = modifiers
         self.keyLabel = label
+    }
+
+    public func matchesKeys(of other: Self) -> Bool {
+        keyCode == other.keyCode && modifiers == other.modifiers
     }
 
     public var displayString: String {
@@ -176,7 +180,11 @@ public struct ScreenshotShortcutSet: Equatable, Sendable {
 
     public func validate() throws {
         let enabled = ScreenshotCaptureKind.allCases.compactMap { self[$0] }
-        guard Set(enabled).count == enabled.count else {
+        guard
+            !enabled.enumerated().contains(where: { index, shortcut in
+                enabled.prefix(index).contains { $0.matchesKeys(of: shortcut) }
+            })
+        else {
             throw ScreenshotCaptureContractError.duplicateShortcut
         }
     }

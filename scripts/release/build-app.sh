@@ -22,9 +22,9 @@ mkdir -p \
     "$app_path/Contents/XPCServices/RecordReportSender.xpc/Contents/MacOS"
 
 cd "$repo_root"
-swift build -c release --arch arm64 --disable-automatic-resolution
+swift build --build-system swiftbuild -c release --arch arm64 --disable-automatic-resolution
 binary_path="$(
-    swift build -c release --arch arm64 --disable-automatic-resolution \
+    swift build --build-system swiftbuild -c release --arch arm64 --disable-automatic-resolution \
         --show-bin-path
 )/record"
 binary_root="$(dirname "$binary_path")"
@@ -52,6 +52,25 @@ install -m 0644 Sources/RecordReportSenderService/Info.plist \
 ditto --norsrc --noextattr \
     "$sparkle_framework" \
     "$app_path/Contents/Frameworks/Sparkle.framework"
+# Native localization resources are compiled by SwiftPM from the generated catalogs.
+localization_bundle="$binary_root/Record_RecordCore.bundle"
+if [[ ! -d "$localization_bundle" ]]; then
+    echo "missing Record localization bundle" >&2
+    exit 1
+fi
+ditto --norsrc --noextattr "$localization_bundle" \
+    "$app_path/Contents/Resources/Record_RecordCore.bundle"
+ditto --norsrc --noextattr "$repo_root/Sources/Record/Resources/Localization" \
+    "$app_path/Contents/Resources"
+ditto --norsrc --noextattr "$repo_root/Sources/Record/Resources/ShortcutLocalization" \
+    "$app_path/Contents/Resources"
+# App Intents resolves display strings in the application bundle. Reuse the
+# same generated catalog that backs the in-app English and Spanish interface.
+for language in en es; do
+    install -m 0644 "$localization_bundle/Contents/Resources/$language.lproj/Localizable.strings" \
+        "$app_path/Contents/Resources/$language.lproj/Localizable.strings"
+done
+python3 "$repo_root/scripts/release/build-app-intents.py" "$app_path"
 install -m 0644 Sources/Record/Info.plist "$app_path/Contents/Info.plist"
 install -m 0644 Sources/Record/Resources/Record.icns \
     "$app_path/Contents/Resources/Record.icns"

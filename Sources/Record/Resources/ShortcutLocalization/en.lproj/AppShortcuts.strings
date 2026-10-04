@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Get recording status in ${applicationName}</key>
+	<string>Get recording status in ${applicationName}</string>
+	<key>Pause recording with ${applicationName}</key>
+	<string>Pause recording with ${applicationName}</string>
+	<key>Resume recording with ${applicationName}</key>
+	<string>Resume recording with ${applicationName}</string>
+	<key>Start recording with ${applicationName}</key>
+	<string>Start recording with ${applicationName}</string>
+	<key>Stop recording with ${applicationName}</key>
+	<string>Stop recording with ${applicationName}</string>
+</dict>
+</plist>

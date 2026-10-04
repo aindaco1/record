@@ -1,5 +1,7 @@
 import AVFoundation
 import Foundation
+import RecordCore
+import RecordCapture
 
 /// Fixed-capacity handoff from real-time audio callbacks to one serial file
 /// writer. Callback work is bounded to an owning buffer copy plus an O(1)
@@ -61,6 +63,7 @@ final class AudioFileWritePump: @unchecked Sendable {
     }
 
     private let lock = NSLock()
+    private let activity: AudioActivity?
     private let worker: DispatchQueue
     private let onEvent: @Sendable (Event) -> Void
     private var file: AVAudioFile?
@@ -77,6 +80,7 @@ final class AudioFileWritePump: @unchecked Sendable {
 
     init(
         file: AVAudioFile,
+        activity: AudioActivity? = nil,
         capacity: Int = 32,
         worker: DispatchQueue = DispatchQueue(
             label: "com.aindaco.record.audio-file-writer",
@@ -85,6 +89,7 @@ final class AudioFileWritePump: @unchecked Sendable {
         ),
         onEvent: @escaping @Sendable (Event) -> Void = { _ in }
     ) {
+        self.activity = activity
         self.file = file
         processingFormat = file.processingFormat
         pending = Ring(capacity: capacity)
@@ -202,6 +207,7 @@ final class AudioFileWritePump: @unchecked Sendable {
             do {
                 switch item {
                 case .audio(let buffer):
+                    activity?.record(buffer: buffer)
                     try file?.write(from: try normalized(buffer))
                     lock.withLock { state.writtenBuffers += 1 }
                 case .silence(let frames):
@@ -244,10 +250,12 @@ final class AudioFileWritePump: @unchecked Sendable {
             // emerge on a later callback without clipping that output.
             max(1, ceil(Double(source.frameLength) * ratio) + 1_024)
         )
-        guard let output = AVAudioPCMBuffer(
-            pcmFormat: processingFormat,
-            frameCapacity: capacity
-        ) else {
+        guard
+            let output = AVAudioPCMBuffer(
+                pcmFormat: processingFormat,
+                frameCapacity: capacity
+            )
+        else {
             throw NSError(
                 domain: "Record.AudioFileWritePump",
                 code: 2,
@@ -276,10 +284,12 @@ final class AudioFileWritePump: @unchecked Sendable {
         var remaining = frames
         while remaining > 0 {
             let frameCount = AVAudioFrameCount(min(remaining, 4_096))
-            guard let buffer = AVAudioPCMBuffer(
-                pcmFormat: processingFormat,
-                frameCapacity: frameCount
-            ) else {
+            guard
+                let buffer = AVAudioPCMBuffer(
+                    pcmFormat: processingFormat,
+                    frameCapacity: frameCount
+                )
+            else {
                 throw NSError(
                     domain: "Record.AudioFileWritePump",
                     code: 4,

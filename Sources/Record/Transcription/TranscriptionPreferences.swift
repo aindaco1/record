@@ -53,7 +53,7 @@ enum TranscriptionPreferences {
                     ?? configuredModel
                     ?? defaultParakeetModel,
                 executable: nil,
-                language: language
+                language: "auto"
             )
         case .macwhisper:
             let configuredModel = configuredEngine == .macwhisper ? configuration.model : nil
@@ -93,6 +93,19 @@ enum TranscriptionPreferences {
             return configuration.refineWithAppleIntelligence
         }
         return defaults.bool(forKey: refinementKey)
+    }
+
+    static func preferredLanguage(
+        configuration: AppConfiguration.Transcription, defaults: UserDefaults = .standard
+    ) -> String {
+        defaults.string(forKey: languageKey) ?? configuration.language
+    }
+
+    static func setLanguage(_ language: String, defaults: UserDefaults = .standard) {
+        // The first UI slice exposes the supported automatic/English/Spanish choices.
+        // Existing advanced choices stay intact until explicitly changed.
+        guard ["auto", "en", "es"].contains(language) else { return }
+        defaults.set(language, forKey: languageKey)
     }
 
     static func setRefinementEnabled(

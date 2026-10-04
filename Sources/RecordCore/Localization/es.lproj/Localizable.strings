@@ -1,0 +1,874 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>
+
+You can manage Record manually in System Settings → General → Login Items.</key>
+	<string>
+
+Puedes configurar Record en Configuración del Sistema → General → Ítems de inicio.</string>
+	<key> Download it again from the verified source and retry.</key>
+	<string> Descárgalo de nuevo desde la fuente verificada e inténtalo otra vez.</string>
+	<key> You can retry or use the manual import option.</key>
+	<string> Puedes reintentar o usar la importación manual.</string>
+	<key> · %ld queued</key>
+	<string> · %ld en cola</string>
+	<key>%@ activity</key>
+	<string>Actividad de %@</string>
+	<key>%@ · %ld/%ld complete</key>
+	<string>%@ · %ld/%ld completas</string>
+	<key>%ld percent</key>
+	<string>%ld por ciento</string>
+	<key>A default shortcut is assigned to recording. Change that recording shortcut first.</key>
+	<string>Un atajo predeterminado está asignado a grabación. Cámbialo antes de restablecer los atajos.</string>
+	<key>A shortcut must include at least one modifier key.</key>
+	<string>El atajo debe incluir al menos una tecla modificadora.</string>
+	<key>Add word</key>
+	<string>Agregar palabra</string>
+	<key>All transcription runs locally on this Mac.</key>
+	<string>Todas las transcripciones se procesan en esta Mac.</string>
+	<key>Allow Microphone Access</key>
+	<string>Permitir acceso al micrófono</string>
+	<key>Allow Screen Recording</key>
+	<string>Permitir grabación de pantalla</string>
+	<key>Allow System Audio Recording</key>
+	<string>Permitir grabación del audio del sistema</string>
+	<key>Allow microphone access</key>
+	<string>Permite el acceso al micrófono</string>
+	<key>Allow screen recording access</key>
+	<string>Permite grabar la pantalla</string>
+	<key>An audio device became unavailable. Reconnect it and try again.</key>
+	<string>Un dispositivo de audio dejó de estar disponible. Reconéctalo e inténtalo de nuevo.</string>
+	<key>Apple Intelligence does not support the selected transcript language.</key>
+	<string>Apple Intelligence no admite el idioma seleccionado.</string>
+	<key>Apple Intelligence is not currently available.</key>
+	<string>Apple Intelligence no está disponible en este momento.</string>
+	<key>Apple Intelligence is not supported on this Mac.</key>
+	<string>Esta Mac no es compatible con Apple Intelligence.</string>
+	<key>Apple Intelligence is still preparing its on-device model.</key>
+	<string>Apple Intelligence aún está preparando su modelo local.</string>
+	<key>Applies to captures only. Existing Finder windows remain visible.</key>
+	<string>Solo afecta a las capturas. Las ventanas abiertas de Finder siguen visibles.</string>
+	<key>Applies to captures only. Notification sounds may still be recorded.</key>
+	<string>Solo afecta a las capturas. Los sonidos de las notificaciones podrían grabarse.</string>
+	<key>Applies to captures only. Your macOS menu bar remains unchanged.</key>
+	<string>Solo afecta a las capturas. La barra de menús de macOS no cambia.</string>
+	<key>Applies to the next session processed. Interface language is set separately in General.</key>
+	<string>Se aplica a la siguiente sesión procesada. El idioma de la interfaz se configura por separado en General.</string>
+	<key>Apply Vocabulary</key>
+	<string>Aplicar vocabulario</string>
+	<key>Approve Record at Login</key>
+	<string>Autorizar Record al iniciar sesión</string>
+	<key>Area</key>
+	<string>Área</string>
+	<key>Audio</key>
+	<string>Audio</string>
+	<key>Audio only</key>
+	<string>Solo audio</string>
+	<key>Audio recording couldn’t start</key>
+	<string>No se pudo iniciar la grabación de audio</string>
+	<key>Audio recording needs recovery</key>
+	<string>La grabación de audio necesita recuperación</string>
+	<key>Audio recording ready</key>
+	<string>Grabación de audio lista</string>
+	<key>Audio recording saved locally</key>
+	<string>Grabación de audio guardada en tu Mac</string>
+	<key>Audio sources</key>
+	<string>Fuentes de audio</string>
+	<key>Audio start / stop</key>
+	<string>Iniciar / detener audio</string>
+	<key>Automatic</key>
+	<string>Automático</string>
+	<key>Before vocabulary</key>
+	<string>Antes del vocabulario</string>
+	<key>Before you start</key>
+	<string>Antes de empezar</string>
+	<key>Cancel</key>
+	<string>Cancelar</string>
+	<key>Cancelling…</key>
+	<string>Cancelando…</string>
+	<key>Capture Area…</key>
+	<string>Capturar área…</string>
+	<key>Capture Full Display</key>
+	<string>Capturar pantalla completa</string>
+	<key>Capture Window or Application…</key>
+	<string>Capturar ventana o aplicación…</string>
+	<key>Capture privacy</key>
+	<string>Privacidad de las capturas</string>
+	<key>Capture stopped early, but the available video is safe.</key>
+	<string>La captura se detuvo antes de tiempo. El video disponible está a salvo.</string>
+	<key>Change save folder</key>
+	<string>Cambiar carpeta de destino</string>
+	<key>Change…</key>
+	<string>Cambiar…</string>
+	<key>Check Permissions…</key>
+	<string>Comprobar permisos…</string>
+	<key>Check for Updates…</key>
+	<string>Buscar actualizaciones…</string>
+	<key>Check the export folder and try the capture again.</key>
+	<string>Revisa la carpeta de destino y repite la captura.</string>
+	<key>Check the microphone permission and try again.</key>
+	<string>Revisa el permiso del micrófono e inténtalo de nuevo.</string>
+	<key>Choose</key>
+	<string>Elegir</string>
+	<key>Choose Export Folder</key>
+	<string>Elegir carpeta de destino</string>
+	<key>Choose Input</key>
+	<string>Elegir entrada</string>
+	<key>Choose a Record .ips crash report up to 2 MB. Only the filtered summary can be sent.</key>
+	<string>Elige un informe de fallo .ips de Record de hasta 2 MB. Solo se puede enviar el resumen filtrado.</string>
+	<key>Choose a regular WAV, MP3, M4A, AIFF, CAF, or FLAC audio file under 4 GB.</key>
+	<string>Elige un archivo de audio WAV, MP3, M4A, AIFF, CAF o FLAC de menos de 4 GB que no sea un enlace.</string>
+	<key>Choose a save folder</key>
+	<string>Elige una carpeta de destino</string>
+	<key>Choose a valid Record .ips crash report no larger than 2 MB. The preview is unchanged.</key>
+	<string>Elige un informe .ips válido de Record de hasta 2 MB. La vista previa no cambió.</string>
+	<key>Choose an available save folder before importing audio.</key>
+	<string>Elige una carpeta de destino disponible antes de importar audio.</string>
+	<key>Choose another microphone before starting a new recording.</key>
+	<string>Elige otro micrófono antes de iniciar una nueva grabación.</string>
+	<key>Choose audio files to copy into Sessions and transcribe locally. Your originals stay in place.</key>
+	<string>Selecciona archivos de audio para copiarlos a Sesiones y transcribirlos en tu Mac. Los originales se conservan.</string>
+	<key>Choose the Downloaded Parakeet v3 Model Folder</key>
+	<string>Elige la carpeta descargada del modelo Parakeet v3</string>
+	<key>Choose the export folder again. Existing recordings are unaffected.</key>
+	<string>Vuelve a elegir la carpeta de destino. Las grabaciones existentes se conservan.</string>
+	<key>Choose what to capture, check your input, and start recording here.</key>
+	<string>Elige qué capturar, comprueba la entrada e inicia la grabación aquí.</string>
+	<key>Choose where files go, how recordings are named, and what stays out of captures.</key>
+	<string>Elige dónde guardar, cómo nombrar las grabaciones y qué excluir de las capturas.</string>
+	<key>Clean transcript</key>
+	<string>Transcripción depurada</string>
+	<key>Cleaning transcript</key>
+	<string>Depurando transcripción</string>
+	<key>Click a shortcut, then press a key combination. Delete turns it off; Escape cancels. Shortcuts work across apps.</key>
+	<string>Haz clic en un atajo y presiona una combinación de teclas. Suprimir lo desactiva; Escape cancela. Funcionan desde cualquier aplicación.</string>
+	<key>Click to approve Record in Login Items</key>
+	<string>Haz clic para autorizar Record en Ítems de inicio</string>
+	<key>Clipboard</key>
+	<string>Portapapeles</string>
+	<key>Complete recording permissions, source selection, and model setup in Record first.</key>
+	<string>Primero configura los permisos de grabación, la fuente y el modelo en Record.</string>
+	<key>Copied. Audio and transcripts stay in Sessions.</key>
+	<string>Copiado. El audio y las transcripciones se conservan en Sesiones.</string>
+	<key>Copy</key>
+	<string>Copiar</string>
+	<key>Copy transcript</key>
+	<string>Copiar texto</string>
+	<key>Could not prepare the report. Refresh to try again.</key>
+	<string>No se pudo preparar el informe. Actualiza para volver a intentarlo.</string>
+	<key>Could not save the report. Choose another location.</key>
+	<string>No se pudo guardar el informe. Elige otra ubicación.</string>
+	<key>Couldn’t apply vocabulary. Wait for transcription to finish and try again.</key>
+	<string>No se pudo aplicar el vocabulario. Espera a que termine la transcripción e inténtalo de nuevo.</string>
+	<key>Couldn’t defer transcription</key>
+	<string>No se pudo posponer la transcripción</string>
+	<key>Couldn’t register: %@. Another app or macOS is using the shortcut.</key>
+	<string>No se pudo registrar: %@. Otra aplicación o macOS está usando el atajo.</string>
+	<key>Crash summary ready for review. The raw file stays on your Mac.</key>
+	<string>El resumen del fallo está listo para revisar. El archivo original se queda en tu Mac.</string>
+	<key>Create transcripts after recording. Model setup is optional; recording works without it.</key>
+	<string>Transcribe al terminar de grabar. Instalar el modelo es opcional; puedes grabar sin él.</string>
+	<key>Custom Region…</key>
+	<string>Región personalizada…</string>
+	<key>Deferred</key>
+	<string>Pospuesta</string>
+	<key>Delivery was not confirmed. Retry sends this same report without counting it twice.</key>
+	<string>No se confirmó la entrega. Reintentar envía el mismo informe sin contarlo dos veces.</string>
+	<key>Dictation preview</key>
+	<string>Vista previa del dictado</string>
+	<key>Dictation saved</key>
+	<string>Dictado guardado</string>
+	<key>Dictation start / stop</key>
+	<string>Iniciar / detener dictado</string>
+	<key>Display, Application, or Window…</key>
+	<string>Pantalla, aplicación o ventana…</string>
+	<key>Download and Install</key>
+	<string>Descargar e instalar</string>
+	<key>Downloading and verifying…</key>
+	<string>Descargando y verificando…</string>
+	<key>Downloading model · %@ of %@</key>
+	<string>Descargando modelo · %@ de %@</string>
+	<key>Downloading…</key>
+	<string>Descargando…</string>
+	<key>Drag to select a capture area · Esc to cancel</key>
+	<string>Arrastra para seleccionar un área · Esc para cancelar</string>
+	<key>Enable Record under Privacy &amp; Security › Microphone. Record will restart after you change the permission.</key>
+	<string>Activa Record en Privacidad y seguridad › Micrófono. Record se reiniciará después de cambiar el permiso.</string>
+	<key>Enable Record under Privacy &amp; Security › Screen &amp; System Audio Recording › System Audio Recording Only. Record will restart after you change the permission.</key>
+	<string>Activa Record en Privacidad y seguridad › Grabación de pantalla y audio del sistema › Solo grabación de audio del sistema. Record se reiniciará después de cambiar el permiso.</string>
+	<key>Enable Record under Privacy &amp; Security › Screen &amp; System Audio Recording. Record will restart after you change the permission.</key>
+	<string>Activa Record en Privacidad y seguridad › Grabación de pantalla y audio del sistema. Record se reiniciará después de cambiar el permiso.</string>
+	<key>Engine</key>
+	<string>Motor</string>
+	<key>English</key>
+	<string>Inglés</string>
+	<key>Example: </key>
+	<string>Ejemplo: </string>
+	<key>Expanding the verified model…</key>
+	<string>Descomprimiendo el modelo verificado…</string>
+	<key>Export folder unavailable</key>
+	<string>Carpeta de destino no disponible</string>
+	<key>Failed</key>
+	<string>Fallida</string>
+	<key>File format</key>
+	<string>Formato de archivo</string>
+	<key>Filter by title or date (YYYY-MM-DD)</key>
+	<string>Filtrar por título o fecha (AAAA-MM-DD)</string>
+	<key>Filter sessions by title or date</key>
+	<string>Filtrar sesiones por título o fecha</string>
+	<key>Finalized</key>
+	<string>Finalizada</string>
+	<key>Finished Record sessions will be saved in this folder.</key>
+	<string>Las sesiones finalizadas de Record se guardarán en esta carpeta.</string>
+	<key>Follow macOS</key>
+	<string>Usar idioma de macOS</string>
+	<key>Full Display</key>
+	<string>Pantalla completa</string>
+	<key>General</key>
+	<string>General</string>
+	<key>Get Record’s current capture state without sharing recording content.</key>
+	<string>Consulta el estado actual de la captura en Record sin compartir su contenido.</string>
+	<key>Gifski Not Installed</key>
+	<string>Gifski no está instalado</string>
+	<key>Gifski couldn’t open the video</key>
+	<string>Gifski no pudo abrir el video</string>
+	<key>Gifski is unavailable</key>
+	<string>Gifski no está disponible</string>
+	<key>Global vocabulary</key>
+	<string>Vocabulario global</string>
+	<key>Help &amp; diagnostics</key>
+	<string>Ayuda y diagnóstico</string>
+	<key>Help &amp; diagnostics…</key>
+	<string>Ayuda y diagnóstico…</string>
+	<key>Hide Desktop items from capture</key>
+	<string>Ocultar elementos del escritorio en las capturas</string>
+	<key>Hide menu bar, including the clock</key>
+	<string>Ocultar la barra de menús, incluido el reloj</string>
+	<key>Hide notifications from capture</key>
+	<string>Ocultar notificaciones en las capturas</string>
+	<key>Idle</key>
+	<string>Sin grabar</string>
+	<key>Import</key>
+	<string>Importar</string>
+	<key>Import Audio</key>
+	<string>Importar audio</string>
+	<key>Import Audio…</key>
+	<string>Importar audio…</string>
+	<key>Import Existing Model…</key>
+	<string>Importar modelo existente…</string>
+	<key>Import Model</key>
+	<string>Importar modelo</string>
+	<key>Import crash log…</key>
+	<string>Importar informe de fallo…</string>
+	<key>Imported audio</key>
+	<string>Audio importado</string>
+	<key>Importing %@…</key>
+	<string>Importando %@…</string>
+	<key>Improve Transcript Readability</key>
+	<string>Mejorar legibilidad de transcripciones</string>
+	<key>In audio-only mode, a specific microphone uses raw input. System Default retains voice processing.</key>
+	<string>Al grabar solo audio, un micrófono específico usa entrada directa. Predeterminado del sistema conserva el procesamiento de voz.</string>
+	<key>Input test finished.</key>
+	<string>Prueba de entrada finalizada.</string>
+	<key>Input test stopped.</key>
+	<string>Prueba de entrada detenida.</string>
+	<key>Input test: not needed</key>
+	<string>Prueba de entrada: no necesaria</string>
+	<key>Input unavailable. Check Microphone permission or choose another device.</key>
+	<string>Entrada no disponible. Revisa el permiso del micrófono o elige otro dispositivo.</string>
+	<key>Install Gifski, then try opening the recording again.</key>
+	<string>Instala Gifski y vuelve a abrir la grabación.</string>
+	<key>Installed</key>
+	<string>Instalado</string>
+	<key>Interface language</key>
+	<string>Idioma de la interfaz</string>
+	<key>Interrupted</key>
+	<string>Interrumpida</string>
+	<key>JPEG quality</key>
+	<string>Calidad JPEG</string>
+	<key>JPEG quality affects JPEG files only. PNG is always lossless.</key>
+	<string>La calidad JPEG solo afecta a los archivos JPEG. PNG siempre conserva la calidad original.</string>
+	<key>Later</key>
+	<string>Después</string>
+	<key>Listening — speak to check the microphone. No audio is saved.</key>
+	<string>Escuchando: habla para probar el micrófono. No se guarda audio.</string>
+	<key>Loading transcription engine</key>
+	<string>Cargando motor de transcripción</string>
+	<key>MacWhisper (Small)</key>
+	<string>MacWhisper (Small)</string>
+	<key>Main Display</key>
+	<string>Pantalla principal</string>
+	<key>Manual Setup…</key>
+	<string>Instalación manual…</string>
+	<key>Microphone</key>
+	<string>Micrófono</string>
+	<key>Microphone + System Audio</key>
+	<string>Micrófono y audio del sistema</string>
+	<key>Microphone Only</key>
+	<string>Solo micrófono</string>
+	<key>Microphone activity</key>
+	<string>Actividad del micrófono</string>
+	<key>Microphone: not used</key>
+	<string>Micrófono: no se usa</string>
+	<key>Mode</key>
+	<string>Modo</string>
+	<key>Model setup progress</key>
+	<string>Progreso de instalación del modelo</string>
+	<key>Name template</key>
+	<string>Plantilla de nombre</string>
+	<key>Needs retry</key>
+	<string>Requiere reintento</string>
+	<key>No Audio</key>
+	<string>Sin audio</string>
+	<key>No microphone audio received. Choose another input and test again.</key>
+	<string>No se recibió audio del micrófono. Elige otra entrada y repite la prueba.</string>
+	<key>No preview is available. Use Reveal to inspect the session and its source files.</key>
+	<string>No hay vista previa. Usa Mostrar en Finder para revisar la sesión y sus archivos originales.</string>
+	<key>No recording was started. </key>
+	<string>No se inició ninguna grabación. </string>
+	<key>No screenshot was saved or copied. Try the capture again.</key>
+	<string>No se guardó ni copió ninguna imagen. Repite la captura.</string>
+	<key>No sessions in the current save folder or private recovery storage.</key>
+	<string>No hay sesiones en la carpeta actual ni en el almacenamiento de recuperación.</string>
+	<key>No sessions match this filter.</key>
+	<string>Ninguna sesión coincide con este filtro.</string>
+	<key>No speech was recognized. Your audio is saved in Sessions.</key>
+	<string>No se reconoció ninguna voz. El audio está guardado en Sesiones.</string>
+	<key>Not Now</key>
+	<string>Ahora no</string>
+	<key>Off</key>
+	<string>Desactivado</string>
+	<key>Open Last Video in Gifski</key>
+	<string>Abrir último video en Gifski</string>
+	<key>Open Login Items</key>
+	<string>Abrir Ítems de inicio</string>
+	<key>Open Record at Login</key>
+	<string>Abrir Record al iniciar sesión</string>
+	<key>Open Record automatically after you sign in</key>
+	<string>Abrir Record automáticamente al iniciar sesión</string>
+	<key>Open Record before using recording commands.</key>
+	<string>Abre Record antes de usar los comandos de grabación.</string>
+	<key>Open Recovery Folder…</key>
+	<string>Abrir carpeta de recuperación…</string>
+	<key>Open System Settings</key>
+	<string>Abrir Configuración del Sistema</string>
+	<key>Open Verified Source</key>
+	<string>Abrir fuente verificada</string>
+	<key>Open at Login is unavailable for this copy of Record</key>
+	<string>Esta copia de Record no admite abrirse al iniciar sesión</string>
+	<key>Open last recording</key>
+	<string>Abrir última grabación</string>
+	<key>Optional: set up local transcription (recording works without it)</key>
+	<string>Opcional: instala la transcripción local (puedes grabar sin ella)</string>
+	<key>Original recognition is retained. Open Sessions to compare clean and raw transcripts, retry unfinished tracks, or transcribe later.</key>
+	<string>Se conserva el reconocimiento original. En Sesiones puedes comparar versiones, reintentar pistas pendientes o transcribir después.</string>
+	<key>Other spellings (separate with ;) </key>
+	<string>Otros alias (separados con ;)</string>
+	<key>PNG (Lossless)</key>
+	<string>PNG (sin pérdida)</string>
+	<key>Parakeet (Default)</key>
+	<string>Parakeet (predeterminado)</string>
+	<key>Parakeet Is Ready</key>
+	<string>Parakeet está listo</string>
+	<key>Parakeet detects language automatically. Your MacWhisper language choice is kept.</key>
+	<string>Parakeet detecta el idioma automáticamente. Se conserva el idioma elegido para MacWhisper.</string>
+	<key>Parakeet model</key>
+	<string>Modelo de Parakeet</string>
+	<key>Paste the image now to preserve it, then check the export folder.</key>
+	<string>Pega la imagen para conservarla y revisa la carpeta de destino.</string>
+	<key>Pause Recording</key>
+	<string>Pausar grabación</string>
+	<key>Pause an active screen recording.</key>
+	<string>Pausa una grabación de pantalla activa.</string>
+	<key>Pause and resume require a screen recording.</key>
+	<string>Solo se pueden pausar y reanudar las grabaciones de pantalla.</string>
+	<key>Pause screen recording</key>
+	<string>Pausar grabación de pantalla</string>
+	<key>Paused</key>
+	<string>En pausa</string>
+	<key>Pausing recording</key>
+	<string>Pausando la grabación</string>
+	<key>Pausing screen recording…</key>
+	<string>Pausando grabación de pantalla…</string>
+	<key>Play imported audio</key>
+	<string>Reproducir audio importado</string>
+	<key>Play microphone</key>
+	<string>Reproducir micrófono</string>
+	<key>Play shutter sound</key>
+	<string>Reproducir sonido de obturador</string>
+	<key>Play system audio</key>
+	<string>Reproducir audio del sistema</string>
+	<key>Play video</key>
+	<string>Reproducir video</string>
+	<key>Preferred spelling</key>
+	<string>Escritura preferida</string>
+	<key>Preferred spellings apply automatically to every new transcript. Case and spacing variants match automatically; separate other aliases with semicolons. For existing sessions, use Apply Vocabulary in Sessions.</key>
+	<string>La escritura preferida se aplica a cada nueva transcripción. Se reconocen variantes de mayúsculas y espacios; separa otros alias con punto y coma. En sesiones anteriores, usa Aplicar vocabulario.</string>
+	<key>Preparing model download…</key>
+	<string>Preparando descarga del modelo…</string>
+	<key>Preparing recording</key>
+	<string>Preparando la grabación</string>
+	<key>Preparing screen recording…</key>
+	<string>Preparando grabación de pantalla…</string>
+	<key>Preparing transcript</key>
+	<string>Preparando transcripción</string>
+	<key>Queued</key>
+	<string>En cola</string>
+	<key>Queued for local transcription. Your audio is saved in Sessions.</key>
+	<string>En espera para transcribir en tu Mac. El audio está guardado en Sesiones.</string>
+	<key>Quick Dictation</key>
+	<string>Dictado rápido</string>
+	<key>Quit Record</key>
+	<string>Salir de Record</string>
+	<key>Quit Record from the menu bar, then open it again.</key>
+	<string>Sal de Record desde la barra de menús y vuelve a abrirlo.</string>
+	<key>Quit and reopen Record to apply the interface language. Speech language is unchanged.</key>
+	<string>Sal de Record y vuelve a abrirlo para aplicar el idioma. El idioma del audio no cambia.</string>
+	<key>Raw transcript</key>
+	<string>Transcripción original</string>
+	<key>Ready</key>
+	<string>Lista</string>
+	<key>Recent Sessions…</key>
+	<string>Sesiones recientes…</string>
+	<key>Recent recording sessions</key>
+	<string>Sesiones de grabación recientes</string>
+	<key>Record %@. Click to open temp sessions.</key>
+	<string>Record %@. Haz clic para abrir las sesiones temporales.</string>
+	<key>Record Couldn’t Download the Parakeet Model</key>
+	<string>Record no pudo descargar el modelo de Parakeet</string>
+	<key>Record Couldn’t Import This Model</key>
+	<string>Record no pudo importar este modelo</string>
+	<key>Record Settings</key>
+	<string>Configuración de Record</string>
+	<key>Record can download the pinned model from its GitHub release and verify it </key>
+	<string>Record puede descargar la versión fijada del modelo desde GitHub y verificarla </string>
+	<key>Record could not start this operation. Check its settings and try again.</key>
+	<string>Record no pudo iniciar esta operación. Revisa los ajustes y vuelve a intentarlo.</string>
+	<key>Record couldn’t change Login Items</key>
+	<string>Record no pudo cambiar los ítems de inicio</string>
+	<key>Record couldn’t prepare screen capture. The failed session was preserved.</key>
+	<string>Record no pudo preparar la captura de pantalla. Se conservó la sesión.</string>
+	<key>Record couldn’t prepare the local video file. The failed session was preserved.</key>
+	<string>Record no pudo preparar el archivo de video. Se conservó la sesión.</string>
+	<key>Record couldn’t restart</key>
+	<string>Record no pudo reiniciarse</string>
+	<key>Record is busy with another capture or transition. Check status and try again.</key>
+	<string>Record está realizando otra captura o cambiando de estado. Consulta el estado y vuelve a intentarlo.</string>
+	<key>Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. </key>
+	<string>Record necesita el modelo Parakeet v3 (unos 460 MB) para transcribir en tu Mac. </string>
+	<key>Record sections</key>
+	<string>Secciones de Record</string>
+	<key>Record stopped and preserved the available media. </key>
+	<string>Record se detuvo y conservó los archivos disponibles. </string>
+	<key>Record will open automatically after you sign in</key>
+	<string>Record se abrirá automáticamente al iniciar sesión</string>
+	<key>Record — Help &amp; diagnostics</key>
+	<string>Record — Ayuda y diagnóstico</string>
+	<key>Recording</key>
+	<string>Grabación</string>
+	<key>Recording &amp; preferences</key>
+	<string>Grabación y preferencias</string>
+	<key>Recording Setup…</key>
+	<string>Configurar grabación…</string>
+	<key>Recording Status</key>
+	<string>Estado de la grabación</string>
+	<key>Recording controls are locked while capture is starting, running, or saving.</key>
+	<string>Los controles se bloquean al iniciar, grabar o guardar una captura.</string>
+	<key>Recording mode</key>
+	<string>Modo de grabación</string>
+	<key>Recording names</key>
+	<string>Nombres de grabaciones</string>
+	<key>Recording paused</key>
+	<string>Grabación pausada</string>
+	<key>Recording recovery finished</key>
+	<string>Recuperación finalizada</string>
+	<key>Recording resumed</key>
+	<string>Grabación reanudada</string>
+	<key>Recording started</key>
+	<string>Grabación iniciada</string>
+	<key>Recording stopped</key>
+	<string>Grabación detenida</string>
+	<key>Recordings in the current save folder and private recovery storage.</key>
+	<string>Grabaciones de la carpeta actual y del almacenamiento privado de recuperación.</string>
+	<key>Refresh</key>
+	<string>Actualizar</string>
+	<key>Remove selected</key>
+	<string>Eliminar selección</string>
+	<key>Rename finished recordings</key>
+	<string>Renombrar grabaciones finalizadas</string>
+	<key>Report preview</key>
+	<string>Vista previa del informe</string>
+	<key>Report received. Similar reports are grouped together.</key>
+	<string>Informe recibido. Los informes similares se agrupan.</string>
+	<key>Report saved locally.</key>
+	<string>Informe guardado en tu Mac.</string>
+	<key>Requires macOS 26 or later.</key>
+	<string>Requiere macOS 26 o posterior.</string>
+	<key>Restore Screenshot Defaults</key>
+	<string>Restablecer atajos de capturas</string>
+	<key>Resume Recording</key>
+	<string>Reanudar grabación</string>
+	<key>Resume a paused screen recording.</key>
+	<string>Reanuda una grabación de pantalla pausada.</string>
+	<key>Resume screen recording</key>
+	<string>Reanudar grabación de pantalla</string>
+	<key>Resuming recording</key>
+	<string>Reanudando la grabación</string>
+	<key>Resuming screen recording…</key>
+	<string>Reanudando grabación de pantalla…</string>
+	<key>Retry</key>
+	<string>Reintentar</string>
+	<key>Retry Failed Transcription</key>
+	<string>Reintentar transcripción</string>
+	<key>Retry unfinished tracks</key>
+	<string>Reintentar pendientes</string>
+	<key>Reveal</key>
+	<string>Mostrar en Finder</string>
+	<key>Reveal the most recently finished recording in Finder</key>
+	<string>Mostrar la última grabación finalizada en Finder</string>
+	<key>Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.</key>
+	<string>Revisa un informe de diagnóstico, guárdalo en tu Mac o envíalo al desarrollador para ayudar a mejorar Record.</string>
+	<key>Review the report before sending.</key>
+	<string>Revisa el informe antes de enviarlo.</string>
+	<key>Review your text, then copy it. Audio and transcripts stay in Sessions.</key>
+	<string>Revisa el texto y luego cópialo. El audio y las transcripciones se conservan en Sesiones.</string>
+	<key>Save location</key>
+	<string>Ubicación de archivos</string>
+	<key>Save report…</key>
+	<string>Guardar informe…</string>
+	<key>Save to</key>
+	<string>Guardar en</string>
+	<key>Save vocabulary</key>
+	<string>Guardar vocabulario</string>
+	<key>Saved locally. Click to open the recording folder.</key>
+	<string>Guardado en tu Mac. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>Saved to %@, but the private working copy could not be removed.</key>
+	<string>Guardado en %@. No se pudo eliminar la copia de trabajo privada.</string>
+	<key>Saved to %@. Click to open the recording folder.</key>
+	<string>Guardado en %@. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>Saving recording</key>
+	<string>Guardando la grabación</string>
+	<key>Saving recording…</key>
+	<string>Guardando grabación…</string>
+	<key>Saving transcript</key>
+	<string>Guardando transcripción</string>
+	<key>Screen</key>
+	<string>Pantalla</string>
+	<key>Screen Recording permission is required. Audio-only recording still works.</key>
+	<string>Se necesita permiso para grabar la pantalla. Puedes seguir grabando solo audio.</string>
+	<key>Screen access needed for screenshots</key>
+	<string>Se necesita acceso a la pantalla</string>
+	<key>Screen access: not needed</key>
+	<string>Acceso a pantalla: no necesario</string>
+	<key>Screen pause / resume</key>
+	<string>Pausar / reanudar pantalla</string>
+	<key>Screen recording couldn’t start</key>
+	<string>No se pudo iniciar la grabación de pantalla</string>
+	<key>Screen recording needs recovery</key>
+	<string>La grabación de pantalla necesita recuperación</string>
+	<key>Screen recording preserved</key>
+	<string>Grabación de pantalla conservada</string>
+	<key>Screen recording ready</key>
+	<string>Grabación de pantalla lista</string>
+	<key>Screen recording saved locally</key>
+	<string>Grabación de pantalla guardada en tu Mac</string>
+	<key>Screen source</key>
+	<string>Fuente de pantalla</string>
+	<key>Screen start / stop</key>
+	<string>Iniciar / detener pantalla</string>
+	<key>Screenshot capture failed</key>
+	<string>No se pudo capturar la pantalla</string>
+	<key>Screenshot copied, save failed</key>
+	<string>Captura copiada, no se pudo guardar</string>
+	<key>Screenshot couldn’t be saved or copied</key>
+	<string>No se pudo guardar ni copiar la captura</string>
+	<key>Screenshot saved</key>
+	<string>Captura guardada</string>
+	<key>Screenshot saved, clipboard unavailable</key>
+	<string>Captura guardada, portapapeles no disponible</string>
+	<key>Screenshots</key>
+	<string>Capturas</string>
+	<key>Screenshots and finished recordings share this folder. Sessions shows this folder and private recovery storage.</key>
+	<string>Las capturas y grabaciones finalizadas comparten esta carpeta. Sesiones también muestra el almacenamiento privado de recuperación.</string>
+	<key>Screenshots save to your chosen folder. A lossless PNG also goes to the clipboard.</key>
+	<string>Las capturas se guardan en la carpeta elegida. También se copia un PNG sin pérdida al portapapeles.</string>
+	<key>Selected microphone disconnected. Choose another input.</key>
+	<string>Se desconectó el micrófono seleccionado. Elige otra entrada.</string>
+	<key>Selected microphone unavailable</key>
+	<string>Micrófono seleccionado no disponible</string>
+	<key>Send report to developer</key>
+	<string>Enviar al desarrollador</string>
+	<key>Sending the reviewed report…</key>
+	<string>Enviando el informe revisado…</string>
+	<key>Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.</key>
+	<string>Los informes enviados son públicos. Incluyen las versiones de la app y del sistema, ajustes generales de grabación, tipos de eventos recientes y un resumen opcional del fallo. Excluyen archivos multimedia, transcripciones, nombres, rutas de archivos, contenido del portapapeles y registros sin filtrar. Reporta las vulnerabilidades de seguridad de forma privada.</string>
+	<key>Sessions</key>
+	<string>Sesiones</string>
+	<key>Sessions…</key>
+	<string>Sesiones…</string>
+	<key>Set Up Local Parakeet Transcription</key>
+	<string>Configurar transcripción local con Parakeet</string>
+	<key>Set Up Local Transcription</key>
+	<string>Configurar transcripción local</string>
+	<key>Set Up Parakeet Model…</key>
+	<string>Instalar modelo de Parakeet…</string>
+	<key>Set capture shortcuts in Shortcuts. Change the shared save folder in General.</key>
+	<string>Configura los atajos de captura en Atajos. Cambia la carpeta compartida en General.</string>
+	<key>Set up the local Parakeet model</key>
+	<string>Instalar el modelo local de Parakeet</string>
+	<key>Settings…</key>
+	<string>Configuración…</string>
+	<key>Setup required</key>
+	<string>Requiere instalación</string>
+	<key>Shortcuts</key>
+	<string>Atajos</string>
+	<key>Show compact panel while recording</key>
+	<string>Mostrar panel compacto al grabar</string>
+	<key>Some files couldn’t be imported</key>
+	<string>No se pudieron importar algunos archivos</string>
+	<key>Spanish</key>
+	<string>Español</string>
+	<key>Speak into your selected microphone, stop, then review and copy the text.</key>
+	<string>Habla con el micrófono seleccionado, detén el dictado y luego revisa y copia el texto.</string>
+	<key>Speech language</key>
+	<string>Idioma del audio</string>
+	<key>Start ${mode} recording</key>
+	<string>Iniciar grabación de ${mode}</string>
+	<key>Start Audio Recording</key>
+	<string>Grabar audio</string>
+	<key>Start Recording</key>
+	<string>Iniciar grabación</string>
+	<key>Start Screen Recording</key>
+	<string>Grabar pantalla</string>
+	<key>Start a recording using your saved Record settings.</key>
+	<string>Inicia una grabación con los ajustes guardados en Record.</string>
+	<key>Start audio-only recording</key>
+	<string>Iniciar grabación de audio</string>
+	<key>Start screen recording</key>
+	<string>Iniciar grabación de pantalla</string>
+	<key>Startup &amp; support</key>
+	<string>Inicio y ayuda</string>
+	<key>Stop</key>
+	<string>Detener</string>
+	<key>Stop Recording</key>
+	<string>Detener grabación</string>
+	<key>Stop Test</key>
+	<string>Detener prueba</string>
+	<key>Stop capture and preserve the recording. Use Status to check when saving finishes.</key>
+	<string>Detén la captura y conserva la grabación. Consulta el estado para saber cuándo termina de guardarse.</string>
+	<key>Stop recording</key>
+	<string>Detener grabación</string>
+	<key>Stop the current recording, take one screenshot to grant access, then try again.</key>
+	<string>Detén la grabación, toma una captura para dar acceso y vuelve a intentarlo.</string>
+	<key>Stopping recording</key>
+	<string>Deteniendo la grabación</string>
+	<key>Stopping recording…</key>
+	<string>Deteniendo grabación…</string>
+	<key>System Audio Only</key>
+	<string>Solo audio del sistema</string>
+	<key>System Default</key>
+	<string>Predeterminado del sistema</string>
+	<key>System audio</key>
+	<string>Audio del sistema</string>
+	<key>System audio activity</key>
+	<string>Actividad del audio del sistema</string>
+	<key>System audio permission: checked when you start</key>
+	<string>Audio del sistema: permiso verificado al iniciar</string>
+	<key>Test Input</key>
+	<string>Probar entrada</string>
+	<key>Test Input listens for 10 seconds without saving. Audio sources stay in separate files.</key>
+	<string>Probar entrada escucha durante 10 segundos sin guardar audio. Cada fuente de audio se guarda por separado.</string>
+	<key>Test microphone input</key>
+	<string>Probar entrada del micrófono</string>
+	<key>Test your microphone</key>
+	<string>Prueba el micrófono</string>
+	<key>That key combination can’t be used as a shortcut.</key>
+	<string>Esa combinación de teclas no se puede usar como atajo.</string>
+	<key>That shortcut can’t be saved.</key>
+	<string>No se pudo guardar ese atajo.</string>
+	<key>That shortcut is already assigned to another Record action.</key>
+	<string>Ese atajo ya está asignado a otra acción de Record.</string>
+	<key>The audio file could not be decoded completely, is empty, or is longer than 12 hours.</key>
+	<string>El archivo no se pudo decodificar por completo, está vacío o dura más de 12 horas.</string>
+	<key>The audio is safe. Click to open the recording folder.</key>
+	<string>El audio está a salvo. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>The available media is safe. Click to open the recording folder.</key>
+	<string>Los archivos disponibles están a salvo. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>The command expired without running. Check status and try again.</key>
+	<string>El comando venció sin ejecutarse. Consulta el estado y vuelve a intentarlo.</string>
+	<key>The export failed, but the original recording is safe.</key>
+	<string>No se pudo exportar. La grabación original está a salvo.</string>
+	<key>The image is safe in the export folder. Copy it from Finder if needed.</key>
+	<string>La imagen está a salvo en la carpeta de destino. Puedes copiarla desde Finder.</string>
+	<key>The recording command is invalid or belongs to an older app instance.</key>
+	<string>El comando de grabación no es válido o pertenece a una sesión anterior de la app.</string>
+	<key>The recording is preserved. Try again after the current track finishes.</key>
+	<string>La grabación se conserva. Inténtalo cuando termine la pista actual.</string>
+	<key>The recording is safe and can be opened manually.</key>
+	<string>La grabación está a salvo y puedes abrirla manualmente.</string>
+	<key>The recording is safe. Click to open its folder and review transcribe.log.</key>
+	<string>La grabación está a salvo. Haz clic para abrir su carpeta y revisar transcribe.log.</string>
+	<key>The selected screen or window is no longer available. Choose it again and retry.</key>
+	<string>La pantalla o ventana seleccionada ya no está disponible. Vuelve a elegirla e inténtalo de nuevo.</string>
+	<key>The source file changed during import. Wait until it finishes saving, then try again.</key>
+	<string>El archivo cambió durante la importación. Espera a que termine de guardarse e inténtalo de nuevo.</string>
+	<key>The verified model was installed locally. Pending recordings will now be transcribed.</key>
+	<string>El modelo verificado se instaló en tu Mac. Ahora se transcribirán las grabaciones pendientes.</string>
+	<key>These exclusions apply to screenshots and screen recordings. Notification sounds require Focus to silence.</key>
+	<string>Estas exclusiones afectan a capturas de imagen y video. Para silenciar notificaciones, usa un modo de concentración.</string>
+	<key>This report has already been received.</key>
+	<string>Este informe ya se recibió.</string>
+	<key>Tokens: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. The example uses placeholder clipboard text; actual clipboard content is read only for recording names that request it.</key>
+	<string>Variables: {date}, {time}, {color}, {adjective}, {animal}, {country}, {name}, {starWars}, {clipboard}. El ejemplo usa texto de muestra; el portapapeles solo se lee si la plantilla lo solicita.</string>
+	<key>Transcribe later</key>
+	<string>Transcribir después</string>
+	<key>Transcribing</key>
+	<string>Transcribiendo</string>
+	<key>Transcribing %@</key>
+	<string>Transcribiendo %@</string>
+	<key>Transcript</key>
+	<string>Transcripción</string>
+	<key>Transcript cleanup</key>
+	<string>Depuración de transcripciones</string>
+	<key>Transcript preview</key>
+	<string>Vista previa de la transcripción</string>
+	<key>Transcript ready</key>
+	<string>Transcripción lista</string>
+	<key>Transcription</key>
+	<string>Transcripción</string>
+	<key>Transcription couldn’t finish</key>
+	<string>No se pudo completar la transcripción</string>
+	<key>Transcription deferred · recording preserved</key>
+	<string>Transcripción pospuesta · grabación conservada</string>
+	<key>Transcription finished</key>
+	<string>Transcripción finalizada</string>
+	<key>Transcription finished. Click to open the recording folder.</key>
+	<string>Terminó la transcripción. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>Transcription needs retry · %@</key>
+	<string>La transcripción requiere reintento · %@</string>
+	<key>Transcription not started</key>
+	<string>Transcripción pendiente</string>
+	<key>Transcription runs locally. Parakeet needs a one-time model setup. Install MacWhisper to make its engine available.</key>
+	<string>La transcripción es local. Parakeet requiere instalar su modelo una sola vez. Instala MacWhisper para usar su motor.</string>
+	<key>Transcription started</key>
+	<string>Transcripción iniciada</string>
+	<key>Turn on Apple Intelligence in System Settings to use this option.</key>
+	<string>Activa Apple Intelligence en Configuración del Sistema para usar esta opción.</string>
+	<key>Type shortcut · Delete = Off</key>
+	<string>Presiona el atajo · Suprimir = Desactivar</string>
+	<key>Unavailable shortcuts: %@. Choose another combination.</key>
+	<string>Atajos no disponibles: %@. Elige otra combinación.</string>
+	<key>Unsaved vocabulary changes</key>
+	<string>Cambios de vocabulario sin guardar</string>
+	<key>Use supported tokens and balanced braces. Your last valid template is still saved.</key>
+	<string>Usa variables admitidas y llaves de apertura y cierre. Se conserva la última plantilla válida.</string>
+	<key>Use unique, nonempty spellings up to 128 characters, with at most 20 aliases per word.</key>
+	<string>Usa entradas únicas, no vacías, de hasta 128 caracteres y un máximo de 20 alias por palabra.</string>
+	<key>Uses Apple Intelligence after transcription. Transcript text stays on this Mac.</key>
+	<string>Usa Apple Intelligence después de transcribir. El texto se queda en esta Mac.</string>
+	<key>Verifying and installing the local model…</key>
+	<string>Verificando e instalando el modelo local…</string>
+	<key>Verifying the download…</key>
+	<string>Verificando la descarga…</string>
+	<key>View submitted report</key>
+	<string>Ver informe enviado</string>
+	<key>Vocabulary</key>
+	<string>Vocabulario</string>
+	<key>Vocabulary saved. New transcripts will use these spellings.</key>
+	<string>Vocabulario guardado. Las nuevas transcripciones usarán estas palabras.</string>
+	<key>Window or Application</key>
+	<string>Ventana o aplicación</string>
+	<key>Your audio is safe. Open Sessions to retry transcription.</key>
+	<string>Tu audio está guardado. Abre Sesiones para volver a intentar la transcripción.</string>
+	<key>audio</key>
+	<string>audio</string>
+	<key>before local installation. Recording continues to work without the model.</key>
+	<string>antes de instalarla. Puedes seguir grabando sin el modelo.</string>
+	<key>capture under load</key>
+	<string>Captura con alta carga</string>
+	<key>complete</key>
+	<string>Completa</string>
+	<key>dictation</key>
+	<string>dictado</string>
+	<key>downloading Parakeet model…</key>
+	<string>Descargando modelo de Parakeet…</string>
+	<key>found %ld session needing manual review</key>
+	<string>encontró %ld sesión que requiere revisión manual</string>
+	<key>found %ld sessions needing manual review</key>
+	<string>encontró %ld sesiones que requieren revisión manual</string>
+	<key>idle</key>
+	<string>Listo</string>
+	<key>macOS Keyboard Shortcuts…</key>
+	<string>Atajos de teclado de macOS…</string>
+	<key>macOS needs your approval before Record can open automatically after sign-in.</key>
+	<string>macOS necesita tu autorización para abrir Record automáticamente al iniciar sesión.</string>
+	<key>marked %ld empty session as failed</key>
+	<string>marcó %ld sesión vacía como fallida</string>
+	<key>marked %ld empty sessions as failed</key>
+	<string>marcó %ld sesiones vacías como fallidas</string>
+	<key>microphone reconnecting…</key>
+	<string>Reconectando micrófono…</string>
+	<key>no transcript</key>
+	<string>Sin transcripción</string>
+	<key>paused screen recording · %@</key>
+	<string>Grabación de pantalla pausada · %@</string>
+	<key>pausing screen recording…</key>
+	<string>Pausando grabación de pantalla…</string>
+	<key>preparing screen recording…</key>
+	<string>Preparando grabación de pantalla…</string>
+	<key>preserved %ld interrupted recording</key>
+	<string>conservó %ld grabación interrumpida</string>
+	<key>preserved %ld interrupted recordings</key>
+	<string>conservó %ld grabaciones interrumpidas</string>
+	<key>quarantined %ld partial file</key>
+	<string>aisló %ld archivo parcial</string>
+	<key>quarantined %ld partial files</key>
+	<string>aisló %ld archivos parciales</string>
+	<key>reconnecting microphone…</key>
+	<string>Reconectando micrófono…</string>
+	<key>restored %ld playable media file</key>
+	<string>recuperó %ld archivo reproducible</string>
+	<key>restored %ld playable media files</key>
+	<string>recuperó %ld archivos reproducibles</string>
+	<key>resuming screen recording…</key>
+	<string>Reanudando grabación de pantalla…</string>
+	<key>retrying transcription…</key>
+	<string>Reintentando transcripción…</string>
+	<key>saving recording…</key>
+	<string>Guardando grabación…</string>
+	<key>screen</key>
+	<string>pantalla</string>
+	<key>stopping recording…</key>
+	<string>Deteniendo grabación…</string>
+	<key>track captured no data</key>
+	<string>Una pista no capturó datos</string>
+	<key>track write failed</key>
+	<string>No se pudo guardar una pista</string>
+	<key>transcribed</key>
+	<string>Transcrito</string>
+	<key>unfinished</key>
+	<string>Pendiente</string>
+	<key>using compatible microphone mode</key>
+	<string>Modo de micrófono compatible</string>
+	<key>using raw microphone</key>
+	<string>Entrada directa del micrófono</string>
+	<key>verifying Parakeet model…</key>
+	<string>Verificando modelo de Parakeet…</string>
+	<key>waiting for %@ recording permissions…</key>
+	<string>Esperando permisos para grabar %@…</string>
+	<key>● %@ recording · %@%@</key>
+	<string>● Grabando %@ · %@%@</string>
+	<key>✓ Input test completed</key>
+	<string>✓ Prueba de entrada realizada</string>
+	<key>✓ Local transcription model ready</key>
+	<string>✓ Modelo de transcripción listo</string>
+	<key>✓ Microphone permission</key>
+	<string>✓ Permiso del micrófono</string>
+	<key>✓ Save folder chosen</key>
+	<string>✓ Carpeta de destino elegida</string>
+	<key>✓ Screen recording permission</key>
+	<string>✓ Permiso de grabación de pantalla</string>
+</dict>
+</plist>

@@ -1,3 +1,4 @@
+import RecordCore
 import Foundation
 
 /// One deterministic rendering contract for every recording phase. AppKit
@@ -18,9 +19,9 @@ struct RecordingMenuPresentation: Equatable {
     let clearsCaptureHealth: Bool
 
     static let idle = RecordingMenuPresentation(
-        stateTitle: "idle",
-        toggleTitle: "Start screen recording",
-        pauseResumeTitle: "Pause screen recording",
+        stateTitle: L10n.text("idle"),
+        toggleTitle: L10n.text("Start screen recording"),
+        pauseResumeTitle: L10n.text("Pause screen recording"),
         toggleEnabled: true,
         pauseResumeVisible: false,
         pauseResumeEnabled: false,
@@ -39,9 +40,10 @@ struct RecordingMenuPresentation: Equatable {
     ) -> Self {
         let health = healthNote.map { " · \($0)" } ?? ""
         return RecordingMenuPresentation(
-            stateTitle: "● \(mode.displayName) recording · \(elapsed)\(health)",
-            toggleTitle: "Stop recording",
-            pauseResumeTitle: "Pause screen recording",
+            stateTitle: L10n.format(
+                "● %@ recording · %@%@", L10n.text(mode.displayName), elapsed, health),
+            toggleTitle: L10n.text("Stop recording"),
+            pauseResumeTitle: L10n.text("Pause screen recording"),
             toggleEnabled: true,
             pauseResumeVisible: mode == .screen,
             pauseResumeEnabled: mode == .screen,
@@ -56,15 +58,16 @@ struct RecordingMenuPresentation: Equatable {
 
     static func requestingPermissions(for mode: RecordingMode) -> Self {
         busy(
-            stateTitle: "waiting for \(mode.displayName) recording permissions…",
-            toggleTitle: "Start screen recording",
+            stateTitle: L10n.format(
+                "waiting for %@ recording permissions…", L10n.text(mode.displayName)),
+            toggleTitle: L10n.text("Start screen recording"),
             clearsCaptureHealth: true
         )
     }
 
     static let preparingScreenRecording = busy(
-        stateTitle: "preparing screen recording…",
-        toggleTitle: "Preparing screen recording…",
+        stateTitle: L10n.text("preparing screen recording…"),
+        toggleTitle: L10n.text("Preparing screen recording…"),
         clearsCaptureHealth: true
     )
 
@@ -73,9 +76,9 @@ struct RecordingMenuPresentation: Equatable {
         indicatorActive: Bool
     ) -> Self {
         RecordingMenuPresentation(
-            stateTitle: "stopping recording…",
-            toggleTitle: "Stopping recording…",
-            pauseResumeTitle: "Pause screen recording",
+            stateTitle: L10n.text("stopping recording…"),
+            toggleTitle: L10n.text("Stopping recording…"),
+            pauseResumeTitle: L10n.text("Pause screen recording"),
             toggleEnabled: false,
             pauseResumeVisible: captureStarted,
             pauseResumeEnabled: false,
@@ -89,15 +92,15 @@ struct RecordingMenuPresentation: Equatable {
     }
 
     static let savingRecording = busy(
-        stateTitle: "saving recording…",
-        toggleTitle: "Saving recording…"
+        stateTitle: L10n.text("saving recording…"),
+        toggleTitle: L10n.text("Saving recording…")
     )
 
     static func pausedScreenRecording(elapsed: String) -> Self {
         RecordingMenuPresentation(
-            stateTitle: "paused screen recording · \(elapsed)",
-            toggleTitle: "Stop recording",
-            pauseResumeTitle: "Resume screen recording",
+            stateTitle: L10n.format("paused screen recording · %@", elapsed),
+            toggleTitle: L10n.text("Stop recording"),
+            pauseResumeTitle: L10n.text("Resume screen recording"),
             toggleEnabled: true,
             pauseResumeVisible: true,
             pauseResumeEnabled: true,
@@ -113,12 +116,12 @@ struct RecordingMenuPresentation: Equatable {
     static func rotatingScreenRecording(resuming: Bool) -> Self {
         RecordingMenuPresentation(
             stateTitle: resuming
-                ? "resuming screen recording…"
-                : "pausing screen recording…",
-            toggleTitle: "Stop recording",
+                ? L10n.text("resuming screen recording…")
+                : L10n.text("pausing screen recording…"),
+            toggleTitle: L10n.text("Stop recording"),
             pauseResumeTitle: resuming
-                ? "Resuming screen recording…"
-                : "Pausing screen recording…",
+                ? L10n.text("Resuming screen recording…")
+                : L10n.text("Pausing screen recording…"),
             toggleEnabled: false,
             pauseResumeVisible: true,
             pauseResumeEnabled: false,
@@ -139,7 +142,7 @@ struct RecordingMenuPresentation: Equatable {
         RecordingMenuPresentation(
             stateTitle: stateTitle,
             toggleTitle: toggleTitle,
-            pauseResumeTitle: "Pause screen recording",
+            pauseResumeTitle: L10n.text("Pause screen recording"),
             toggleEnabled: false,
             pauseResumeVisible: false,
             pauseResumeEnabled: false,

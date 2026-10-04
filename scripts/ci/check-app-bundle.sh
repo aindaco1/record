@@ -7,6 +7,7 @@ if [[ $# -ne 1 || "$1" != /* ]]; then
 fi
 
 app_path="$1"
+python3 "$(dirname "${BASH_SOURCE[0]}")/check-app-intents.py" "$app_path"
 if [[ ! -d "$app_path" || -L "$app_path" ]]; then
     echo "missing or unsafe app bundle: $app_path" >&2
     exit 1
@@ -27,6 +28,10 @@ fi
 required_files=(
     "$app_path/Contents/Info.plist"
     "$app_path/Contents/Resources/Record.icns"
+    "$app_path/Contents/Resources/Record_RecordCore.bundle/Contents/Resources/en.lproj/Localizable.strings"
+    "$app_path/Contents/Resources/Record_RecordCore.bundle/Contents/Resources/es.lproj/Localizable.strings"
+    "$app_path/Contents/Resources/en.lproj/InfoPlist.strings"
+    "$app_path/Contents/Resources/es.lproj/InfoPlist.strings"
     "$app_path/Contents/Resources/Shutter.mp3"
     "$app_path/Contents/Resources/record-macwhisper"
     "$app_path/Contents/Resources/THIRD_PARTY_NOTICES.md"

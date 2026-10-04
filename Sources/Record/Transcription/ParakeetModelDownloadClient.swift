@@ -3,6 +3,27 @@ import RecordCore
 
 protocol ParakeetModelArchiveDownloading: Sendable {
     func downloadV3Archive(to outputFile: FileHandle) async throws
+    func downloadV3Archive(to outputFile: FileHandle, progress: @escaping @Sendable (Int64) -> Void)
+        async throws
+}
+
+extension ParakeetModelArchiveDownloading {
+    func downloadV3Archive(to outputFile: FileHandle, progress: @escaping @Sendable (Int64) -> Void)
+        async throws
+    {
+        try await downloadV3Archive(to: outputFile)
+    }
+}
+
+private final class ModelDownloadProgressReceiver: NSObject,
+    ParakeetModelDownloadProgressXPCProtocol, @unchecked Sendable
+{
+    let progress: @Sendable (Int64) -> Void
+    init(progress: @escaping @Sendable (Int64) -> Void) { self.progress = progress }
+    func receivedBytes(_ count: Int64) {
+        guard (0...ParakeetModelDownloadDescriptor.v3.byteCount).contains(count) else { return }
+        progress(count)
+    }
 }
 
 final class XPCParakeetModelArchiveDownloader: ParakeetModelArchiveDownloading,
@@ -17,6 +38,13 @@ final class XPCParakeetModelArchiveDownloader: ParakeetModelArchiveDownloading,
                 "Record’s protected model downloader is unavailable."
             }
         }
+    }
+
+    // NSXPCConnection supports cross-thread messaging and invalidation. Keep
+    // this unchecked boundary local; reply continuation ownership stays locked.
+    private final class ConnectionBox: @unchecked Sendable {
+        let connection: NSXPCConnection
+        init(_ connection: NSXPCConnection) { self.connection = connection }
     }
 
     private final class ReplyGate: @unchecked Sendable {
@@ -37,39 +65,57 @@ final class XPCParakeetModelArchiveDownloader: ParakeetModelArchiveDownloading,
     }
 
     func downloadV3Archive(to outputFile: FileHandle) async throws {
+        try await downloadV3Archive(to: outputFile, progress: { _ in })
+    }
+
+    func downloadV3Archive(to outputFile: FileHandle, progress: @escaping @Sendable (Int64) -> Void)
+        async throws
+    {
+        try Task.checkCancellation()
         let connection = NSXPCConnection(
             serviceName: "com.aindaco.record.model-downloader"
         )
         connection.remoteObjectInterface = NSXPCInterface(
             with: ParakeetModelDownloaderXPCProtocol.self
         )
+        connection.exportedInterface = NSXPCInterface(
+            with: ParakeetModelDownloadProgressXPCProtocol.self)
+        connection.exportedObject = ModelDownloadProgressReceiver(progress: progress)
         connection.resume()
         defer { connection.invalidate() }
 
-        try await withCheckedThrowingContinuation { continuation in
-            let gate = ReplyGate(continuation)
-            connection.interruptionHandler = {
-                gate.resolve(.failure(ClientError.unavailable))
-            }
-            connection.invalidationHandler = {
-                gate.resolve(.failure(ClientError.unavailable))
-            }
-            guard
-                let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
-                    gate.resolve(.failure(error))
-                }) as? ParakeetModelDownloaderXPCProtocol
-            else {
-                gate.resolve(.failure(ClientError.unavailable))
-                return
-            }
-            proxy.downloadParakeetV3(to: outputFile) { error in
-                if let error {
-                    gate.resolve(.failure(error))
-                } else {
-                    gate.resolve(.success(()))
+        let box = ConnectionBox(connection)
+        try await withTaskCancellationHandler { @Sendable [box] in
+            let connection = box.connection
+            try await withCheckedThrowingContinuation { continuation in
+                let gate = ReplyGate(continuation)
+                connection.interruptionHandler = {
+                    gate.resolve(.failure(ClientError.unavailable))
+                }
+                connection.invalidationHandler = {
+                    gate.resolve(.failure(ClientError.unavailable))
+                }
+                guard
+                    let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
+                        gate.resolve(.failure(error))
+                    }) as? ParakeetModelDownloaderXPCProtocol
+                else {
+                    gate.resolve(.failure(ClientError.unavailable))
+                    return
+                }
+                guard !Task.isCancelled else { gate.resolve(.failure(CancellationError())); return }
+                proxy.downloadParakeetV3(to: outputFile) { error in
+                    if let error {
+                        gate.resolve(.failure(error))
+                    } else {
+                        gate.resolve(.success(()))
+                    }
                 }
             }
+        } onCancel: { [box] in
+            box.connection.invalidate()
         }
+        try Task.checkCancellation()
     }
 }
 

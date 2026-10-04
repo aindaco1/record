@@ -3,6 +3,38 @@ import RecordCore
 import XCTest
 
 final class SessionManifestTests: XCTestCase {
+    func testDictationPurposeSurvivesFinalizationAndOldSchemasStillRead() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        for version in 1...3 {
+            let original = SessionManifest(
+                schemaVersion: version, startedAt: start,
+                tracks: [.init(kind: .microphone, filename: "mic.caf")],
+                purpose: version == 3 ? .dictation : nil)
+            let finalized = try original.finalized(
+                at: start.addingTimeInterval(1), tracks: original.tracks)
+            try finalized.write(to: directory)
+            XCTAssertEqual(try SessionManifest.read(from: directory), finalized)
+            XCTAssertEqual(finalized.purpose, original.purpose)
+        }
+    }
+
+    func testDictationCannotLabelAnOldSchemaOrSystemAudioSession() throws {
+        let directory = try makeTemporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        for kind in [SessionManifest.TrackKind.systemAudio, .importedAudio, .screen] {
+            let manifest = SessionManifest(
+                startedAt: Date(),
+                tracks: [.init(kind: kind, filename: "source.wav")], purpose: .dictation)
+            XCTAssertThrowsError(try manifest.write(to: directory))
+        }
+        let old = SessionManifest(
+            schemaVersion: 2, startedAt: Date(),
+            tracks: [.init(kind: .microphone, filename: "mic.caf")], purpose: .dictation)
+        XCTAssertThrowsError(try old.write(to: directory))
+    }
+
     func testManifestRoundTripsAndFinalizesAtomically() throws {
         let directory = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

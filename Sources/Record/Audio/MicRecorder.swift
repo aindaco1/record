@@ -47,6 +47,8 @@ final class MicRecorder: @unchecked Sendable {
     private var preferRawInputUntilStop = false
     private var usingVoiceProcessing = false
     private let startedAt: Date
+    private let deviceUID: String?
+    let activity = AudioActivity()
     private let onHealth: @Sendable (CaptureHealthEvent) -> Void
 
     private(set) var isRecording = false
@@ -54,9 +56,11 @@ final class MicRecorder: @unchecked Sendable {
 
     init(
         startedAt: Date = Date(),
+        deviceUID: String? = nil,
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) {
         self.startedAt = startedAt
+        self.deviceUID = deviceUID
         self.onHealth = onHealth
     }
 
@@ -64,6 +68,7 @@ final class MicRecorder: @unchecked Sendable {
         dispatchPrecondition(condition: .onQueue(.main))
         guard !isRecording else { return }
 
+        try AudioInputDevices.select(deviceUID, on: engine.inputNode)
         let initialInput = engine.inputNode.outputFormat(forBus: 0)
         guard let fileFormat = Self.monoFormat(sampleRate: initialInput.sampleRate) else {
             throw RecorderError.unsupportedFormat(initialInput)
@@ -84,7 +89,7 @@ final class MicRecorder: @unchecked Sendable {
         } catch {
             throw RecorderError.fileCreationFailed(error)
         }
-        writer = AudioFileWritePump(file: file) { [weak self] event in
+        writer = AudioFileWritePump(file: file, activity: activity) { [weak self] event in
             DispatchQueue.main.async { self?.report(event) }
         }
 
@@ -139,9 +144,16 @@ final class MicRecorder: @unchecked Sendable {
             )
         }
 
-        let newEngine = AVAudioEngine()
+        // An explicit route produces an asynchronous configuration change. Reuse
+        // that settled engine during bounded recovery instead of recreating and
+        // rerouting a fresh default engine on every attempt.
+        let newEngine = deviceUID == nil ? AVAudioEngine() : engine
         let input = newEngine.inputNode
-        var voiceProcessing = requestedVoiceProcessing
+        var voiceProcessing = MicrophoneSelectionPolicy.usesVoiceProcessing(
+            requested: requestedVoiceProcessing, deviceID: deviceUID)
+        if !voiceProcessing, input.isVoiceProcessingEnabled {
+            try input.setVoiceProcessingEnabled(false)
+        }
         if voiceProcessing {
             do {
                 try input.setVoiceProcessingEnabled(true)
@@ -155,6 +167,7 @@ final class MicRecorder: @unchecked Sendable {
             }
         }
 
+        try AudioInputDevices.select(deviceUID, on: input)
         let inputFormat = input.outputFormat(forBus: 0)
         guard let monoFormat = Self.monoFormat(sampleRate: inputFormat.sampleRate) else {
             throw RecorderError.unsupportedFormat(inputFormat)
@@ -228,6 +241,7 @@ final class MicRecorder: @unchecked Sendable {
     // MARK: Route recovery
 
     private func installDefaultInputObserver() {
+        guard deviceUID == nil else { return }
         defaultInputObserver = try? DefaultInputDeviceObserver { [weak self] in
             self?.routeDidChange(.defaultInput)
         }

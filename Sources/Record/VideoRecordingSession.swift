@@ -37,6 +37,11 @@ struct VideoCaptureOutputURLs: Equatable, Sendable {
 protocol VideoCapturePipeline: AnyObject, Sendable {
     func start() async throws
     func stop() async -> VideoCapturePipelineStopResult
+    func audioLevels() async -> (microphone: Double, system: Double)
+}
+
+extension VideoCapturePipeline {
+    func audioLevels() async -> (microphone: Double, system: Double) { (0, 0) }
 }
 
 protocol VideoCapturePipelineBuilding: Sendable {
@@ -188,6 +193,10 @@ private actor ScreenCaptureVideoPipeline: VideoCapturePipeline {
         self.sink = sink
         self.writer = writer
         self.readiness = readiness
+    }
+
+    func audioLevels() -> (microphone: Double, system: Double) {
+        (sink.microphoneActivity.level(), sink.systemAudioActivity.level())
     }
 
     func start() async throws {
@@ -580,7 +589,7 @@ actor VideoRecordingSession {
                 files[.systemAudio] = output.url
             case .microphone:
                 files[.microphone] = output.url
-            case .screen, .camera:
+            case .screen, .camera, .importedAudio:
                 break
             }
         }
@@ -719,6 +728,10 @@ actor VideoRecordingSession {
         let waiters = rotationWaiters
         rotationWaiters.removeAll(keepingCapacity: false)
         waiters.forEach { $0.resume() }
+    }
+
+    func audioLevels() async -> (microphone: Double, system: Double) {
+        await pipeline?.audioLevels() ?? (0, 0)
     }
 
     private func receive(_ event: ScreenCaptureEvent, from pipelineID: UUID) {

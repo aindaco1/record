@@ -2,8 +2,12 @@ import Foundation
 import RecordCore
 import RecordModelDownload
 
-private final class ModelDownloaderService: NSObject, ParakeetModelDownloaderXPCProtocol {
+private final class ModelDownloaderService: NSObject, ParakeetModelDownloaderXPCProtocol,
+    @unchecked Sendable
+{
     private let downloader = ParakeetRemoteDownloader()
+    private let connection: NSXPCConnection
+    init(connection: NSXPCConnection) { self.connection = connection }
 
     private final class ReplyBox: @unchecked Sendable {
         let reply: (NSError?) -> Void
@@ -18,7 +22,13 @@ private final class ModelDownloaderService: NSObject, ParakeetModelDownloaderXPC
         withReply reply: @escaping (NSError?) -> Void
     ) {
         let replyBox = ReplyBox(reply)
-        downloader.download(to: outputFile) { error in
+        downloader.download(
+            to: outputFile,
+            progress: { [weak self] bytes in
+                (self?.connection.remoteObjectProxy as? ParakeetModelDownloadProgressXPCProtocol)?
+                    .receivedBytes(bytes)
+            }
+        ) { error in
             replyBox.reply(error as NSError?)
         }
     }
@@ -36,7 +46,15 @@ private final class ServiceDelegate: NSObject, NSXPCListenerDelegate {
         connection.exportedInterface = NSXPCInterface(
             with: ParakeetModelDownloaderXPCProtocol.self
         )
-        connection.exportedObject = ModelDownloaderService()
+        connection.remoteObjectInterface = NSXPCInterface(
+            with: ParakeetModelDownloadProgressXPCProtocol.self)
+        let service = ModelDownloaderService(connection: connection)
+        connection.exportedObject = service
+        connection.invalidationHandler = { [weak connection, service] in
+            service.cancelDownload()
+            connection?.exportedObject = nil
+            connection?.invalidationHandler = nil
+        }
         connection.resume()
         return true
     }

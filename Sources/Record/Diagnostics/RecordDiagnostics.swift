@@ -12,7 +12,7 @@ final class RecordDiagnostics: ObservableObject {
     private static let pendingKey = "diagnostics.pendingReport.v1"
     @Published private(set) var preview = ""
     @Published private(set) var sending = false
-    @Published private(set) var status = "Review the report before sending."
+    @Published private(set) var status = L10n.text("Review the report before sending.")
     @Published private(set) var issueNumber: Int?
     private(set) var bytes: Data?
     private let snapshot: () -> RecordDiagnosticReport
@@ -55,13 +55,13 @@ final class RecordDiagnostics: ObservableObject {
             preview = String(decoding: data, as: UTF8.self)
             defaults.set(data, forKey: Self.pendingKey)
             issueNumber = nil
-            status = "Review the report before sending."
+            status = L10n.text("Review the report before sending.")
         } catch {
             bytes = nil
             preview = ""
             issueNumber = nil
             defaults.removeObject(forKey: Self.pendingKey)
-            status = "Could not prepare the report. Refresh to try again."
+            status = L10n.text("Could not prepare the report. Refresh to try again.")
         }
     }
 
@@ -70,7 +70,7 @@ final class RecordDiagnostics: ObservableObject {
         var report = snapshot()
         try report.includeCrash(data)
         setReport(report)
-        status = "Crash summary ready for review. The raw file stays on your Mac."
+        status = L10n.text("Crash summary ready for review. The raw file stays on your Mac.")
     }
 
     func importCrash(window: NSWindow?) {
@@ -80,7 +80,9 @@ final class RecordDiagnostics: ObservableObject {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.message =
-            "Choose a Record .ips crash report up to 2 MB. Only the filtered summary can be sent."
+            L10n.text(
+                "Choose a Record .ips crash report up to 2 MB. Only the filtered summary can be sent."
+            )
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let self, let url = panel.url else { return }
             do {
@@ -90,7 +92,9 @@ final class RecordDiagnostics: ObservableObject {
                 try self.includeCrash(Self.readCrashFile(url))
             } catch {
                 self.status =
-                    "Choose a valid Record .ips crash report no larger than 2 MB. The preview is unchanged."
+                    L10n.text(
+                        "Choose a valid Record .ips crash report no larger than 2 MB. The preview is unchanged."
+                    )
             }
         }
     }
@@ -126,8 +130,10 @@ final class RecordDiagnostics: ObservableObject {
             guard response == .OK, let url = panel.url else { return }
             do {
                 try bytes.write(to: url, options: .atomic)
-                self?.status = "Report saved locally."
-            } catch { self?.status = "Could not save the report. Choose another location." }
+                self?.status = L10n.text("Report saved locally.")
+            } catch {
+                self?.status = L10n.text("Could not save the report. Choose another location.")
+            }
         }
     }
 
@@ -136,18 +142,20 @@ final class RecordDiagnostics: ObservableObject {
         sending = true
         issueNumber = nil
         setBusy(true)
-        status = "Sending the reviewed report…"
+        status = L10n.text("Sending the reviewed report…")
         defer { sending = false; setBusy(false) }
         do {
             let receipt = try await client.send(bytes)
             issueNumber = receipt.issueNumber
             status =
                 receipt.duplicate
-                ? "This report was already received. Its count is unchanged."
-                : "Report received. Matching reports share the same issue."
+                ? L10n.text("This report has already been received.")
+                : L10n.text("Report received. Similar reports are grouped together.")
         } catch {
             status =
-                "Delivery was not confirmed. Retry sends this same report without counting it twice."
+                L10n.text(
+                    "Delivery was not confirmed. Retry sends this same report without counting it twice."
+                )
         }
     }
 
@@ -165,13 +173,17 @@ struct RecordDiagnosticsView: View {
     @ObservedObject var model: RecordDiagnostics
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Help & diagnostics").font(.title2)
+            Text(L10n.text("Help & diagnostics")).font(.title2)
             Text(
-                "Review a filtered report, save it locally, or send it to Record’s public GitHub issues. Matching reports are grouped together."
+                L10n.text(
+                    "Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record."
+                )
             )
             .fixedSize(horizontal: false, vertical: true)
             Text(
-                "Includes app/system versions, broad capture settings, recent event categories and an optional crash summary. Excludes media, transcripts, names, paths, clipboard content and raw logs. Use private security reporting for vulnerabilities."
+                L10n.text(
+                    "Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately."
+                )
             )
             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ScrollView {
@@ -181,19 +193,24 @@ struct RecordDiagnosticsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }
             .frame(height: 260).background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-            .accessibilityLabel("Report preview")
+            .accessibilityLabel(L10n.text("Report preview"))
             Text(model.status).font(.callout).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("record.reportStatus")
-            if model.issueNumber != nil { Button("View GitHub issue") { model.openIssue() } }
+            if model.issueNumber != nil {
+                Button(L10n.text("View submitted report")) { model.openIssue() }
+            }
             HStack(spacing: 8) {
                 Group {
-                    Button("Refresh") { model.refresh() }
-                    Button("Import crash log…") { model.importCrash(window: NSApp.keyWindow) }
-                    Button("Save report…") { model.export(window: NSApp.keyWindow) }.disabled(
-                        model.bytes == nil)
+                    Button(L10n.text("Refresh")) { model.refresh() }
+                    Button(L10n.text("Import crash log…")) {
+                        model.importCrash(window: NSApp.keyWindow)
+                    }
+                    Button(L10n.text("Save report…")) { model.export(window: NSApp.keyWindow) }
+                        .disabled(
+                            model.bytes == nil)
                 }.disabled(model.sending)
                 Spacer(minLength: 16)
-                Button("Send to public GitHub issues") { Task { await model.send() } }
+                Button(L10n.text("Send report to developer")) { Task { await model.send() } }
                     .disabled(!model.canSend).buttonStyle(.borderedProminent)
             }.controlSize(.regular)
         }.padding(24).frame(width: 640).onAppear { model.prepare() }
@@ -206,7 +223,7 @@ final class DiagnosticsWindowController: NSWindowController {
         let window = NSWindow(
             contentViewController: NSHostingController(
                 rootView: RecordDiagnosticsView(model: model)))
-        window.title = "Record — Help & diagnostics"
+        window.title = L10n.text("Record — Help & diagnostics")
         window.styleMask = [.titled, .closable]
         window.isReleasedWhenClosed = false
         super.init(window: window)

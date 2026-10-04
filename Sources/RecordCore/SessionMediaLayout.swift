@@ -23,7 +23,7 @@ public enum SessionMediaLayout {
             return "system.caf"
         case (.systemAudio, .finalized):
             return "system.wav"
-        case (.camera, _):
+        case (.camera, _), (.importedAudio, _):
             return nil
         }
     }
@@ -34,6 +34,8 @@ public enum SessionMediaLayout {
             return "me"
         case .systemAudio:
             return "them"
+        case .importedAudio:
+            return "source"
         case .screen, .camera:
             return nil
         }

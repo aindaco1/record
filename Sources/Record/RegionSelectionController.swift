@@ -216,7 +216,7 @@ final class RegionSelectionView: NSView {
             border.stroke()
         }
 
-        let message = "Drag to select a capture area · Esc to cancel"
+        let message = L10n.text("Drag to select a capture area · Esc to cancel")
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 15, weight: .semibold),
             .foregroundColor: NSColor.white,

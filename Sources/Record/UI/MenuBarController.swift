@@ -8,15 +8,15 @@ import RecordCore
 @MainActor
 final class MenuBarController {
     static let recordingPulseAnimationKey = "record.recording-pulse"
-    static let settingsMenuTitle = "Settings…"
-    static let openRecoveryFolderMenuTitle = "Open Recovery Folder…"
-    static let openLastRecordingMenuTitle = "Open last recording"
-    static let diagnosticsMenuTitle = "Help & diagnostics…"
-    static let checkForUpdatesMenuTitle = "Check for Updates…"
-    static let screenSourceMenuTitle = "Screen source"
-    static let captureDisplayMenuTitle = "Capture Full Display"
-    static let captureWindowMenuTitle = "Capture Window or Application…"
-    static let captureAreaMenuTitle = "Capture Area…"
+    static let settingsMenuTitle = L10n.text("Settings…")
+    static let openRecoveryFolderMenuTitle = L10n.text("Open Recovery Folder…")
+    static let openLastRecordingMenuTitle = L10n.text("Open last recording")
+    static let diagnosticsMenuTitle = L10n.text("Help & diagnostics…")
+    static let checkForUpdatesMenuTitle = L10n.text("Check for Updates…")
+    static let screenSourceMenuTitle = L10n.text("Screen source")
+    static let captureDisplayMenuTitle = L10n.text("Capture Full Display")
+    static let captureWindowMenuTitle = L10n.text("Capture Window or Application…")
+    static let captureAreaMenuTitle = L10n.text("Capture Area…")
 
     private let statusItem: NSStatusItem
     let recordingIndicator = MenuBarRecordingIndicatorView()
@@ -29,6 +29,7 @@ final class MenuBarController {
     private let settingsItem: NSMenuItem
     private let pauseResumeItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
+    private let dictationItem: NSMenuItem
     private let screenSourceItem: NSMenuItem
     private let mainDisplaySourceItem: NSMenuItem
     private let systemPickerSourceItem: NSMenuItem
@@ -77,9 +78,11 @@ final class MenuBarController {
         return items.first { $0.1.state == .on }?.0
     }
 
+    var onRecordingPresentation: ((RecordingMenuPresentation) -> Void)?
     var onToggle: (() -> Void)?
     var onCaptureScreenshot: ((ScreenshotCaptureKind) -> Void)?
     var onShowSettings: (() -> Void)?
+    var onDictation: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
     var onPauseResume: (() -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
@@ -87,6 +90,8 @@ final class MenuBarController {
     var onRetryTranscription: (() -> Void)?
     var onOpenRecoveryFolder: (() -> Void)?
     var onOpenLastRecording: (() -> Void)?
+    var onShowReadiness: (() -> Void)?
+    var onShowRecentSessions: (() -> Void)?
     var onShowDiagnostics: (() -> Void)?
     var onCheckForUpdates: (() -> Void)?
     var onSettingsInteractionAvailabilityChanged: ((SettingsInteractionAvailability) -> Void)?
@@ -98,7 +103,7 @@ final class MenuBarController {
         let menu = NSMenu()
         menu.autoenablesItems = false
 
-        stateLabel = NSMenuItem(title: "idle", action: nil, keyEquivalent: "")
+        stateLabel = NSMenuItem(title: L10n.text("idle"), action: nil, keyEquivalent: "")
         stateLabel.isEnabled = false
         menu.addItem(stateLabel)
 
@@ -137,14 +142,14 @@ final class MenuBarController {
         menu.addItem(.separator())
 
         toggleItem = NSMenuItem(
-            title: "Start screen recording",
+            title: L10n.text("Start screen recording"),
             action: #selector(toggleClicked),
             keyEquivalent: "r"
         )
         menu.addItem(toggleItem)
 
         pauseResumeItem = NSMenuItem(
-            title: "Pause screen recording",
+            title: L10n.text("Pause screen recording"),
             action: #selector(pauseResumeClicked),
             keyEquivalent: ""
         )
@@ -153,11 +158,15 @@ final class MenuBarController {
         menu.addItem(pauseResumeItem)
 
         audioOnlyItem = NSMenuItem(
-            title: "Start audio-only recording",
+            title: L10n.text("Start audio-only recording"),
             action: #selector(audioOnlyClicked),
             keyEquivalent: ""
         )
         menu.addItem(audioOnlyItem)
+        dictationItem = NSMenuItem(
+            title: L10n.text("Quick Dictation"), action: #selector(dictationClicked),
+            keyEquivalent: "")
+        menu.addItem(dictationItem)
 
         screenSourceItem = NSMenuItem(
             title: Self.screenSourceMenuTitle,
@@ -184,16 +193,24 @@ final class MenuBarController {
         )
         openLastRecordingItem.isEnabled = false
         menu.addItem(openLastRecordingItem)
+        let recentSessionsItem = NSMenuItem(
+            title: L10n.text("Recent Sessions…"),
+            action: #selector(recentSessionsClicked), keyEquivalent: "")
+        menu.addItem(recentSessionsItem)
+        let readinessItem = NSMenuItem(
+            title: L10n.text("Recording Setup…"), action: #selector(readinessClicked),
+            keyEquivalent: "")
+        menu.addItem(readinessItem)
 
         gifskiItem = NSMenuItem(
-            title: "Open Last Video in Gifski",
+            title: L10n.text("Open Last Video in Gifski"),
             action: #selector(openLastVideoInGifskiClicked),
             keyEquivalent: ""
         )
         menu.addItem(gifskiItem)
 
         retryTranscriptionItem = NSMenuItem(
-            title: "Retry Failed Transcription",
+            title: L10n.text("Retry Failed Transcription"),
             action: #selector(retryTranscriptionClicked),
             keyEquivalent: ""
         )
@@ -237,7 +254,7 @@ final class MenuBarController {
         menu.addItem(.separator())
 
         let quit = NSMenuItem(
-            title: "Quit Record",
+            title: L10n.text("Quit Record"),
             action: #selector(quitClicked),
             keyEquivalent: "q"
         )
@@ -250,6 +267,7 @@ final class MenuBarController {
             captureAreaItem,
             pauseResumeItem,
             audioOnlyItem,
+            dictationItem,
             mainDisplaySourceItem,
             systemPickerSourceItem,
             regionSourceItem,
@@ -257,6 +275,8 @@ final class MenuBarController {
             retryTranscriptionItem,
             recoveryFolderItem,
             openLastRecordingItem,
+            recentSessionsItem,
+            readinessItem,
             settingsItem,
             checkForUpdatesItem,
             quit,
@@ -371,19 +391,19 @@ final class MenuBarController {
         case .routeRecovered:
             captureHealthNote = nil
         case .routeChanged:
-            captureHealthNote = "reconnecting microphone…"
+            captureHealthNote = L10n.text("reconnecting microphone…")
         case .routeRecoveryFailed:
-            captureHealthNote = "microphone reconnecting…"
+            captureHealthNote = L10n.text("microphone reconnecting…")
         case .voiceProcessingFallback:
-            captureHealthNote = "using compatible microphone mode"
+            captureHealthNote = L10n.text("using compatible microphone mode")
         case .digitalSilence:
-            captureHealthNote = "using raw microphone"
+            captureHealthNote = L10n.text("using raw microphone")
         case .queuePressure:
-            captureHealthNote = "capture under load"
+            captureHealthNote = L10n.text("capture under load")
         case .writeFailed:
-            captureHealthNote = "track write failed"
+            captureHealthNote = L10n.text("track write failed")
         case .missingCallbacks:
-            captureHealthNote = "track captured no data"
+            captureHealthNote = L10n.text("track captured no data")
         }
     }
 
@@ -397,8 +417,8 @@ final class MenuBarController {
         gifskiItem.isEnabled = available && hasFinishedVideo
         gifskiItem.title =
             available
-            ? "Open Last Video in Gifski"
-            : "Gifski Not Installed"
+            ? L10n.text("Open Last Video in Gifski")
+            : L10n.text("Gifski Not Installed")
     }
 
     /// Show transcription progress/failure as a second status line in the
@@ -415,7 +435,7 @@ final class MenuBarController {
         openLastRecordingItem.title = Self.openLastRecordingMenuTitle
         openLastRecordingItem.isEnabled = available
         openLastRecordingItem.toolTip =
-            available ? "Reveal the most recently finished recording in Finder" : nil
+            available ? L10n.text("Reveal the most recently finished recording in Finder") : nil
     }
 
     func updateRecoveryMaterial(available: Bool) {
@@ -455,7 +475,8 @@ final class MenuBarController {
 
     static func screenshotFlashImage() -> NSImage? {
         let image = NSImage(
-            systemSymbolName: "camera.fill", accessibilityDescription: "Screenshot saved")
+            systemSymbolName: "camera.fill", accessibilityDescription: L10n.text("Screenshot saved")
+        )
         image?.isTemplate = true
         image?.size = menuBarImageSize
         return image
@@ -492,6 +513,7 @@ final class MenuBarController {
         if presentation.clearsCaptureHealth {
             captureHealthNote = nil
         }
+        onRecordingPresentation?(presentation)
         stateLabel.title = presentation.stateTitle
         toggleItem.title = presentation.toggleTitle
         toggleItem.isEnabled = presentation.toggleEnabled
@@ -499,6 +521,7 @@ final class MenuBarController {
         pauseResumeItem.isHidden = !presentation.pauseResumeVisible
         pauseResumeItem.isEnabled = presentation.pauseResumeEnabled
         audioOnlyItem.isEnabled = presentation.audioOnlyEnabled
+        dictationItem.isEnabled = presentation.audioOnlyEnabled
         screenSourceItem.isEnabled = presentation.screenSourceEnabled
         recordingExportFolderIsEnabled = presentation.exportFolderEnabled
         capturePrivacyIsEnabled = presentation.capturePrivacyEnabled
@@ -516,6 +539,9 @@ final class MenuBarController {
         statusItem.button?.image = Self.menuBarImage()
     }
 
+    @objc private func readinessClicked() { onShowReadiness?() }
+    @objc private func recentSessionsClicked() { onShowRecentSessions?() }
+
     @objc private func toggleClicked() { onToggle?() }
     @objc private func captureScreenshotClicked(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,
@@ -525,6 +551,7 @@ final class MenuBarController {
     }
     @objc private func showSettingsClicked() { onShowSettings?() }
     @objc private func pauseResumeClicked() { onPauseResume?() }
+    @objc private func dictationClicked() { onDictation?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func screenSourceClicked(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,
