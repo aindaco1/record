@@ -459,14 +459,8 @@ final class AppController {
                     controller?.showTranscription(status)
                 }
             }
-            await transcription.resumePending(root: root)
-            if let restoredExportLease {
-                await transcription.resumePending(
-                    root: restoredExportLease.url,
-                    recoverInterrupted: false,
-                    retaining: restoredExportLease
-                )
-            }
+            await transcription.resumePending(
+                recoveryRoot: root, exportDirectory: restoredExportLease)
             refreshRecentRecordingMenu()
         }
 
@@ -1862,7 +1856,8 @@ final class AppController {
             switch result {
             case .success:
                 self.presentParakeetModelReady()
-                await transcription.resumePending(root: root)
+                await transcription.resumePending(
+                    recoveryRoot: root, exportDirectory: self.exportDirectoryLease)
             case .failure(let error):
                 if Task.isCancelled || error is CancellationError { return }
                 let alert = NSAlert()
@@ -1913,7 +1908,8 @@ final class AppController {
             switch result {
             case .success:
                 self.presentParakeetModelReady()
-                await transcription.resumePending(root: root)
+                await transcription.resumePending(
+                    recoveryRoot: root, exportDirectory: self.exportDirectoryLease)
             case .failure(let error):
                 let alert = NSAlert()
                 alert.alertStyle = .warning

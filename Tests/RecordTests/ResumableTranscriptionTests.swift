@@ -130,6 +130,64 @@ final class ResumableTranscriptionTests: XCTestCase, @unchecked Sendable {
                 atPath: session.appendingPathComponent("system.wav").path))
     }
 
+    func testModelSetupResumesBothLocationsWithoutRestartingDeferredOrExportedCapture()
+        async throws
+    {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let recoveryRoot = root.appendingPathComponent("recovery")
+        let exportRoot = root.appendingPathComponent("exports")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let recovery = recoveryRoot.appendingPathComponent("pending")
+        let exported = exportRoot.appendingPathComponent("pending")
+        let deferred = exportRoot.appendingPathComponent("deferred")
+        let interrupted = exportRoot.appendingPathComponent("interrupted")
+        let source = Data("synthetic audio".utf8)
+        for session in [recovery, exported, deferred, interrupted] {
+            try FileManager.default.createDirectory(at: session, withIntermediateDirectories: true)
+            try SessionManifest(
+                state: session == interrupted ? .recording : .finalized,
+                startedAt: Date(timeIntervalSince1970: 1),
+                endedAt: session == interrupted ? nil : Date(timeIntervalSince1970: 2),
+                tracks: [.init(kind: .microphone, filename: "mic.wav")]
+            ).write(to: session)
+            try source.write(to: session.appendingPathComponent("mic.wav"))
+        }
+        let finished = expectation(description: "both pending sessions transcribed")
+        finished.expectedFulfillmentCount = 2
+        let engine = RetryEngine()
+        let coordinator = TranscriptionCoordinator(
+            engineFactory: { _ in engine }, refinementEnabled: { false },
+            transcriptionEnabled: { true }, vocabulary: { Vocabulary() })
+        try await coordinator.deferSession(deferred)
+        // Model preparation failures leave retryable checkpoints in either location.
+        for session in [recovery, exported] {
+            var checkpoint = TranscriptionCheckpoint(
+                engine: "", model: "", language: "", tracks: [])
+            checkpoint.state = .needsRetry
+            try checkpoint.write(to: session)
+        }
+        await coordinator.setStatusHandler { status in
+            if case .finished(_, let succeeded) = status {
+                XCTAssertTrue(succeeded)
+                finished.fulfill()
+            }
+        }
+        await coordinator.resumePending(
+            recoveryRoot: recoveryRoot,
+            exportDirectory: ExportDirectoryLease(url: exportRoot, stopAccessOnRelease: false))
+        await fulfillment(of: [finished], timeout: 5)
+        for session in [recovery, exported] {
+            XCTAssertEqual(try TranscriptionCheckpoint.read(from: session).state, .complete)
+        }
+        XCTAssertEqual(try TranscriptionCheckpoint.read(from: deferred).state, .deferred)
+        XCTAssertEqual(try SessionManifest.read(from: interrupted).state, .recording)
+        let calls = await engine.calls
+        XCTAssertEqual(calls, ["mic.wav", "mic.wav"])
+        for session in [recovery, exported, deferred, interrupted] {
+            XCTAssertEqual(try Data(contentsOf: session.appendingPathComponent("mic.wav")), source)
+        }
+    }
+
     func testDeferredSessionDoesNotRestartOnLaunch() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let session = root.appendingPathComponent("synthetic")
