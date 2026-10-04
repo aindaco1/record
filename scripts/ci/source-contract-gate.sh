@@ -23,6 +23,8 @@ swift format lint --strict --configuration .swift-format --recursive \
     Package.swift Sources/RecordCore Sources/RecordCapture Sources/RecordMedia \
     Sources/RecordModelDownload Sources/RecordModelDownloaderService \
     Sources/Record/Diagnostics Sources/RecordReportSenderService \
+    Sources/Record/Automation Sources/Record/UI/DictationPreviewController.swift \
+    Sources/Record/UI/TranscriptPreviewReader.swift \
     Sources/Record/AppUpdateController.swift \
     Sources/Record/Audio/SessionAudioFinalizer.swift \
     Sources/Record/AudioSessionInspector.swift \

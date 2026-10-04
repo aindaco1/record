@@ -89,12 +89,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     let readinessLabel = NSTextField(wrappingLabelWithString: "")
     let checkPermissionsButton = NSButton(
         title: L10n.text("Check Permissions…"), target: nil, action: nil)
+    let startDictationButton = NSButton(
+        title: L10n.text("Quick Dictation"), target: nil, action: nil)
     let startRecordingButton = NSButton(
         title: L10n.text("Start Screen Recording"), target: nil, action: nil)
     let captureLockNote = NSTextField(wrappingLabelWithString: "")
     var interactionAvailability = SettingsInteractionAvailability.idle
     var onRefreshReadiness: ((RecordingMode) -> RecordingReadiness)?
     var onCheckPermissions: ((RecordingMode) -> Void)?
+    var onStartDictation: (() -> Void)?
     var onStartRecording: ((RecordingMode) -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
     var onSectionChanged: ((Section) -> Void)?
@@ -251,6 +254,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
             ScreenCaptureSourcePreference.allCases[screenSourcePopup.indexOfSelectedItem])
     }
     @objc func checkPermissions() { stopInputTest(); onCheckPermissions?(selectedRecordingMode) }
+    @objc func startDictation() { stopInputTest(); onStartDictation?() }
     @objc func startRecording() { stopInputTest(); onStartRecording?(selectedRecordingMode) }
 
     func updateExportDirectory(_ url: URL) {
@@ -268,6 +272,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         startRecordingButton.isEnabled =
             availability.capturePrivacyEnabled && availability.destinationSelectionEnabled
         checkPermissionsButton.isEnabled = startRecordingButton.isEnabled
+        startDictationButton.isEnabled = startRecordingButton.isEnabled
         captureLockNote.stringValue =
             startRecordingButton.isEnabled
             ? ""

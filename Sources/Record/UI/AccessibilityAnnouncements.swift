@@ -25,6 +25,7 @@ final class AccessibilityAnnouncements {
         case .progress: return
         case .transcribing:
             key = "working"; message = L10n.text("Transcription started")
+        case .finished: return
         case .idle:
             key = "idle"; message = L10n.text("Transcription finished")
         case .failed:

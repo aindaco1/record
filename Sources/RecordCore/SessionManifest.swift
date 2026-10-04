@@ -3,7 +3,7 @@ import Foundation
 /// Canonical, crash-recoverable session state. `session.json` is written when
 /// a session directory is created and atomically replaced at each transition.
 public struct SessionManifest: Codable, Equatable, Sendable {
-    public static let currentSchemaVersion = 2
+    public static let currentSchemaVersion = 3
 
     public enum State: String, Codable, Sendable {
         case recording
@@ -123,6 +123,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         }
     }
 
+    public enum Purpose: String, Codable, Sendable { case dictation }
+    public var purpose: Purpose?
     public var importedAudio: ImportedAudio?
     public var schemaVersion: Int
     public var id: UUID
@@ -148,7 +150,8 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         healthEvents: [CaptureHealthEvent]? = nil,
         captureSegments: [CaptureSegment]? = nil,
         captureEvents: [CaptureEvent]? = nil,
-        importedAudio: ImportedAudio? = nil
+        importedAudio: ImportedAudio? = nil,
+        purpose: Purpose? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.id = id
@@ -162,9 +165,11 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         self.captureSegments = captureSegments
         self.captureEvents = captureEvents
         self.importedAudio = importedAudio
+        self.purpose = purpose
     }
 
     enum CodingKeys: String, CodingKey {
+        case purpose
         case importedAudio = "imported_audio"
         case schemaVersion = "schema_version"
         case id
@@ -235,6 +240,7 @@ public struct SessionManifest: Codable, Equatable, Sendable {
         case duplicateCaptureSegment(Int)
         case invalidCaptureEvent
         case invalidImportedAudio
+        case invalidPurpose
     }
 
     private func transitioned(to nextState: State, at end: Date, tracks: [Track]) throws -> Self {
@@ -251,6 +257,11 @@ public struct SessionManifest: Codable, Equatable, Sendable {
     private func validate() throws {
         guard (1...Self.currentSchemaVersion).contains(schemaVersion) else {
             throw ManifestError.unsupportedSchema(schemaVersion)
+        }
+        if purpose == .dictation {
+            guard schemaVersion >= 3, importedAudio == nil,
+                tracks.count == 1, tracks[0].kind == .microphone
+            else { throw ManifestError.invalidPurpose }
         }
         if let importedAudio {
             guard schemaVersion >= 2, state == .finalized, endedAt != nil,

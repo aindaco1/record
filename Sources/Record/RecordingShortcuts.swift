@@ -2,11 +2,12 @@ import Foundation
 import RecordCore
 
 enum RecordingShortcutAction: UInt32, CaseIterable, Sendable {
-    case screen = 4, audio, pauseResume
+    case screen = 4, audio, pauseResume, dictation
     var title: String {
         switch self {
         case .screen: L10n.text("Screen start / stop")
         case .audio: L10n.text("Audio start / stop")
+        case .dictation: L10n.text("Dictation start / stop")
         case .pauseResume: L10n.text("Screen pause / resume")
         }
     }

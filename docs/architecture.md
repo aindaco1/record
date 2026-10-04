@@ -195,8 +195,8 @@ capability-specific checks. The AppKit menu applies one complete presentation
 value for each recording phase so a transition cannot inherit stale command
 availability from a previous phase.
 
-Persistent preferences use one settings window with General, Screenshots, and
-Recording sections. The menu remains an operational surface: it keeps capture,
+Persistent preferences use one settings window with General, Recording, Sessions,
+Transcription, Screenshots, and Shortcuts sections. The menu remains an operational surface: it keeps capture,
 source-selection, open/retry, update, and quit commands. Settings adapters reuse
 the existing preference stores, security-scoped export bookmark, and recording
 presentation policy rather than creating parallel state or grants.
@@ -207,3 +207,10 @@ configuration. Still-image sizing is a separate pure contract because native
 screenshots must not inherit the recording writer's 4K/even-dimension bound.
 Global hotkeys translate into the same three typed screenshot commands used by
 the menu; Carbon registration avoids an Accessibility permission request.
+
+Quick Dictation is an existing microphone recording session with a schema-3
+purpose, followed by the same transcription queue and an explicit-copy preview.
+CLI recording commands and five App Intents share the deterministic RecordCore
+command policy and AppController capture owner. The CLI uses bounded fixed files
+in the private app cache; no network entitlement or public URL handler is added.
+See [ADR 0028](adr/0028-dictation-and-local-recording-control.md).

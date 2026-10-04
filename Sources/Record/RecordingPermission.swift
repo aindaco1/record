@@ -208,7 +208,7 @@ final class RecordingPermissionController {
             return screen.requestAccess()
                 ? .ready
                 : .waitingForRestart(.screenAndSystemAudio)
-        case .audioOnly:
+        case .audioOnly, .dictation:
             guard audio.includeSystemAudio else { return .ready }
             let status = systemAudio.registerAccessRequest()
             guard status == noErr else {

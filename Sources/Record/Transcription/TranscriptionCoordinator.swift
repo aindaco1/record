@@ -50,6 +50,7 @@ struct TranscriptRefinementPass: Equatable, Sendable {
 actor TranscriptionCoordinator {
     enum Status: Sendable {
         case idle
+        case finished(directory: URL, succeeded: Bool)
         case transcribing(session: String, queued: Int)
         case failed(session: String)
         case progress(session: String, stage: String, queued: Int)
@@ -98,7 +99,7 @@ actor TranscriptionCoordinator {
     /// Queue a finished session. With transcription disabled in config, the
     /// completion hook still fires — it just gets an untranscribed folder.
     func enqueue(_ sessionDir: URL, retaining directoryLease: ExportDirectoryLease? = nil) {
-        guard transcriptionEnabled() || Self.isImported(sessionDir) else {
+        guard transcriptionEnabled() || Self.isExplicitTranscription(sessionDir) else {
             runHook(for: sessionDir)
             return
         }
@@ -112,7 +113,7 @@ actor TranscriptionCoordinator {
     func retryLastFailure() -> Bool {
         guard let directory = retryState.failedDirectory,
             let failedJob = retryState.takeFailure(
-                when: transcriptionEnabled() || Self.isImported(directory))
+                when: transcriptionEnabled() || Self.isExplicitTranscription(directory))
         else { return false }
         appendIfNeeded(failedJob.directory, retaining: failedJob.directoryLease)
         drainIfIdle()
@@ -121,7 +122,7 @@ actor TranscriptionCoordinator {
 
     /// Explicit retry also works for a partial or deferred session after relaunch.
     func retry(_ directory: URL, retaining lease: ExportDirectoryLease? = nil) {
-        guard transcriptionEnabled() || Self.isImported(directory),
+        guard transcriptionEnabled() || Self.isExplicitTranscription(directory),
             !PendingTranscription.sameDirectory(activeJob?.directory, directory)
         else { return }
         if var checkpoint = try? TranscriptionCheckpoint.read(from: directory) {
@@ -191,7 +192,7 @@ actor TranscriptionCoordinator {
             }
         }
         let pending = Self.pendingSessionDirectories(root: root).filter {
-            transcriptionEnabled() || Self.isImported($0)
+            transcriptionEnabled() || Self.isExplicitTranscription($0)
         }
         for dir in pending {
             appendIfNeeded(dir, retaining: directoryLease)
@@ -205,8 +206,9 @@ actor TranscriptionCoordinator {
         drainIfIdle()
     }
 
-    private static func isImported(_ directory: URL) -> Bool {
-        (try? SessionManifest.read(from: directory))?.importedAudio != nil
+    private static func isExplicitTranscription(_ directory: URL) -> Bool {
+        guard let manifest = try? SessionManifest.read(from: directory) else { return false }
+        return manifest.importedAudio != nil || manifest.purpose == .dictation
     }
 
     /// The CLI uses the same pipeline and completion-hook claim as the app queue.
@@ -345,8 +347,10 @@ actor TranscriptionCoordinator {
             activeJob = job
             let task = Task { try await self.transcribe(dir) }
             activeTask = task
+            var succeeded = false
             do {
                 try await task.value
+                succeeded = true
                 notificationHandler(
                     RecordNotification(
                         title: L10n.text("Transcript ready"),
@@ -376,6 +380,7 @@ actor TranscriptionCoordinator {
                     )
                 )
             }
+            publish(.finished(directory: dir, succeeded: succeeded))
             activeJob = nil
             activeTask = nil
         }

@@ -29,6 +29,7 @@ final class MenuBarController {
     private let settingsItem: NSMenuItem
     private let pauseResumeItem: NSMenuItem
     private let audioOnlyItem: NSMenuItem
+    private let dictationItem: NSMenuItem
     private let screenSourceItem: NSMenuItem
     private let mainDisplaySourceItem: NSMenuItem
     private let systemPickerSourceItem: NSMenuItem
@@ -81,6 +82,7 @@ final class MenuBarController {
     var onToggle: (() -> Void)?
     var onCaptureScreenshot: ((ScreenshotCaptureKind) -> Void)?
     var onShowSettings: (() -> Void)?
+    var onDictation: (() -> Void)?
     var onStartAudioOnly: (() -> Void)?
     var onPauseResume: (() -> Void)?
     var onSelectScreenSource: ((ScreenCaptureSourcePreference) -> Void)?
@@ -161,6 +163,10 @@ final class MenuBarController {
             keyEquivalent: ""
         )
         menu.addItem(audioOnlyItem)
+        dictationItem = NSMenuItem(
+            title: L10n.text("Quick Dictation"), action: #selector(dictationClicked),
+            keyEquivalent: "")
+        menu.addItem(dictationItem)
 
         screenSourceItem = NSMenuItem(
             title: Self.screenSourceMenuTitle,
@@ -261,6 +267,7 @@ final class MenuBarController {
             captureAreaItem,
             pauseResumeItem,
             audioOnlyItem,
+            dictationItem,
             mainDisplaySourceItem,
             systemPickerSourceItem,
             regionSourceItem,
@@ -514,6 +521,7 @@ final class MenuBarController {
         pauseResumeItem.isHidden = !presentation.pauseResumeVisible
         pauseResumeItem.isEnabled = presentation.pauseResumeEnabled
         audioOnlyItem.isEnabled = presentation.audioOnlyEnabled
+        dictationItem.isEnabled = presentation.audioOnlyEnabled
         screenSourceItem.isEnabled = presentation.screenSourceEnabled
         recordingExportFolderIsEnabled = presentation.exportFolderEnabled
         capturePrivacyIsEnabled = presentation.capturePrivacyEnabled
@@ -543,6 +551,7 @@ final class MenuBarController {
     }
     @objc private func showSettingsClicked() { onShowSettings?() }
     @objc private func pauseResumeClicked() { onPauseResume?() }
+    @objc private func dictationClicked() { onDictation?() }
     @objc private func audioOnlyClicked() { onStartAudioOnly?() }
     @objc private func screenSourceClicked(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,

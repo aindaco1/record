@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOGS = {
     ROOT / "Resources/Localizable.xcstrings": ROOT / "Sources/RecordCore/Localization",
     ROOT / "Resources/InfoPlist.xcstrings": ROOT / "Sources/Record/Resources/Localization",
+    ROOT / "Resources/AppShortcuts.xcstrings": ROOT / "Sources/Record/Resources/ShortcutLocalization",
 }
 
 
@@ -53,7 +54,7 @@ def main():
     # Literal lookups must never silently fall back to English in the Spanish UI.
     entries = json.loads((ROOT / "Resources/Localizable.xcstrings").read_text())["strings"]
     for source in (ROOT / "Sources").rglob("*.swift"):
-        for match in re.finditer(r'L10n\.(?:text|format)\("((?:[^"\\]|\\.)*)"', source.read_text()):
+        for match in re.finditer(r'L10n\.(?:text|format)\(\s*"((?:[^"\\]|\\.)*)"', source.read_text()):
             key = json.loads('"' + match.group(1) + '"')
             if key not in entries:
                 raise SystemExit(f"Missing catalog key in {source.name}: {key}")

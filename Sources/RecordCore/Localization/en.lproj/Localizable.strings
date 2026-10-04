@@ -148,6 +148,12 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Click to approve Record in Login Items</string>
 	<key>Clipboard</key>
 	<string>Clipboard</string>
+	<key>Complete recording permissions, source selection, and model setup in Record first.</key>
+	<string>Complete recording permissions, source selection, and model setup in Record first.</string>
+	<key>Copied. Audio and transcripts stay in Sessions.</key>
+	<string>Copied. Audio and transcripts stay in Sessions.</string>
+	<key>Copy</key>
+	<string>Copy</string>
 	<key>Copy transcript</key>
 	<string>Copy transcript</string>
 	<key>Could not prepare the report. Refresh to try again.</key>
@@ -170,6 +176,12 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Deferred</string>
 	<key>Delivery was not confirmed. Retry sends this same report without counting it twice.</key>
 	<string>Delivery was not confirmed. Retry sends this same report without counting it twice.</string>
+	<key>Dictation preview</key>
+	<string>Dictation preview</string>
+	<key>Dictation saved</key>
+	<string>Dictation saved</string>
+	<key>Dictation start / stop</key>
+	<string>Dictation start / stop</string>
 	<key>Display, Application, or Window…</key>
 	<string>Display, Application, or Window…</string>
 	<key>Download and Install</key>
@@ -216,6 +228,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Full Display</string>
 	<key>General</key>
 	<string>General</string>
+	<key>Get Record’s current capture state without sharing recording content.</key>
+	<string>Get Record’s current capture state without sharing recording content.</string>
 	<key>Gifski Not Installed</key>
 	<string>Gifski Not Installed</string>
 	<key>Gifski couldn’t open the video</key>
@@ -234,6 +248,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Hide menu bar, including the clock</string>
 	<key>Hide notifications from capture</key>
 	<string>Hide notifications from capture</string>
+	<key>Idle</key>
+	<string>Idle</string>
 	<key>Import</key>
 	<string>Import</string>
 	<key>Import Audio</key>
@@ -318,6 +334,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>No sessions in the current save folder or private recovery storage.</string>
 	<key>No sessions match this filter.</key>
 	<string>No sessions match this filter.</string>
+	<key>No speech was recognized. Your audio is saved in Sessions.</key>
+	<string>No speech was recognized. Your audio is saved in Sessions.</string>
 	<key>Not Now</key>
 	<string>Not Now</string>
 	<key>Off</key>
@@ -330,6 +348,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Open Record at Login</string>
 	<key>Open Record automatically after you sign in</key>
 	<string>Open Record automatically after you sign in</string>
+	<key>Open Record before using recording commands.</key>
+	<string>Open Record before using recording commands.</string>
 	<key>Open Recovery Folder…</key>
 	<string>Open Recovery Folder…</string>
 	<key>Open System Settings</key>
@@ -358,8 +378,18 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Parakeet model</string>
 	<key>Paste the image now to preserve it, then check the export folder.</key>
 	<string>Paste the image now to preserve it, then check the export folder.</string>
+	<key>Pause Recording</key>
+	<string>Pause Recording</string>
+	<key>Pause an active screen recording.</key>
+	<string>Pause an active screen recording.</string>
+	<key>Pause and resume require a screen recording.</key>
+	<string>Pause and resume require a screen recording.</string>
 	<key>Pause screen recording</key>
 	<string>Pause screen recording</string>
+	<key>Paused</key>
+	<string>Paused</string>
+	<key>Pausing recording</key>
+	<string>Pausing recording</string>
 	<key>Pausing screen recording…</key>
 	<string>Pausing screen recording…</string>
 	<key>Play imported audio</key>
@@ -378,12 +408,18 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Preferred spellings apply automatically to every new transcript. Case and spacing variants match automatically; separate other aliases with semicolons. For existing sessions, use Apply Vocabulary in Sessions.</string>
 	<key>Preparing model download…</key>
 	<string>Preparing model download…</string>
+	<key>Preparing recording</key>
+	<string>Preparing recording</string>
 	<key>Preparing screen recording…</key>
 	<string>Preparing screen recording…</string>
 	<key>Preparing transcript</key>
 	<string>Preparing transcript</string>
 	<key>Queued</key>
 	<string>Queued</string>
+	<key>Queued for local transcription. Your audio is saved in Sessions.</key>
+	<string>Queued for local transcription. Your audio is saved in Sessions.</string>
+	<key>Quick Dictation</key>
+	<string>Quick Dictation</string>
 	<key>Quit Record</key>
 	<string>Quit Record</string>
 	<key>Quit Record from the menu bar, then open it again.</key>
@@ -408,6 +444,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Record Settings</string>
 	<key>Record can download the pinned model from its GitHub release and verify it </key>
 	<string>Record can download the pinned model from its GitHub release and verify it </string>
+	<key>Record could not start this operation. Check its settings and try again.</key>
+	<string>Record could not start this operation. Check its settings and try again.</string>
 	<key>Record couldn’t change Login Items</key>
 	<string>Record couldn’t change Login Items</string>
 	<key>Record couldn’t prepare screen capture. The failed session was preserved.</key>
@@ -416,6 +454,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Record couldn’t prepare the local video file. The failed session was preserved.</string>
 	<key>Record couldn’t restart</key>
 	<string>Record couldn’t restart</string>
+	<key>Record is busy with another capture or transition. Check status and try again.</key>
+	<string>Record is busy with another capture or transition. Check status and try again.</string>
 	<key>Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. </key>
 	<string>Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. </string>
 	<key>Record sections</key>
@@ -432,8 +472,12 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Recording &amp; preferences</string>
 	<key>Recording Setup…</key>
 	<string>Recording Setup…</string>
+	<key>Recording Status</key>
+	<string>Recording Status</string>
 	<key>Recording controls are locked while capture is starting, running, or saving.</key>
 	<string>Recording controls are locked while capture is starting, running, or saving.</string>
+	<key>Recording mode</key>
+	<string>Recording mode</string>
 	<key>Recording names</key>
 	<string>Recording names</string>
 	<key>Recording paused</key>
@@ -464,8 +508,14 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Requires macOS 26 or later.</string>
 	<key>Restore Screenshot Defaults</key>
 	<string>Restore Screenshot Defaults</string>
+	<key>Resume Recording</key>
+	<string>Resume Recording</string>
+	<key>Resume a paused screen recording.</key>
+	<string>Resume a paused screen recording.</string>
 	<key>Resume screen recording</key>
 	<string>Resume screen recording</string>
+	<key>Resuming recording</key>
+	<string>Resuming recording</string>
 	<key>Resuming screen recording…</key>
 	<string>Resuming screen recording…</string>
 	<key>Retry</key>
@@ -482,6 +532,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Review a diagnostic report, save it to your Mac, or send it to the developer to help improve Record.</string>
 	<key>Review the report before sending.</key>
 	<string>Review the report before sending.</string>
+	<key>Review your text, then copy it. Audio and transcripts stay in Sessions.</key>
+	<string>Review your text, then copy it. Audio and transcripts stay in Sessions.</string>
 	<key>Save location</key>
 	<string>Save location</string>
 	<key>Save report…</key>
@@ -496,6 +548,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Saved to %@, but the private working copy could not be removed.</string>
 	<key>Saved to %@. Click to open the recording folder.</key>
 	<string>Saved to %@. Click to open the recording folder.</string>
+	<key>Saving recording</key>
+	<string>Saving recording</string>
 	<key>Saving recording…</key>
 	<string>Saving recording…</string>
 	<key>Saving transcript</key>
@@ -552,6 +606,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Sent reports are public. They include app and system versions, general recording settings, recent event types, and an optional crash summary. They exclude media, transcripts, names, file paths, clipboard content, and raw logs. Report security vulnerabilities privately.</string>
 	<key>Sessions</key>
 	<string>Sessions</string>
+	<key>Sessions…</key>
+	<string>Sessions…</string>
 	<key>Set Up Local Parakeet Transcription</key>
 	<string>Set Up Local Parakeet Transcription</string>
 	<key>Set Up Local Transcription</key>
@@ -574,12 +630,20 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Some files couldn’t be imported</string>
 	<key>Spanish</key>
 	<string>Spanish</string>
+	<key>Speak into your selected microphone, stop, then review and copy the text.</key>
+	<string>Speak into your selected microphone, stop, then review and copy the text.</string>
 	<key>Speech language</key>
 	<string>Speech language</string>
+	<key>Start ${mode} recording</key>
+	<string>Start ${mode} recording</string>
 	<key>Start Audio Recording</key>
 	<string>Start Audio Recording</string>
+	<key>Start Recording</key>
+	<string>Start Recording</string>
 	<key>Start Screen Recording</key>
 	<string>Start Screen Recording</string>
+	<key>Start a recording using your saved Record settings.</key>
+	<string>Start a recording using your saved Record settings.</string>
 	<key>Start audio-only recording</key>
 	<string>Start audio-only recording</string>
 	<key>Start screen recording</key>
@@ -588,12 +652,18 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Startup &amp; support</string>
 	<key>Stop</key>
 	<string>Stop</string>
+	<key>Stop Recording</key>
+	<string>Stop Recording</string>
 	<key>Stop Test</key>
 	<string>Stop Test</string>
+	<key>Stop capture and preserve the recording. Use Status to check when saving finishes.</key>
+	<string>Stop capture and preserve the recording. Use Status to check when saving finishes.</string>
 	<key>Stop recording</key>
 	<string>Stop recording</string>
 	<key>Stop the current recording, take one screenshot to grant access, then try again.</key>
 	<string>Stop the current recording, take one screenshot to grant access, then try again.</string>
+	<key>Stopping recording</key>
+	<string>Stopping recording</string>
 	<key>Stopping recording…</key>
 	<string>Stopping recording…</string>
 	<key>System Audio Only</key>
@@ -626,10 +696,14 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>The audio is safe. Click to open the recording folder.</string>
 	<key>The available media is safe. Click to open the recording folder.</key>
 	<string>The available media is safe. Click to open the recording folder.</string>
+	<key>The command expired without running. Check status and try again.</key>
+	<string>The command expired without running. Check status and try again.</string>
 	<key>The export failed, but the original recording is safe.</key>
 	<string>The export failed, but the original recording is safe.</string>
 	<key>The image is safe in the export folder. Copy it from Finder if needed.</key>
 	<string>The image is safe in the export folder. Copy it from Finder if needed.</string>
+	<key>The recording command is invalid or belongs to an older app instance.</key>
+	<string>The recording command is invalid or belongs to an older app instance.</string>
 	<key>The recording is preserved. Try again after the current track finishes.</key>
 	<string>The recording is preserved. Try again after the current track finishes.</string>
 	<key>The recording is safe and can be opened manually.</key>
@@ -706,6 +780,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>Vocabulary saved. New transcripts will use these spellings.</string>
 	<key>Window or Application</key>
 	<string>Window or Application</string>
+	<key>Your audio is safe. Open Sessions to retry transcription.</key>
+	<string>Your audio is safe. Open Sessions to retry transcription.</string>
 	<key>audio</key>
 	<string>audio</string>
 	<key>before local installation. Recording continues to work without the model.</key>
@@ -714,6 +790,8 @@ You can manage Record manually in System Settings → General → Login Items.</
 	<string>capture under load</string>
 	<key>complete</key>
 	<string>complete</string>
+	<key>dictation</key>
+	<string>dictation</string>
 	<key>downloading Parakeet model…</key>
 	<string>downloading Parakeet model…</string>
 	<key>found %ld session needing manual review</key>

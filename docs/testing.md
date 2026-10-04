@@ -501,6 +501,21 @@ signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-ca
 | Panel | Automatic show and disabled setting; elapsed/pause/stop/saving match menu; keyboard/VoiceOver usable; reduced motion; excluded from recorded frames |
 | Vocabulary | Add Dust Wave; verify case/space/hyphen variants and explicit aliases across sessions; save/relaunch; original and pre-vocabulary views; remove/reapply restores wording; reject ambiguous aliases |
 | Imported audio | Select several supported files; one corrupt file does not stop others; original bytes unchanged; source label and duration correct; retry/defer; cancelled/failed imports stay out of Sessions |
-| Transcription CLI | Multiple paths and explicit output; saved-folder default; sandbox denial guidance; native --authorize grants; nonzero status on any failure; no recording-control commands or model auto-download |
+| Transcription CLI | Multiple paths and explicit output; saved-folder default; sandbox denial guidance; native --authorize grants; nonzero status on any failure; no model auto-download |
 | Languages | Follow macOS and English/Spanish overrides on relaunch; all sidebar/menu/setup/error surfaces; Parakeet automatic; MacWhisper selection retained; no mixed-language checkpoint settings |
 | Accessibility | Keyboard-only navigation and vocabulary editing; VoiceOver labels, focus, start/pause/resume/stop/transcription announcements; no timer/meter spam; Spanish at minimum window size |
+
+
+## Dictation and recording automation (1.5.0)
+
+| Check | Required evidence |
+|---|---|
+| Dictation capture | Start from menu, Recording page and toggle shortcut; only selected microphone is captured; regular audio preferences unchanged; panel Stop finalizes preserved audio |
+| Dictation preview | Real local recognition reaches preview; vocabulary applies; Copy is explicit; clipboard unchanged until Copy; empty speech and failure have useful messages; Sessions retains source and transcript variants |
+| Dictation queue | Automatic recording transcription off still permits dictation; recovery and retry preserve purpose; Transcribe later frees preview; another active recording rejects a dictation start |
+| Recording CLI | Signed installed binary reaches same running app; status and repeated stop are harmless; start/stop and screen pause/resume work; repeated starts create one session; conflicting mode fails; permission/picker setup returns a useful error |
+| Command lifecycle | Stop during preparation prevents a late capture; closed app and stale instance reject commands; timeout directs caller to check status; capture/export completion remains separate from transcription |
+| Apple Shortcuts | All five Record actions discoverable in Shortcuts; Start exposes three modes; execute Status, Start, Stop, Pause and Resume against signed app; opening a closed app initializes the handler; results contain only localized state |
+| Localization and access | Dictation controls and preview fit English/Spanish at minimum window size; focus, keyboard Copy and VoiceOver labels work; shortcut assignments start Off and existing mappings survive |
+
+Record native outcomes and hardware limits in [candidate testing](testing/1.5.0-candidate.md).

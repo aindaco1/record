@@ -10,6 +10,8 @@ final class RecordingShortcutsTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: domain) }
         let preferences = RecordingShortcuts(defaults: defaults)
         XCTAssertNil(preferences[.screen])
+        XCTAssertNil(preferences[.dictation])
+        XCTAssertEqual(RecordingShortcutAction.dictation.rawValue, 7)
         let screenshot = try XCTUnwrap(ScreenshotShortcutSet.defaults.area)
         let renamedKey = try ScreenshotShortcut(
             keyCode: screenshot.keyCode, modifiers: screenshot.modifiers, keyLabel: "Other")
@@ -19,6 +21,7 @@ final class RecordingShortcutsTests: XCTestCase {
         try preferences.set(shortcut, for: .screen, screenshots: .defaults)
         XCTAssertEqual(preferences[.screen], shortcut)
         XCTAssertThrowsError(try preferences.set(shortcut, for: .audio, screenshots: .defaults))
+        XCTAssertThrowsError(try preferences.set(shortcut, for: .dictation, screenshots: .defaults))
         try preferences.set(nil, for: .screen, screenshots: .defaults)
         XCTAssertNil(RecordingShortcuts(defaults: defaults)[.screen])
     }

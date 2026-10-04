@@ -9,7 +9,7 @@ status; versioned issue-triage files are historical planning snapshots.
 ## Next
 
 - Complete 1.5.0 acceptance for microphone selection, Sessions, language controls,
-  vocabulary, file import/CLI, Spanish, and VoiceOver.
+  vocabulary, file import/CLI, Quick Dictation, recording automation, Spanish, and VoiceOver.
 - First-class frame-rate selection.
 - Representative USB, Bluetooth, and call-length microphone-route acceptance.
 - Direct source-selection and pause/resume acceptance tests on real hardware.

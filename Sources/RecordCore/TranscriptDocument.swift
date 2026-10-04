@@ -85,6 +85,12 @@ public struct TranscriptDocument: Codable, Equatable, Sendable {
         try encodedData(prettyPrinted: false)
     }
 
+    /// Plain dictation text preserves recognized words without transcript metadata.
+    public var plainText: String {
+        segments.map { $0.text.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }.joined(separator: " ")
+    }
+
     public func rendered(title: String) -> String {
         var lines = ["# \(title)", "", "engine: \(engine) (\(model))", ""]
         if let incompleteTrackCount, incompleteTrackCount > 0 {

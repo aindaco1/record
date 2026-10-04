@@ -135,10 +135,21 @@ extension SettingsWindowController {
             stack.addArrangedSubview(readinessLabel)
             checkPermissionsButton.target = self
             checkPermissionsButton.action = #selector(checkPermissions)
+            startDictationButton.target = self
+            startDictationButton.action = #selector(startDictation)
             startRecordingButton.target = self
             startRecordingButton.action = #selector(startRecording)
             stack.addArrangedSubview(
-                NSStackView(views: [startRecordingButton, checkPermissionsButton]))
+                NSStackView(views: [
+                    startRecordingButton, checkPermissionsButton,
+                ]))
+            stack.addArrangedSubview(SettingsLayout.heading(L10n.text("Quick Dictation")))
+            stack.addArrangedSubview(
+                SettingsLayout.note(
+                    L10n.text(
+                        "Speak into your selected microphone, stop, then review and copy the text."
+                    )))
+            stack.addArrangedSubview(startDictationButton)
             captureLockNote.textColor = .secondaryLabelColor
             captureLockNote.isHidden = true
             stack.addArrangedSubview(captureLockNote)

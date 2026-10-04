@@ -102,11 +102,56 @@ Record's windows, including the panel. Close it for the current session or turn 
 not stop recording.
 
 **Settings… → Shortcuts → Recording** assigns screen start/stop, audio
-start/stop, and screen pause/resume keys. Click a control and type a combination;
+start/stop, dictation start/stop, and screen pause/resume keys. Click a control and type a combination;
 Delete turns it Off and Escape cancels editing. New recording shortcuts start Off.
 A start/stop shortcut stops its own active recording mode; it does not change
 modes during capture. Held keys trigger once. Conflicts with other Record actions
 are rejected; unavailable system combinations are reported in Settings.
+
+## Quick Dictation
+
+Choose **Quick Dictation** in the menu or **Settings → Recording**. It records
+only your selected microphone and uses your existing local transcription model,
+speech language, cleanup and vocabulary. Set up the model first in Transcription.
+Your regular audio-source preferences stay unchanged. The compact panel appears
+for dictation even when disabled for regular recordings; use **Stop** when done.
+
+Assign **Dictation start / stop** in **Settings → Shortcuts** to use one toggle
+key combination. Its default is Off. Press once to start and again to stop;
+holding the keys does not repeat. Other recording modes cannot interrupt it.
+
+A preview shows progress, then the recognized words. Review and choose **Copy**
+when ready. Nothing is copied or pasted automatically. Audio and transcripts stay
+in Sessions, including when transcription fails. Dictation transcribes even with
+automatic recording transcription off. While a dictation is processing, its
+shortcut reopens the preview. Use **Transcribe later** in Sessions to defer it.
+
+## Recording automation
+
+In Apple Shortcuts, search for **Record** and choose **Start Recording**,
+**Stop Recording**, **Pause Recording**, **Resume Recording**, or **Recording
+Status**. Start offers Screen, Audio only and Quick Dictation. Actions open Record
+and use its saved settings; permission or source-selection setup may need your
+attention. Pause and Resume work with screen recordings.
+
+For the terminal, use the executable in your installed Record app:
+
+```sh
+"/Applications/Record.app/Contents/MacOS/record" control start --mode dictation
+"/Applications/Record.app/Contents/MacOS/record" control stop
+"/Applications/Record.app/Contents/MacOS/record" control status --json
+```
+
+Adjust the app location if installed elsewhere. CLI commands require Record to
+be open and its save folder, permissions and model already configured. Screen
+starts require Main Display; choose a window or region in the app. Valid modes
+are `screen`, `audio`, and `dictation`. Use `--mode` only with `start`.
+
+Commands confirm acceptance. Stop can return `stopping` or `saving`; poll Status
+for `idle` to know capture/export has ended. Transcription may still be processing
+in Sessions. Repeating a command never toggles it backwards. A busy or unsupported
+operation returns an error; a timeout means check status before retrying.
+Status contains no paths, recording names, audio or transcript content.
 
 ## Save location and recovery
 

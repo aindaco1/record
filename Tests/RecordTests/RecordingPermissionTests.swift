@@ -4,6 +4,27 @@ import XCTest
 
 @MainActor
 final class RecordingPermissionTests: XCTestCase {
+    func testDictationNeedsOnlyMicrophonePermission() async {
+        let microphone = FakeMicrophonePermissionProvider(state: .authorized, requestResult: false)
+        let screen = FakeScreenPermissionProvider(isGranted: false, requestResult: false)
+        let system = FakeSystemAudioPermissionRegistrar()
+        let controller = makeController(microphone: microphone, screen: screen, systemAudio: system)
+        let result = await controller.prepare(
+            for: .dictation,
+            audio: RecordingControl.Mode.dictation.audioConfiguration(using: .init()))
+        XCTAssertEqual(result, .ready)
+        XCTAssertEqual(screen.requestCount, 0)
+        XCTAssertEqual(system.requestCount, 0)
+    }
+
+    func testStoppingPendingDictationClearsThePermissionRestartIntent() {
+        var flow = RecordingPermissionFlowState()
+        XCTAssertEqual(flow.begin(.dictation, resumingAfterRestart: false), .request)
+        flow.clear()
+        XCTAssertNil(flow.pendingMode)
+        XCTAssertEqual(flow.begin(.dictation, resumingAfterRestart: false), .request)
+    }
+
     func testSystemOnlySkipsDeniedMicrophone() async {
         let microphone = FakeMicrophonePermissionProvider(state: .denied, requestResult: false)
         let system = FakeSystemAudioPermissionRegistrar()

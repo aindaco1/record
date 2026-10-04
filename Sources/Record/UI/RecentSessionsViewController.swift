@@ -251,12 +251,9 @@ final class RecentSessionsViewController: NSViewController, NSTableViewDataSourc
                     }
                     ?? (session.hasTranscript
                         ? L10n.text("Transcript ready") : L10n.text("Transcription not started"))
-                let url = session.directory.appendingPathComponent(
-                    filename)
-                guard let size = LocalFilePolicy.regularFileSize(at: url),
-                    size <= 8 * 1_024 * 1_024,
-                    let data = try? Data(contentsOf: url),
-                    let transcript = try? JSONDecoder().decode(TranscriptDocument.self, from: data)
+                guard
+                    let transcript = try? TranscriptPreviewReader.read(
+                        directory: session.directory, filename: filename)
                 else { return (state, nil) }
                 return (state, transcript.rendered(title: session.directory.lastPathComponent))
             }.value

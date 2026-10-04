@@ -7,6 +7,7 @@ if [[ $# -ne 1 || "$1" != /* ]]; then
 fi
 
 app_path="$1"
+python3 "$(dirname "${BASH_SOURCE[0]}")/check-app-intents.py" "$app_path"
 if [[ ! -d "$app_path" || -L "$app_path" ]]; then
     echo "missing or unsafe app bundle: $app_path" >&2
     exit 1

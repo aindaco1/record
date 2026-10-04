@@ -1208,6 +1208,57 @@
         }
       }
     },
+    "Complete recording permissions, source selection, and model setup in Record first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complete recording permissions, source selection, and model setup in Record first."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero configura los permisos de grabación, la fuente y el modelo en Record."
+          }
+        }
+      }
+    },
+    "Copied. Audio and transcripts stay in Sessions.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied. Audio and transcripts stay in Sessions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiado. El audio y las transcripciones se conservan en Sesiones."
+          }
+        }
+      }
+    },
+    "Copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar"
+          }
+        }
+      }
+    },
     "Copy transcript": {
       "extractionState": "manual",
       "localizations": {
@@ -1391,6 +1442,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "No se confirmó la entrega. Reintentar envía el mismo informe sin contarlo dos veces."
+          }
+        }
+      }
+    },
+    "Dictation preview": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictation preview"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista previa del dictado"
+          }
+        }
+      }
+    },
+    "Dictation saved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictation saved"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictado guardado"
+          }
+        }
+      }
+    },
+    "Dictation start / stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictation start / stop"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar / detener dictado"
           }
         }
       }
@@ -1786,6 +1888,23 @@
         }
       }
     },
+    "Get Record’s current capture state without sharing recording content.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Get Record’s current capture state without sharing recording content."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consulta el estado actual de la captura en Record sin compartir su contenido."
+          }
+        }
+      }
+    },
     "Gifski Not Installed": {
       "extractionState": "manual",
       "localizations": {
@@ -1935,6 +2054,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ocultar notificaciones en las capturas"
+          }
+        }
+      }
+    },
+    "Idle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin grabar"
           }
         }
       }
@@ -2653,6 +2789,23 @@
         }
       }
     },
+    "No speech was recognized. Your audio is saved in Sessions.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No speech was recognized. Your audio is saved in Sessions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se reconoció ninguna voz. El audio está guardado en Sesiones."
+          }
+        }
+      }
+    },
     "Not Now": {
       "extractionState": "manual",
       "localizations": {
@@ -2751,6 +2904,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Abrir Record automáticamente al iniciar sesión"
+          }
+        }
+      }
+    },
+    "Open Record before using recording commands.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Record before using recording commands."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre Record antes de usar los comandos de grabación."
           }
         }
       }
@@ -2993,6 +3163,57 @@
         }
       }
     },
+    "Pause Recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausar grabación"
+          }
+        }
+      }
+    },
+    "Pause an active screen recording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause an active screen recording."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa una grabación de pantalla activa."
+          }
+        }
+      }
+    },
+    "Pause and resume require a screen recording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause and resume require a screen recording."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se pueden pausar y reanudar las grabaciones de pantalla."
+          }
+        }
+      }
+    },
     "Pause screen recording": {
       "extractionState": "manual",
       "localizations": {
@@ -3006,6 +3227,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pausar grabación de pantalla"
+          }
+        }
+      }
+    },
+    "Paused": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En pausa"
+          }
+        }
+      }
+    },
+    "Pausing recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausing recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausando la grabación"
           }
         }
       }
@@ -3163,6 +3418,23 @@
         }
       }
     },
+    "Preparing recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando la grabación"
+          }
+        }
+      }
+    },
     "Preparing screen recording…": {
       "extractionState": "manual",
       "localizations": {
@@ -3210,6 +3482,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "En cola"
+          }
+        }
+      }
+    },
+    "Queued for local transcription. Your audio is saved in Sessions.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queued for local transcription. Your audio is saved in Sessions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En espera para transcribir en tu Mac. El audio está guardado en Sesiones."
+          }
+        }
+      }
+    },
+    "Quick Dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Dictation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictado rápido"
           }
         }
       }
@@ -3418,6 +3724,23 @@
         }
       }
     },
+    "Record could not start this operation. Check its settings and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record could not start this operation. Check its settings and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record no pudo iniciar esta operación. Revisa los ajustes y vuelve a intentarlo."
+          }
+        }
+      }
+    },
     "Record couldn’t change Login Items": {
       "extractionState": "manual",
       "localizations": {
@@ -3482,6 +3805,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Record no pudo reiniciarse"
+          }
+        }
+      }
+    },
+    "Record is busy with another capture or transition. Check status and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record is busy with another capture or transition. Check status and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record está realizando otra captura o cambiando de estado. Consulta el estado y vuelve a intentarlo."
           }
         }
       }
@@ -3622,6 +3962,23 @@
         }
       }
     },
+    "Recording Status": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording Status"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estado de la grabación"
+          }
+        }
+      }
+    },
     "Recording controls are locked while capture is starting, running, or saving.": {
       "extractionState": "manual",
       "localizations": {
@@ -3635,6 +3992,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Los controles se bloquean al iniciar, grabar o guardar una captura."
+          }
+        }
+      }
+    },
+    "Recording mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording mode"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo de grabación"
           }
         }
       }
@@ -3894,6 +4268,40 @@
         }
       }
     },
+    "Resume Recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudar grabación"
+          }
+        }
+      }
+    },
+    "Resume a paused screen recording.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume a paused screen recording."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanuda una grabación de pantalla pausada."
+          }
+        }
+      }
+    },
     "Resume screen recording": {
       "extractionState": "manual",
       "localizations": {
@@ -3907,6 +4315,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reanudar grabación de pantalla"
+          }
+        }
+      }
+    },
+    "Resuming recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resuming recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reanudando la grabación"
           }
         }
       }
@@ -4047,6 +4472,23 @@
         }
       }
     },
+    "Review your text, then copy it. Audio and transcripts stay in Sessions.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review your text, then copy it. Audio and transcripts stay in Sessions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revisa el texto y luego cópialo. El audio y las transcripciones se conservan en Sesiones."
+          }
+        }
+      }
+    },
     "Save location": {
       "extractionState": "manual",
       "localizations": {
@@ -4162,6 +4604,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Guardado en %@. Haz clic para abrir la carpeta de la grabación."
+          }
+        }
+      }
+    },
+    "Saving recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardando la grabación"
           }
         }
       }
@@ -4642,6 +5101,23 @@
         }
       }
     },
+    "Sessions…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sesiones…"
+          }
+        }
+      }
+    },
     "Set Up Local Parakeet Transcription": {
       "extractionState": "manual",
       "localizations": {
@@ -4829,6 +5305,23 @@
         }
       }
     },
+    "Speak into your selected microphone, stop, then review and copy the text.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speak into your selected microphone, stop, then review and copy the text."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Habla con el micrófono seleccionado, detén el dictado y luego revisa y copia el texto."
+          }
+        }
+      }
+    },
     "Speech language": {
       "extractionState": "manual",
       "localizations": {
@@ -4842,6 +5335,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Idioma del audio"
+          }
+        }
+      }
+    },
+    "Start ${mode} recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start ${mode} recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar grabación de ${mode}"
           }
         }
       }
@@ -4863,6 +5373,23 @@
         }
       }
     },
+    "Start Recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar grabación"
+          }
+        }
+      }
+    },
     "Start Screen Recording": {
       "extractionState": "manual",
       "localizations": {
@@ -4876,6 +5403,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Grabar pantalla"
+          }
+        }
+      }
+    },
+    "Start a recording using your saved Record settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a recording using your saved Record settings."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia una grabación con los ajustes guardados en Record."
           }
         }
       }
@@ -4948,6 +5492,23 @@
         }
       }
     },
+    "Stop Recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detener grabación"
+          }
+        }
+      }
+    },
     "Stop Test": {
       "extractionState": "manual",
       "localizations": {
@@ -4961,6 +5522,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Detener prueba"
+          }
+        }
+      }
+    },
+    "Stop capture and preserve the recording. Use Status to check when saving finishes.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop capture and preserve the recording. Use Status to check when saving finishes."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detén la captura y conserva la grabación. Consulta el estado para saber cuándo termina de guardarse."
           }
         }
       }
@@ -4995,6 +5573,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Detén la grabación, toma una captura para dar acceso y vuelve a intentarlo."
+          }
+        }
+      }
+    },
+    "Stopping recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopping recording"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deteniendo la grabación"
           }
         }
       }
@@ -5271,6 +5866,23 @@
         }
       }
     },
+    "The command expired without running. Check status and try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The command expired without running. Check status and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El comando venció sin ejecutarse. Consulta el estado y vuelve a intentarlo."
+          }
+        }
+      }
+    },
     "The export failed, but the original recording is safe.": {
       "extractionState": "manual",
       "localizations": {
@@ -5301,6 +5913,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "La imagen está a salvo en la carpeta de destino. Puedes copiarla desde Finder."
+          }
+        }
+      }
+    },
+    "The recording command is invalid or belongs to an older app instance.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording command is invalid or belongs to an older app instance."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El comando de grabación no es válido o pertenece a una sesión anterior de la app."
           }
         }
       }
@@ -5951,6 +6580,23 @@
         }
       }
     },
+    "Your audio is safe. Open Sessions to retry transcription.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your audio is safe. Open Sessions to retry transcription."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu audio está guardado. Abre Sesiones para volver a intentar la transcripción."
+          }
+        }
+      }
+    },
     "audio": {
       "extractionState": "manual",
       "localizations": {
@@ -6015,6 +6661,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Completa"
+          }
+        }
+      }
+    },
+    "dictation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dictation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dictado"
           }
         }
       }

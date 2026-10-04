@@ -148,6 +148,12 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Haz clic para autorizar Record en Ítems de inicio</string>
 	<key>Clipboard</key>
 	<string>Portapapeles</string>
+	<key>Complete recording permissions, source selection, and model setup in Record first.</key>
+	<string>Primero configura los permisos de grabación, la fuente y el modelo en Record.</string>
+	<key>Copied. Audio and transcripts stay in Sessions.</key>
+	<string>Copiado. El audio y las transcripciones se conservan en Sesiones.</string>
+	<key>Copy</key>
+	<string>Copiar</string>
 	<key>Copy transcript</key>
 	<string>Copiar texto</string>
 	<key>Could not prepare the report. Refresh to try again.</key>
@@ -170,6 +176,12 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Pospuesta</string>
 	<key>Delivery was not confirmed. Retry sends this same report without counting it twice.</key>
 	<string>No se confirmó la entrega. Reintentar envía el mismo informe sin contarlo dos veces.</string>
+	<key>Dictation preview</key>
+	<string>Vista previa del dictado</string>
+	<key>Dictation saved</key>
+	<string>Dictado guardado</string>
+	<key>Dictation start / stop</key>
+	<string>Iniciar / detener dictado</string>
 	<key>Display, Application, or Window…</key>
 	<string>Pantalla, aplicación o ventana…</string>
 	<key>Download and Install</key>
@@ -216,6 +228,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Pantalla completa</string>
 	<key>General</key>
 	<string>General</string>
+	<key>Get Record’s current capture state without sharing recording content.</key>
+	<string>Consulta el estado actual de la captura en Record sin compartir su contenido.</string>
 	<key>Gifski Not Installed</key>
 	<string>Gifski no está instalado</string>
 	<key>Gifski couldn’t open the video</key>
@@ -234,6 +248,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Ocultar la barra de menús, incluido el reloj</string>
 	<key>Hide notifications from capture</key>
 	<string>Ocultar notificaciones en las capturas</string>
+	<key>Idle</key>
+	<string>Sin grabar</string>
 	<key>Import</key>
 	<string>Importar</string>
 	<key>Import Audio</key>
@@ -318,6 +334,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>No hay sesiones en la carpeta actual ni en el almacenamiento de recuperación.</string>
 	<key>No sessions match this filter.</key>
 	<string>Ninguna sesión coincide con este filtro.</string>
+	<key>No speech was recognized. Your audio is saved in Sessions.</key>
+	<string>No se reconoció ninguna voz. El audio está guardado en Sesiones.</string>
 	<key>Not Now</key>
 	<string>Ahora no</string>
 	<key>Off</key>
@@ -330,6 +348,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Abrir Record al iniciar sesión</string>
 	<key>Open Record automatically after you sign in</key>
 	<string>Abrir Record automáticamente al iniciar sesión</string>
+	<key>Open Record before using recording commands.</key>
+	<string>Abre Record antes de usar los comandos de grabación.</string>
 	<key>Open Recovery Folder…</key>
 	<string>Abrir carpeta de recuperación…</string>
 	<key>Open System Settings</key>
@@ -358,8 +378,18 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Modelo de Parakeet</string>
 	<key>Paste the image now to preserve it, then check the export folder.</key>
 	<string>Pega la imagen para conservarla y revisa la carpeta de destino.</string>
+	<key>Pause Recording</key>
+	<string>Pausar grabación</string>
+	<key>Pause an active screen recording.</key>
+	<string>Pausa una grabación de pantalla activa.</string>
+	<key>Pause and resume require a screen recording.</key>
+	<string>Solo se pueden pausar y reanudar las grabaciones de pantalla.</string>
 	<key>Pause screen recording</key>
 	<string>Pausar grabación de pantalla</string>
+	<key>Paused</key>
+	<string>En pausa</string>
+	<key>Pausing recording</key>
+	<string>Pausando la grabación</string>
 	<key>Pausing screen recording…</key>
 	<string>Pausando grabación de pantalla…</string>
 	<key>Play imported audio</key>
@@ -378,12 +408,18 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>La escritura preferida se aplica a cada nueva transcripción. Se reconocen variantes de mayúsculas y espacios; separa otros alias con punto y coma. En sesiones anteriores, usa Aplicar vocabulario.</string>
 	<key>Preparing model download…</key>
 	<string>Preparando descarga del modelo…</string>
+	<key>Preparing recording</key>
+	<string>Preparando la grabación</string>
 	<key>Preparing screen recording…</key>
 	<string>Preparando grabación de pantalla…</string>
 	<key>Preparing transcript</key>
 	<string>Preparando transcripción</string>
 	<key>Queued</key>
 	<string>En cola</string>
+	<key>Queued for local transcription. Your audio is saved in Sessions.</key>
+	<string>En espera para transcribir en tu Mac. El audio está guardado en Sesiones.</string>
+	<key>Quick Dictation</key>
+	<string>Dictado rápido</string>
 	<key>Quit Record</key>
 	<string>Salir de Record</string>
 	<key>Quit Record from the menu bar, then open it again.</key>
@@ -408,6 +444,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Configuración de Record</string>
 	<key>Record can download the pinned model from its GitHub release and verify it </key>
 	<string>Record puede descargar la versión fijada del modelo desde GitHub y verificarla </string>
+	<key>Record could not start this operation. Check its settings and try again.</key>
+	<string>Record no pudo iniciar esta operación. Revisa los ajustes y vuelve a intentarlo.</string>
 	<key>Record couldn’t change Login Items</key>
 	<string>Record no pudo cambiar los ítems de inicio</string>
 	<key>Record couldn’t prepare screen capture. The failed session was preserved.</key>
@@ -416,6 +454,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Record no pudo preparar el archivo de video. Se conservó la sesión.</string>
 	<key>Record couldn’t restart</key>
 	<string>Record no pudo reiniciarse</string>
+	<key>Record is busy with another capture or transition. Check status and try again.</key>
+	<string>Record está realizando otra captura o cambiando de estado. Consulta el estado y vuelve a intentarlo.</string>
 	<key>Record needs the Parakeet v3 model (about 460 MB) for on-device transcription. </key>
 	<string>Record necesita el modelo Parakeet v3 (unos 460 MB) para transcribir en tu Mac. </string>
 	<key>Record sections</key>
@@ -432,8 +472,12 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Grabación y preferencias</string>
 	<key>Recording Setup…</key>
 	<string>Configurar grabación…</string>
+	<key>Recording Status</key>
+	<string>Estado de la grabación</string>
 	<key>Recording controls are locked while capture is starting, running, or saving.</key>
 	<string>Los controles se bloquean al iniciar, grabar o guardar una captura.</string>
+	<key>Recording mode</key>
+	<string>Modo de grabación</string>
 	<key>Recording names</key>
 	<string>Nombres de grabaciones</string>
 	<key>Recording paused</key>
@@ -464,8 +508,14 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Requiere macOS 26 o posterior.</string>
 	<key>Restore Screenshot Defaults</key>
 	<string>Restablecer atajos de capturas</string>
+	<key>Resume Recording</key>
+	<string>Reanudar grabación</string>
+	<key>Resume a paused screen recording.</key>
+	<string>Reanuda una grabación de pantalla pausada.</string>
 	<key>Resume screen recording</key>
 	<string>Reanudar grabación de pantalla</string>
+	<key>Resuming recording</key>
+	<string>Reanudando la grabación</string>
 	<key>Resuming screen recording…</key>
 	<string>Reanudando grabación de pantalla…</string>
 	<key>Retry</key>
@@ -482,6 +532,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Revisa un informe de diagnóstico, guárdalo en tu Mac o envíalo al desarrollador para ayudar a mejorar Record.</string>
 	<key>Review the report before sending.</key>
 	<string>Revisa el informe antes de enviarlo.</string>
+	<key>Review your text, then copy it. Audio and transcripts stay in Sessions.</key>
+	<string>Revisa el texto y luego cópialo. El audio y las transcripciones se conservan en Sesiones.</string>
 	<key>Save location</key>
 	<string>Ubicación de archivos</string>
 	<key>Save report…</key>
@@ -496,6 +548,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Guardado en %@. No se pudo eliminar la copia de trabajo privada.</string>
 	<key>Saved to %@. Click to open the recording folder.</key>
 	<string>Guardado en %@. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>Saving recording</key>
+	<string>Guardando la grabación</string>
 	<key>Saving recording…</key>
 	<string>Guardando grabación…</string>
 	<key>Saving transcript</key>
@@ -552,6 +606,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Los informes enviados son públicos. Incluyen las versiones de la app y del sistema, ajustes generales de grabación, tipos de eventos recientes y un resumen opcional del fallo. Excluyen archivos multimedia, transcripciones, nombres, rutas de archivos, contenido del portapapeles y registros sin filtrar. Reporta las vulnerabilidades de seguridad de forma privada.</string>
 	<key>Sessions</key>
 	<string>Sesiones</string>
+	<key>Sessions…</key>
+	<string>Sesiones…</string>
 	<key>Set Up Local Parakeet Transcription</key>
 	<string>Configurar transcripción local con Parakeet</string>
 	<key>Set Up Local Transcription</key>
@@ -574,12 +630,20 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>No se pudieron importar algunos archivos</string>
 	<key>Spanish</key>
 	<string>Español</string>
+	<key>Speak into your selected microphone, stop, then review and copy the text.</key>
+	<string>Habla con el micrófono seleccionado, detén el dictado y luego revisa y copia el texto.</string>
 	<key>Speech language</key>
 	<string>Idioma del audio</string>
+	<key>Start ${mode} recording</key>
+	<string>Iniciar grabación de ${mode}</string>
 	<key>Start Audio Recording</key>
 	<string>Grabar audio</string>
+	<key>Start Recording</key>
+	<string>Iniciar grabación</string>
 	<key>Start Screen Recording</key>
 	<string>Grabar pantalla</string>
+	<key>Start a recording using your saved Record settings.</key>
+	<string>Inicia una grabación con los ajustes guardados en Record.</string>
 	<key>Start audio-only recording</key>
 	<string>Iniciar grabación de audio</string>
 	<key>Start screen recording</key>
@@ -588,12 +652,18 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Inicio y ayuda</string>
 	<key>Stop</key>
 	<string>Detener</string>
+	<key>Stop Recording</key>
+	<string>Detener grabación</string>
 	<key>Stop Test</key>
 	<string>Detener prueba</string>
+	<key>Stop capture and preserve the recording. Use Status to check when saving finishes.</key>
+	<string>Detén la captura y conserva la grabación. Consulta el estado para saber cuándo termina de guardarse.</string>
 	<key>Stop recording</key>
 	<string>Detener grabación</string>
 	<key>Stop the current recording, take one screenshot to grant access, then try again.</key>
 	<string>Detén la grabación, toma una captura para dar acceso y vuelve a intentarlo.</string>
+	<key>Stopping recording</key>
+	<string>Deteniendo la grabación</string>
 	<key>Stopping recording…</key>
 	<string>Deteniendo grabación…</string>
 	<key>System Audio Only</key>
@@ -626,10 +696,14 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>El audio está a salvo. Haz clic para abrir la carpeta de la grabación.</string>
 	<key>The available media is safe. Click to open the recording folder.</key>
 	<string>Los archivos disponibles están a salvo. Haz clic para abrir la carpeta de la grabación.</string>
+	<key>The command expired without running. Check status and try again.</key>
+	<string>El comando venció sin ejecutarse. Consulta el estado y vuelve a intentarlo.</string>
 	<key>The export failed, but the original recording is safe.</key>
 	<string>No se pudo exportar. La grabación original está a salvo.</string>
 	<key>The image is safe in the export folder. Copy it from Finder if needed.</key>
 	<string>La imagen está a salvo en la carpeta de destino. Puedes copiarla desde Finder.</string>
+	<key>The recording command is invalid or belongs to an older app instance.</key>
+	<string>El comando de grabación no es válido o pertenece a una sesión anterior de la app.</string>
 	<key>The recording is preserved. Try again after the current track finishes.</key>
 	<string>La grabación se conserva. Inténtalo cuando termine la pista actual.</string>
 	<key>The recording is safe and can be opened manually.</key>
@@ -706,6 +780,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Vocabulario guardado. Las nuevas transcripciones usarán estas palabras.</string>
 	<key>Window or Application</key>
 	<string>Ventana o aplicación</string>
+	<key>Your audio is safe. Open Sessions to retry transcription.</key>
+	<string>Tu audio está guardado. Abre Sesiones para volver a intentar la transcripción.</string>
 	<key>audio</key>
 	<string>audio</string>
 	<key>before local installation. Recording continues to work without the model.</key>
@@ -714,6 +790,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Captura con alta carga</string>
 	<key>complete</key>
 	<string>Completa</string>
+	<key>dictation</key>
+	<string>dictado</string>
 	<key>downloading Parakeet model…</key>
 	<string>Descargando modelo de Parakeet…</string>
 	<key>found %ld session needing manual review</key>

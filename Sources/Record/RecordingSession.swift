@@ -22,6 +22,7 @@ final class RecordingSession {
     let id: UUID
     let dir: URL
     let startedAt: Date
+    let purpose: SessionManifest.Purpose?
 
     private let health: CaptureHealthLedger
     private let mic: (any SessionAudioRecording)?
@@ -35,6 +36,7 @@ final class RecordingSession {
         id: UUID = UUID(),
         preparedSystemAudioTap: PreparedSystemAudioTap? = nil,
         audio: CaptureAudioConfiguration = .init(),
+        purpose: SessionManifest.Purpose? = nil,
         mic: (any SessionAudioRecording)? = nil,
         system: (any SessionAudioRecording)? = nil,
         audioFinalizer: any SessionAudioFinalizing = PCM24WaveAudioFinalizer(),
@@ -43,6 +45,7 @@ final class RecordingSession {
         guard audio.includeMicrophone || audio.includeSystemAudio else {
             throw SessionError.noAudioSource
         }
+        self.purpose = purpose
         self.id = id
         self.startedAt = startedAt
         let health = CaptureHealthLedger(onEvent: onHealth)
@@ -73,7 +76,8 @@ final class RecordingSession {
                     ? SessionMediaLayout.track(for: .microphone, stage: .capture) : nil,
                 audio.includeSystemAudio
                     ? SessionMediaLayout.track(for: .systemAudio, stage: .capture) : nil,
-            ].compactMap { $0 }
+            ].compactMap { $0 },
+            purpose: purpose
         )
         try manifest.write(to: dir)
         health.setPersistence { [weak self] events in

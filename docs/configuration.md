@@ -71,3 +71,17 @@ therefore omit a hook rather than duplicate its side effects.
 Invalid schemas, relative executables, unsupported engines, missing
 MacWhisper models, and invalid language values fail closed to safe defaults and
 produce a local warning.
+
+## Dictation and recording commands
+
+Quick Dictation reuses the selected microphone and transcription settings. It
+temporarily selects microphone-only capture and explicitly transcribes the
+session even if automatic transcription is disabled. Its optional toggle shortcut
+is configured in Settings, not the JSON file. Copying text is always explicit.
+
+`record control start --mode screen|audio|dictation`, `stop`, `pause`, `resume`,
+and `status` operate on the running app's saved setup. Add `--json` for a coarse
+state response. They accept no arbitrary path, source name, executable or config
+payload. CLI capture cannot prompt for setup; screen starts require Main Display.
+Apple Shortcuts exposes the same five commands and can open the app's normal
+interactive setup. See [the user guide](user-guide.md#recording-automation).

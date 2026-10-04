@@ -8,6 +8,12 @@ All notable changes to Record are documented here. Record follows
 
 ### Added
 
+- Quick Dictation uses the selected microphone, existing local transcription and
+  vocabulary, then opens a preview with explicit Copy. Assign a start/stop toggle
+  in Shortcuts; audio and transcripts remain in Sessions for retry.
+- Local recording automation through `record control` and five Apple Shortcuts
+  actions: Start, Stop, Pause, Resume and Status. Repeated commands are idempotent;
+  pause/resume apply to screen recording. Status returns only the capture state.
 - Global automatic vocabulary: preferred spellings such as “Dust Wave” normalize
   case and spacing variants across sessions; optional aliases handle recurring
   mishearings. Preserve raw and pre-vocabulary transcripts, and reapply rules to
@@ -57,6 +63,8 @@ See [ADR 0026](docs/adr/0026-local-recording-workflow.md) for the local checkpoi
 source-selection, and content-free model progress contracts.
 [ADR 0027](docs/adr/0027-local-vocabulary-import-and-language.md) describes vocabulary,
 import provenance, language selection, and localization resources.
+[ADR 0028](docs/adr/0028-dictation-and-local-recording-control.md) adds microphone
+dictation and shared local recording commands to this unpublished candidate.
 
 ### Development
 
