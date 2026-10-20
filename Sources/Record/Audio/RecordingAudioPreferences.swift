@@ -14,7 +14,38 @@ enum RecordingAudioSource: String, CaseIterable {
 
 struct RecordingAudioPreferences {
     let defaults: UserDefaults
-    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    private let appConfiguration: AppConfiguration
+    init(defaults: UserDefaults = .standard, configuration: AppConfiguration = Config.current) {
+        self.defaults = defaults
+        self.appConfiguration = configuration
+    }
+    var voiceProcessing: Bool {
+        get {
+            defaults.object(forKey: "recording.voiceProcessing") as? Bool
+                ?? appConfiguration.micVoiceProcessing
+        }
+        nonmutating set { defaults.set(newValue, forKey: "recording.voiceProcessing") }
+    }
+    var disableVoiceProcessingForZoom: Bool {
+        get {
+            defaults.object(forKey: "recording.disableVoiceProcessingForZoom") as? Bool
+                ?? appConfiguration.micDisableVoiceProcessingForZoom
+        }
+        nonmutating set {
+            defaults.set(newValue, forKey: "recording.disableVoiceProcessingForZoom")
+        }
+    }
+    var automaticGainControl: Bool {
+        get {
+            defaults.object(forKey: "recording.automaticGainControl") as? Bool
+                ?? appConfiguration.micAutomaticGainControl
+        }
+        nonmutating set { defaults.set(newValue, forKey: "recording.automaticGainControl") }
+    }
+    var usesVoiceProcessing: Bool {
+        MicrophoneSelectionPolicy.usesVoiceProcessing(
+            requested: voiceProcessing, deviceID: microphoneUID)
+    }
     var source: RecordingAudioSource {
         get {
             defaults.string(forKey: "recording.audioSource").flatMap(

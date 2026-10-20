@@ -17,6 +17,37 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertTrue(configuration.transcription.suppressSpeakerEcho)
         XCTAssertFalse(configuration.transcription.refineWithAppleIntelligence)
         XCTAssertTrue(configuration.micVoiceProcessing)
+        XCTAssertFalse(configuration.micAutomaticGainControl)
+        XCTAssertTrue(configuration.micDisableVoiceProcessingForZoom)
+    }
+
+    func testGainControlDefaultsOffWithoutDisablingVoiceProcessing() throws {
+        for configuration in [
+            AppConfiguration(),
+            try AppConfiguration.decode(Data(#"{"mic_voice_processing":true}"#.utf8)),
+        ] {
+            XCTAssertTrue(configuration.micVoiceProcessing)
+            XCTAssertFalse(configuration.micAutomaticGainControl)
+            XCTAssertTrue(configuration.micDisableVoiceProcessingForZoom)
+        }
+    }
+
+    func testGainControlOptInRoundTripsIndependentlyOfVoiceProcessing() throws {
+        let configuration = try AppConfiguration.decode(
+            Data(#"{"mic_voice_processing":false,"mic_automatic_gain_control":true}"#.utf8))
+        XCTAssertTrue(configuration.micAutomaticGainControl)
+        XCTAssertFalse(configuration.micVoiceProcessing)
+        XCTAssertEqual(
+            try AppConfiguration.decode(JSONEncoder().encode(configuration)), configuration)
+    }
+
+    func testZoomProtectionOptOutRoundTrips() throws {
+        let configuration = try AppConfiguration.decode(
+            Data(#"{"mic_disable_voice_processing_for_zoom":false}"#.utf8))
+        XCTAssertFalse(configuration.micDisableVoiceProcessingForZoom)
+        XCTAssertTrue(configuration.micVoiceProcessing)
+        XCTAssertEqual(
+            try AppConfiguration.decode(JSONEncoder().encode(configuration)), configuration)
     }
 
     func testTranscriptRefinementCanBeEnabledExplicitly() throws {

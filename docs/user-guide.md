@@ -29,6 +29,29 @@ The save folder is in General; model setup is in Transcription.
 Choose **Start Screen Recording** or **Start Audio Recording** when ready.
 Opening Settings never starts a recording or downloads a model by itself.
 
+**Use Apple voice processing** is on by default in **Settings → Recording**.
+It reduces speaker echo and background noise for audio-only recording and Quick
+Dictation with **System Default** selected as the microphone. Turn it off to use
+raw input; more speaker echo may then be recorded.
+
+**Turn off while Zoom is open** is also on by default. Record uses raw input while
+the Zoom desktop app is open, including in the background or outside a meeting.
+This avoids starting Apple's voice processor alongside Zoom's microphone capture.
+If Zoom opens during a recording, Record switches to raw input and keeps it for
+the rest of that recording. The switch can briefly interrupt microphone capture;
+the existing track is preserved and the gap is padded. After quitting Zoom,
+start another recording to restore Apple processing. Turn this automatic option
+off if you prefer to manage processing yourself. Browser-based Zoom is not detected.
+
+**Automatically adjust microphone volume** is off by default and applies only
+when Apple voice processing is in use. It is independent of the processing
+switch and does not control Zoom's microphone level. Change these preferences
+while idle; they apply to the next capture. Explicit microphone selections use
+raw input, and screen recording retains its ScreenCaptureKit microphone path.
+
+Remote call quality must be checked with another participant; a healthy local
+recording alone does not establish what the participant hears.
+
 ## Screenshots
 
 | Command | Default shortcut for new installations | Captures |
@@ -92,8 +115,8 @@ offers input selection for the next recording. It never silently substitutes a
 microphone for that selection.
 
 In audio-only mode and dictation, a specific microphone uses raw input.
-**System Default** uses voice processing by default to reduce speaker echo,
-with a fallback to raw input if the route cannot provide processed samples.
+**System Default** follows the voice-processing and Zoom compatibility settings
+above, with a fallback to raw input if the route cannot provide processed samples.
 
 **Test Input** listens for ten seconds and displays microphone activity without
 saving audio. Stop the test at any time. The two activity indicators show enabled
@@ -301,8 +324,9 @@ If local transcription fails, **Retry Failed Transcription** appears in the
 Record menu until the job is retried. Record keeps all source audio files
 unchanged.
 
-With System Default input, audio-only recording and dictation use voice processing
-to reduce speaker-to-microphone echo. When aligned cross-track speech still
+With System Default input, audio-only recording and dictation can use Apple voice
+processing to reduce speaker-to-microphone echo, subject to the Recording settings
+and automatic Zoom bypass. When aligned cross-track speech still
 duplicates, Record conservatively removes only
 high-confidence mic copies from the readable transcript and keeps the
 unsuppressed result in `transcript.raw.json`.

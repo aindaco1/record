@@ -17,6 +17,8 @@ automation settings use a versioned JSON file at
     "refine_with_apple_intelligence": false
   },
   "mic_voice_processing": true,
+  "mic_automatic_gain_control": false,
+  "mic_disable_voice_processing_for_zoom": true,
   "completion_hook": {
     "executable": "/absolute/path/to/local-tool",
     "arguments": ["--session", "{session}"]
@@ -40,14 +42,37 @@ preferences and is managed in **Transcription → Vocabulary**, not this JSON fi
 
 `mic_voice_processing` enables Apple's local VoiceProcessingIO echo canceller
 for System Default input in audio-only recording and dictation. It is on by
-default and falls back to raw capture when the route cannot produce live
-processed samples. A specific microphone uses raw input; screen recording uses
+default; **Settings → Recording → Use Apple voice processing** overrides this
+baseline. Record also falls back to raw capture when the route cannot produce
+live processed samples. A specific microphone uses raw input; screen recording uses
 ScreenCaptureKit's microphone path. `suppress_speaker_echo` is a
 second, transcript-only safeguard: aligned high-confidence microphone copies
 of system speech are omitted from `transcript.json` and `transcript.md`, while
 `transcript.raw.json` retains the unsuppressed local result. Voice processing
 affects microphone capture; transcript echo suppression never modifies the
 captured media or private recovery sources.
+
+`mic_disable_voice_processing_for_zoom` defaults to `true`, including in older
+configuration files. **Turn off while Zoom is open** overrides this baseline.
+Record checks whether the native Zoom app is running, including in the background,
+before each microphone engine starts. A Zoom launch during capture releases the
+voice processor and restarts raw input using the existing writer and bounded
+recovery. The bypass lasts through route recovery and until capture ends, even
+if Zoom quits. A later recording after Zoom quits restores processing if enabled.
+This intentionally includes idle Zoom windows; it does not detect a meeting or
+browser-based Zoom. No window content or application inventory is collected.
+Manual off and explicit microphone selection always keep voice processing off.
+See [ADR 0030](adr/0030-zoom-voice-processing-compatibility.md).
+
+`mic_automatic_gain_control` defaults to `false`, including in older configuration
+files that omit it. **Settings → Recording → Automatically adjust microphone
+volume** overrides this baseline. It controls only Apple's automatic gain in
+the audio-only and dictation voice-processing path; turning it off does not
+disable echo cancellation or noise suppression. It has no effect while voice
+processing is bypassed. The choice is captured when a microphone
+recorder is created and reapplied if its engine recovers after a route change.
+It does not change Zoom's gain, system microphone volume, or playback ducking.
+See [ADR 0029](adr/0029-independent-microphone-gain-control.md).
 
 `refine_with_apple_intelligence` is an opt-in baseline for the same Transcription setting
 and defaults to `false`. On macOS 26+, Record checks the local Foundation Models

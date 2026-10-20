@@ -125,9 +125,33 @@ extension SettingsWindowController {
             stack.addArrangedSubview(
                 SettingsLayout.note(
                     L10n.text(
-                        "In audio-only mode, a specific microphone uses raw input. System Default retains voice processing."
+                        "In audio-only mode, a specific microphone uses raw input. With System Default, use the voice processing settings below."
                     )
                 ))
+            voiceProcessingCheckbox.target = self
+            voiceProcessingCheckbox.action = #selector(voiceProcessingChanged)
+            stack.addArrangedSubview(voiceProcessingCheckbox)
+            stack.addArrangedSubview(
+                SettingsLayout.note(
+                    L10n.text(
+                        "Reduces speaker echo and background noise in audio-only recording and dictation. Turning it off may capture more speaker echo."
+                    )))
+            zoomCompatibilityCheckbox.target = self
+            zoomCompatibilityCheckbox.action = #selector(zoomCompatibilityChanged)
+            stack.addArrangedSubview(zoomCompatibilityCheckbox)
+            stack.addArrangedSubview(
+                SettingsLayout.note(
+                    L10n.text(
+                        "Includes Zoom in the background. If Zoom opens during a recording, voice processing stays off until the next recording after Zoom quits."
+                    )))
+            automaticGainControlCheckbox.target = self
+            automaticGainControlCheckbox.action = #selector(automaticGainControlChanged)
+            stack.addArrangedSubview(automaticGainControlCheckbox)
+            stack.addArrangedSubview(
+                SettingsLayout.note(
+                    L10n.text(
+                        "Automatic gain control applies only when Apple voice processing is in use."
+                    )))
             panelCheckbox.target = self
             panelCheckbox.action = #selector(panelChanged)
             stack.addArrangedSubview(panelCheckbox)

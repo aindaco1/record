@@ -55,7 +55,15 @@ enum Config {
     }
 
     static func micVoiceProcessing() -> Bool {
-        current.micVoiceProcessing
+        RecordingAudioPreferences().voiceProcessing
+    }
+
+    static func micDisableVoiceProcessingForZoom() -> Bool {
+        RecordingAudioPreferences().disableVoiceProcessingForZoom
+    }
+
+    static func micAutomaticGainControl() -> Bool {
+        RecordingAudioPreferences().automaticGainControl
     }
 
     static func resolveRoot(cliOverride: String?) -> URL {
