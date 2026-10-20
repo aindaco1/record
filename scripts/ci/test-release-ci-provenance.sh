@@ -49,7 +49,7 @@ fi
 
 for required_fragment in \
     'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8' \
-    'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a' \
+    'actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9' \
     "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')" \
     './scripts/tools/package-ci-app.sh'; do
     if ! grep -Fq "$required_fragment" "$ci_workflow"; then
