@@ -112,7 +112,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     let transcriptRefinementCheckbox = NSButton(
         checkboxWithTitle: L10n.text("Improve Transcript Readability"), target: nil, action: nil)
 
-    let audioPreferences = RecordingAudioPreferences()
+    let audioPreferences: RecordingAudioPreferences
+    let voiceProcessingCheckbox = NSButton(
+        checkboxWithTitle: L10n.text("Use Apple voice processing"), target: nil, action: nil)
+    let zoomCompatibilityCheckbox = NSButton(
+        checkboxWithTitle: L10n.text("Turn off while Zoom is open"), target: nil, action: nil)
+    let automaticGainControlCheckbox = NSButton(
+        checkboxWithTitle: L10n.text("Automatically adjust microphone volume"),
+        target: nil, action: nil)
     let sourcePopup = NSPopUpButton()
     let microphonePopup = NSPopUpButton()
     let inputTestButton = NSButton(title: L10n.text("Test Input"), target: nil, action: nil)
@@ -167,10 +174,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
 
     init(
         screenshotPreferences: ScreenshotPreferences,
-        sessions: RecentSessionsViewController = RecentSessionsViewController()
+        sessions: RecentSessionsViewController = RecentSessionsViewController(),
+        audioPreferences: RecordingAudioPreferences = .init()
     ) {
         self.sessions = sessions
         self.screenshotPreferences = screenshotPreferences
+        self.audioPreferences = audioPreferences
         let window = SettingsWindow(
             contentRect: NSRect(x: 0, y: 0, width: 960, height: 700),
             styleMask: [.titled, .closable, .resizable],
@@ -282,6 +291,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         sourcePopup.isEnabled = availability.capturePrivacyEnabled
         microphonePopup.isEnabled = availability.capturePrivacyEnabled
         inputTestButton.isEnabled = availability.capturePrivacyEnabled
+        refreshVoiceProcessingControls()
         if !availability.capturePrivacyEnabled {
             stopInputTest()
         } else if inputTestTask == nil {
@@ -469,6 +479,40 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
         sourcePopup.selectItem(
             at: RecordingAudioSource.allCases.firstIndex(of: audioPreferences.source) ?? 0)
         panelCheckbox.state = audioPreferences.showsPanel ? .on : .off
+        refreshVoiceProcessingControls()
+    }
+
+    private func refreshVoiceProcessingControls() {
+        voiceProcessingCheckbox.state = audioPreferences.voiceProcessing ? .on : .off
+        voiceProcessingCheckbox.isEnabled =
+            interactionAvailability.capturePrivacyEnabled && audioPreferences.microphoneUID == nil
+        zoomCompatibilityCheckbox.state =
+            audioPreferences.disableVoiceProcessingForZoom ? .on : .off
+        zoomCompatibilityCheckbox.isEnabled =
+            interactionAvailability.capturePrivacyEnabled && audioPreferences.usesVoiceProcessing
+        automaticGainControlCheckbox.state = audioPreferences.automaticGainControl ? .on : .off
+        automaticGainControlCheckbox.isEnabled =
+            interactionAvailability.capturePrivacyEnabled
+            && audioPreferences.usesVoiceProcessing
+    }
+
+    @objc func voiceProcessingChanged() {
+        guard voiceProcessingCheckbox.isEnabled else { return }
+        audioPreferences.voiceProcessing = voiceProcessingCheckbox.state == .on
+        refreshVoiceProcessingControls()
+        onAudioPreferencesChanged?()
+    }
+
+    @objc func zoomCompatibilityChanged() {
+        guard zoomCompatibilityCheckbox.isEnabled else { return }
+        audioPreferences.disableVoiceProcessingForZoom = zoomCompatibilityCheckbox.state == .on
+        onAudioPreferencesChanged?()
+    }
+
+    @objc func automaticGainControlChanged() {
+        guard automaticGainControlCheckbox.isEnabled else { return }
+        audioPreferences.automaticGainControl = automaticGainControlCheckbox.state == .on
+        onAudioPreferencesChanged?()
     }
 
     func updateAudioLevels(
@@ -487,6 +531,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTa
     @objc func microphoneChanged() {
         stopInputTest()
         audioPreferences.microphoneUID = microphonePopup.selectedItem?.representedObject as? String
+        refreshVoiceProcessingControls()
         onAudioPreferencesChanged?()
         refreshReadiness()
     }

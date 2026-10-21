@@ -82,7 +82,7 @@ security, testing, releases, and historical records. Useful starting points:
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/project/roadmap.md)
 - [Changelog](CHANGELOG.md)
-- [Record 1.5.0 release notes](docs/releases/1.5.0.md)
+- [Record 1.5.1 release notes](docs/releases/1.5.1.md)
 
 ## Provenance and license
 

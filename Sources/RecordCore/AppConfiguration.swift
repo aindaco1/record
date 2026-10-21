@@ -80,6 +80,8 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
     public var recordingsDirectory: String?
     public var transcription: Transcription
     public var micVoiceProcessing: Bool
+    public var micAutomaticGainControl: Bool
+    public var micDisableVoiceProcessingForZoom: Bool
     public var completionHook: CompletionHook?
 
     public init(
@@ -87,12 +89,16 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         recordingsDirectory: String? = nil,
         transcription: Transcription = .init(),
         micVoiceProcessing: Bool = true,
+        micAutomaticGainControl: Bool = false,
+        micDisableVoiceProcessingForZoom: Bool = true,
         completionHook: CompletionHook? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.recordingsDirectory = recordingsDirectory
         self.transcription = transcription
         self.micVoiceProcessing = micVoiceProcessing
+        self.micAutomaticGainControl = micAutomaticGainControl
+        self.micDisableVoiceProcessingForZoom = micDisableVoiceProcessingForZoom
         self.completionHook = completionHook
     }
 
@@ -101,6 +107,8 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
         case recordingsDirectory = "recordings_directory"
         case transcription
         case micVoiceProcessing = "mic_voice_processing"
+        case micAutomaticGainControl = "mic_automatic_gain_control"
+        case micDisableVoiceProcessingForZoom = "mic_disable_voice_processing_for_zoom"
         case completionHook = "completion_hook"
     }
 
@@ -123,6 +131,11 @@ public struct AppConfiguration: Codable, Equatable, Sendable {
                 Bool.self,
                 forKey: .micVoiceProcessing
             ) ?? true
+        micAutomaticGainControl =
+            try container.decodeIfPresent(Bool.self, forKey: .micAutomaticGainControl) ?? false
+        micDisableVoiceProcessingForZoom =
+            try container.decodeIfPresent(Bool.self, forKey: .micDisableVoiceProcessingForZoom)
+            ?? true
         completionHook = try container.decodeIfPresent(
             CompletionHook.self,
             forKey: .completionHook

@@ -80,6 +80,10 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Iniciar / detener audio</string>
 	<key>Automatic</key>
 	<string>Automático</string>
+	<key>Automatic gain control applies only when Apple voice processing is in use.</key>
+	<string>El control automático de ganancia solo se aplica cuando se usa el procesamiento de voz de Apple.</string>
+	<key>Automatically adjust microphone volume</key>
+	<string>Ajustar automáticamente el volumen del micrófono</string>
 	<key>Before vocabulary</key>
 	<string>Antes del vocabulario</string>
 	<key>Before you start</key>
@@ -268,8 +272,10 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Importando %@…</string>
 	<key>Improve Transcript Readability</key>
 	<string>Mejorar legibilidad de transcripciones</string>
-	<key>In audio-only mode, a specific microphone uses raw input. System Default retains voice processing.</key>
-	<string>Al grabar solo audio, un micrófono específico usa entrada directa. Predeterminado del sistema conserva el procesamiento de voz.</string>
+	<key>In audio-only mode, a specific microphone uses raw input. With System Default, use the voice processing settings below.</key>
+	<string>En el modo de solo audio, un micrófono específico usa la entrada sin procesar. Con Predeterminado del sistema, usa los ajustes de procesamiento de voz que aparecen a continuación.</string>
+	<key>Includes Zoom in the background. If Zoom opens during a recording, voice processing stays off until the next recording after Zoom quits.</key>
+	<string>Incluye Zoom en segundo plano. Si Zoom se abre durante una grabación, el procesamiento de voz permanece desactivado hasta la siguiente grabación después de cerrar Zoom.</string>
 	<key>Input test finished.</key>
 	<string>Prueba de entrada finalizada.</string>
 	<key>Input test stopped.</key>
@@ -492,6 +498,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Grabación detenida</string>
 	<key>Recordings in the current save folder and private recovery storage.</key>
 	<string>Grabaciones de la carpeta actual y del almacenamiento privado de recuperación.</string>
+	<key>Reduces speaker echo and background noise in audio-only recording and dictation. Turning it off may capture more speaker echo.</key>
+	<string>Reduce el eco de los altavoces y el ruido de fondo en las grabaciones de solo audio y el dictado. Al desactivarlo, puede captarse más eco de los altavoces.</string>
 	<key>Refresh</key>
 	<string>Actualizar</string>
 	<key>Remove selected</key>
@@ -754,6 +762,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>La transcripción es local. Parakeet requiere instalar su modelo una sola vez. Instala MacWhisper para usar su motor.</string>
 	<key>Transcription started</key>
 	<string>Transcripción iniciada</string>
+	<key>Turn off while Zoom is open</key>
+	<string>Desactivar mientras Zoom esté abierto</string>
 	<key>Turn on Apple Intelligence in System Settings to use this option.</key>
 	<string>Activa Apple Intelligence en Configuración del Sistema para usar esta opción.</string>
 	<key>Type shortcut · Delete = Off</key>
@@ -762,6 +772,8 @@ Puedes configurar Record en Configuración del Sistema → General → Ítems de
 	<string>Atajos no disponibles: %@. Elige otra combinación.</string>
 	<key>Unsaved vocabulary changes</key>
 	<string>Cambios de vocabulario sin guardar</string>
+	<key>Use Apple voice processing</key>
+	<string>Usar el procesamiento de voz de Apple</string>
 	<key>Use supported tokens and balanced braces. Your last valid template is still saved.</key>
 	<string>Usa variables admitidas y llaves de apertura y cierre. Se conserva la última plantilla válida.</string>
 	<key>Use unique, nonempty spellings up to 128 characters, with at most 20 aliases per word.</key>

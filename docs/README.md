@@ -61,7 +61,7 @@ unless a procedure says otherwise.
 - [GitHub Actions outage runbook](runbooks/github-actions-outage.md): incident
   handling and recovery.
 - [Changelog](../CHANGELOG.md): user-facing changes by version.
-- [Record 1.5.0 release notes](releases/1.5.0.md) and
+- [Record 1.5.1 release notes](releases/1.5.1.md) and
   [earlier release notes](releases/). Version 1.4.8 was not published; its planned
   maintenance was included in 1.5.0.
 

@@ -52,6 +52,7 @@ swift format lint --strict --configuration .swift-format --recursive \
     Sources/Record/VideoRecordingSession.swift \
     Sources/Record/Audio/AudioInputDevices.swift \
     Sources/Record/Audio/RecordingAudioPreferences.swift \
+    Sources/Record/Audio/MicRecorder.swift Sources/Record/Audio/ZoomApplicationMonitor.swift \
     Sources/Record/RecordingShortcuts.swift \
     Sources/Record/SettingsWindowController.swift \
     Sources/Record/UI/SettingsLayout.swift \

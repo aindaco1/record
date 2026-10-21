@@ -4,6 +4,15 @@ New features, improvements, and fixes in each Record release. For current
 instructions, see the [user guide](docs/user-guide.md). Technical decisions and
 validation evidence live in the [developer documentation](docs/README.md#contribute).
 
+## [Unreleased]
+
+## [1.5.1] - 2026-10-20
+
+### Changed
+
+- Settings → Recording now offers Apple voice processing and automatic Zoom compatibility controls. By default, audio-only recording and dictation use raw microphone input while Zoom is open to avoid the shared built-in microphone format change associated with quiet outgoing Zoom audio. If Zoom launches during capture, Record switches to raw input for the rest of that recording; processing resumes on a later recording after Zoom quits.
+- Automatic microphone gain control is now off by default for audio-only recording and dictation. Enable it independently in Settings → Recording when wanted.
+
 ## [1.5.0] - 2026-10-04
 
 ### Added

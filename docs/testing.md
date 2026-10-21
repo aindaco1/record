@@ -500,6 +500,8 @@ signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-ca
 |---|---|
 | Audio sources | Built-in microphone only, system only, and both in audio and screen modes; only enabled files and permissions; separate activity |
 | Input test | Explicit start/stop and ten-second expiry; no files; closing Settings or starting capture stops the test |
+| Voice processing and Zoom | Follow the [compatibility comparison](#voice-processing-and-zoom-compatibility); manual off, Zoom already open or launched mid-capture, persistence, raw routing, and remote call quality |
+| Microphone gain control | Follow the [AGC comparison](#microphone-gain-control); default off, opt-in persists, voice processing retained, remote call quality checked separately |
 | Selected microphone | Explicit built-in routing; disconnect a selected USB/Bluetooth microphone, confirm safe stop and preserved media, then select another input |
 | Sessions | Current destination plus private recovery only; title/date filter; raw/clean copy; source playback; folder-change refresh; no symlink traversal |
 | Transcription | One track fails, partial label appears, retry preserves the successful track; defer/relaunch/retry preserves media and successful work |
@@ -527,3 +529,57 @@ signed candidate. Evidence belongs in [1.5.0 candidate testing](testing/1.5.0-ca
 | Localization and access | Dictation controls and preview fit English/Spanish at minimum window size; focus, keyboard Copy and VoiceOver labels work; shortcut assignments start Off and existing mappings survive |
 
 Record native outcomes and hardware limits in [candidate testing](testing/1.5.0-candidate.md).
+
+## Microphone gain control
+
+These checks qualify the independent AGC setting; a passing local microphone file
+does not establish the quality heard by a remote meeting participant.
+
+1. With no saved AGC preference or advanced override, open Settings → Recording.
+   **Automatically adjust microphone volume** must be off. Enable it, reopen
+   Settings and relaunch Record, then confirm it remains on. Turn it off again.
+2. Choose System Default and audio-only capture with both sources. Confirm the
+   checkbox locks while starting, recording and saving. Verify the selected AGC
+   state is applied alongside enabled voice processing with Zoom closed, including after a
+   default-route recovery. Repeat for dictation; verify explicit-microphone raw
+   capture and screen recording retain their existing capture paths.
+3. In a short Zoom comparison with built-in microphone and speakers, keep Zoom
+   settings, macOS microphone mode, speaker volume and speaking distance fixed.
+   Disable **Turn off while Zoom is open** explicitly for this AGC-only test;
+   restore it afterward.
+   Compare Record stopped, recording with AGC off, and stopped again. Repeat with
+   Record AGC on. Evaluate remote-received speech level, clarity and echo as well
+   as both saved tracks. Compare startup and settled capture separately.
+
+Keep private recordings and raw diagnostics local. Record the tested build and
+actual outcomes separately from deterministic test results. Live Zoom acceptance
+for the new default is pending until this comparison is performed.
+
+## Voice processing and Zoom compatibility
+
+1. With no preference overrides, confirm **Use Apple voice processing** and
+   **Turn off while Zoom is open** are on, and automatic gain is off. Toggle each,
+   reopen Settings and relaunch Record to verify persistence. During starting,
+   recording and saving all three controls must lock. Explicit microphone
+   selection disables them without erasing preferences.
+2. With Zoom closed and System Default selected, verify the processing switch
+   selects processed or raw capture. Repeat for dictation and route recovery.
+3. Open the native Zoom app before starting Record, including background/idle Zoom.
+   With automatic compatibility on, confirm no Record voice processor starts.
+   In a short call with built-in microphone and speakers, compare remote-received
+   level and clarity with Record stopped, recording, and stopped again. Check
+   both local source files and speaker bleed separately.
+4. Start processed capture with Zoom closed, then launch Zoom. Confirm one switch
+   to raw capture, preserved source files, bounded recovery and a padded gap.
+   Quit and reopen Zoom during that capture: processing must stay off. After
+   stopping Record and quitting Zoom, the next capture must enable processing.
+   Repeat with a microphone route change while bypassed and with dictation.
+5. Disable automatic compatibility and confirm opening Zoom does not change
+   processing. Set manual processing off and confirm Zoom quitting cannot enable
+   it. Screen recording and explicit-input capture retain their existing paths.
+6. Confirm unrelated app launches do not switch capture. Browser Zoom is outside
+   automatic detection. Inspect English/Spanish layouts and VoiceOver labels.
+
+These are manual acceptance rows, not claims of completed hardware validation.
+Capture diagnostics and private comparison audio stay local. No synthetic test
+can establish what a remote Zoom participant hears.

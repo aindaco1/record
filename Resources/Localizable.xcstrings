@@ -630,6 +630,39 @@
         }
       }
     },
+    "Automatic gain control applies only when Apple voice processing is in use.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic gain control applies only when Apple voice processing is in use."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El control automático de ganancia solo se aplica cuando se usa el procesamiento de voz de Apple."
+          }
+        }
+      }
+    },
+    "Automatically adjust microphone volume": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically adjust microphone volume"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustar automáticamente el volumen del micrófono"
+          }
+        }
+      }
+    },
     "Before vocabulary": {
       "extractionState": "manual",
       "localizations": {
@@ -2228,19 +2261,34 @@
         }
       }
     },
-    "In audio-only mode, a specific microphone uses raw input. System Default retains voice processing.": {
-      "extractionState": "manual",
+    "In audio-only mode, a specific microphone uses raw input. With System Default, use the voice processing settings below.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "In audio-only mode, a specific microphone uses raw input. System Default retains voice processing."
+            "value": "In audio-only mode, a specific microphone uses raw input. With System Default, use the voice processing settings below."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Al grabar solo audio, un micrófono específico usa entrada directa. Predeterminado del sistema conserva el procesamiento de voz."
+            "value": "En el modo de solo audio, un micrófono específico usa la entrada sin procesar. Con Predeterminado del sistema, usa los ajustes de procesamiento de voz que aparecen a continuación."
+          }
+        }
+      }
+    },
+    "Includes Zoom in the background. If Zoom opens during a recording, voice processing stays off until the next recording after Zoom quits.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes Zoom in the background. If Zoom opens during a recording, voice processing stays off until the next recording after Zoom quits."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluye Zoom en segundo plano. Si Zoom se abre durante una grabación, el procesamiento de voz permanece desactivado hasta la siguiente grabación después de cerrar Zoom."
           }
         }
       }
@@ -4128,6 +4176,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Grabaciones de la carpeta actual y del almacenamiento privado de recuperación."
+          }
+        }
+      }
+    },
+    "Reduces speaker echo and background noise in audio-only recording and dictation. Turning it off may capture more speaker echo.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduces speaker echo and background noise in audio-only recording and dictation. Turning it off may capture more speaker echo."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reduce el eco de los altavoces y el ruido de fondo en las grabaciones de solo audio y el dictado. Al desactivarlo, puede captarse más eco de los altavoces."
           }
         }
       }
@@ -6359,6 +6423,22 @@
         }
       }
     },
+    "Turn off while Zoom is open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off while Zoom is open"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivar mientras Zoom esté abierto"
+          }
+        }
+      }
+    },
     "Turn on Apple Intelligence in System Settings to use this option.": {
       "extractionState": "manual",
       "localizations": {
@@ -6423,6 +6503,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cambios de vocabulario sin guardar"
+          }
+        }
+      }
+    },
+    "Use Apple voice processing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Apple voice processing"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar el procesamiento de voz de Apple"
           }
         }
       }

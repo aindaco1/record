@@ -3,6 +3,17 @@ import CoreAudio
 import Foundation
 import RecordCore
 
+/// The voice-processing controls can be verified without opening a microphone.
+protocol MicrophoneVoiceProcessingInput: AnyObject {
+    func setVoiceProcessingEnabled(_ enabled: Bool) throws
+    var isVoiceProcessingAGCEnabled: Bool { get set }
+    var voiceProcessingOtherAudioDuckingConfiguration:
+        AVAudioVoiceProcessingOtherAudioDuckingConfiguration
+    { get set }
+}
+
+extension AVAudioInputNode: MicrophoneVoiceProcessingInput {}
+
 /// Records the default input device to one crash-resilient AAC/CAF track.
 /// Capture callbacks only copy into a bounded handoff; conversion, encoding,
 /// and filesystem work happen on the writer queue.
@@ -15,6 +26,7 @@ final class MicRecorder: @unchecked Sendable {
         case defaultInput
         case engineConfiguration
         case livenessFailure
+        case zoomStarted
     }
 
     enum RecorderError: Error, CustomStringConvertible {
@@ -48,6 +60,9 @@ final class MicRecorder: @unchecked Sendable {
     private var usingVoiceProcessing = false
     private let startedAt: Date
     private let deviceUID: String?
+    private let automaticGainControlEnabled: Bool
+    private var voiceProcessingPolicy: MicrophoneVoiceProcessingPolicy
+    private let zoomActivity: any ZoomActivityMonitoring
     let activity = AudioActivity()
     private let onHealth: @Sendable (CaptureHealthEvent) -> Void
 
@@ -57,10 +72,18 @@ final class MicRecorder: @unchecked Sendable {
     init(
         startedAt: Date = Date(),
         deviceUID: String? = nil,
+        automaticGainControlEnabled: Bool = Config.micAutomaticGainControl(),
+        voiceProcessingEnabled: Bool = Config.micVoiceProcessing(),
+        disableVoiceProcessingForZoom: Bool = Config.micDisableVoiceProcessingForZoom(),
+        zoomActivity: any ZoomActivityMonitoring = ZoomApplicationMonitor(),
         onHealth: @escaping @Sendable (CaptureHealthEvent) -> Void = { _ in }
     ) {
         self.startedAt = startedAt
         self.deviceUID = deviceUID
+        self.automaticGainControlEnabled = automaticGainControlEnabled
+        self.voiceProcessingPolicy = .init(
+            requested: voiceProcessingEnabled, disableForZoom: disableVoiceProcessingForZoom)
+        self.zoomActivity = zoomActivity
         self.onHealth = onHealth
     }
 
@@ -93,9 +116,16 @@ final class MicRecorder: @unchecked Sendable {
             DispatchQueue.main.async { self?.report(event) }
         }
 
+        voiceProcessingPolicy.reset()
+        if deviceUID == nil, voiceProcessingPolicy.requested, voiceProcessingPolicy.disableForZoom {
+            zoomActivity.start { [weak self] isRunning in
+                self?.zoomActivityChanged(isRunning: isRunning)
+            }
+        }
         do {
-            try attachEngine(voiceProcessing: Config.micVoiceProcessing())
+            try attachEngine(voiceProcessing: true)
         } catch {
+            zoomActivity.stop()
             writer?.finish()
             writer = nil
             throw error
@@ -118,6 +148,7 @@ final class MicRecorder: @unchecked Sendable {
         scheduledLivenessCheck = nil
         restartLiveness.cancel()
         defaultInputObserver = nil
+        zoomActivity.stop()
         tearDownEngine()
 
         let snapshot = writer?.snapshot()
@@ -137,6 +168,17 @@ final class MicRecorder: @unchecked Sendable {
 
     // MARK: Capture graph
 
+    static func configureVoiceProcessing(
+        on input: any MicrophoneVoiceProcessingInput, automaticGainControl: Bool
+    ) throws {
+        try input.setVoiceProcessingEnabled(true)
+        // Apply on every fresh engine, including route recovery. Apple's AGC
+        // defaults on; disabling it does not bypass echo cancellation.
+        input.isVoiceProcessingAGCEnabled = automaticGainControl
+        input.voiceProcessingOtherAudioDuckingConfiguration =
+            .init(enableAdvancedDucking: false, duckingLevel: .min)
+    }
+
     private func attachEngine(voiceProcessing requestedVoiceProcessing: Bool) throws {
         guard let writer else {
             throw RecorderError.fileCreationFailed(
@@ -149,16 +191,20 @@ final class MicRecorder: @unchecked Sendable {
         // rerouting a fresh default engine on every attempt.
         let newEngine = deviceUID == nil ? AVAudioEngine() : engine
         let input = newEngine.inputNode
-        var voiceProcessing = MicrophoneSelectionPolicy.usesVoiceProcessing(
-            requested: requestedVoiceProcessing, deviceID: deviceUID)
+        // Recheck before every graph attachment, including route recovery.
+        if deviceUID == nil, voiceProcessingPolicy.requested, voiceProcessingPolicy.disableForZoom {
+            voiceProcessingPolicy.observeZoom(isRunning: zoomActivity.isZoomRunning)
+        }
+        var voiceProcessing =
+            requestedVoiceProcessing
+            && voiceProcessingPolicy.usesVoiceProcessing(deviceID: deviceUID)
         if !voiceProcessing, input.isVoiceProcessingEnabled {
             try input.setVoiceProcessingEnabled(false)
         }
         if voiceProcessing {
             do {
-                try input.setVoiceProcessingEnabled(true)
-                input.voiceProcessingOtherAudioDuckingConfiguration =
-                    .init(enableAdvancedDucking: false, duckingLevel: .min)
+                try Self.configureVoiceProcessing(
+                    on: input, automaticGainControl: automaticGainControlEnabled)
             } catch {
                 FileHandle.standardError.write(
                     Data("warning: mic voice processing unavailable; recording raw mic\n".utf8)
@@ -209,8 +255,13 @@ final class MicRecorder: @unchecked Sendable {
         tapInstalled = true
         usingVoiceProcessing = voiceProcessing
         installEngineObserver(for: newEngine)
+        let gainControl =
+            input.isVoiceProcessingEnabled
+            ? String(input.isVoiceProcessingAGCEnabled) : "not-applicable"
         let report =
             "mic: voiceProcessing=\(input.isVoiceProcessingEnabled) "
+            + "agc=\(gainControl) "
+            + "zoomBypass=\(voiceProcessingPolicy.bypassedForZoom) "
             + "input=\(inputFormat) tap=\(voiceProcessing ? monoFormat : inputFormat)\n"
         FileHandle.standardError.write(Data(report.utf8))
     }
@@ -239,6 +290,18 @@ final class MicRecorder: @unchecked Sendable {
     }
 
     // MARK: Route recovery
+
+    private func zoomActivityChanged(isRunning: Bool) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard voiceProcessingPolicy.observeZoom(isRunning: isRunning),
+            isRecording, usingVoiceProcessing
+        else { return }
+        // Release VPIO promptly; the existing bounded recovery preserves the
+        // writer and pads the interruption instead of starting a new track.
+        tearDownEngine()
+        engine = AVAudioEngine()
+        routeDidChange(.zoomStarted)
+    }
 
     private func installDefaultInputObserver() {
         guard deviceUID == nil else { return }
@@ -327,7 +390,7 @@ final class MicRecorder: @unchecked Sendable {
         padMicrophoneGapThroughNow()
         do {
             try attachEngine(
-                voiceProcessing: Config.micVoiceProcessing() && !preferRawInputUntilStop
+                voiceProcessing: !preferRawInputUntilStop
             )
             let recoveredAt = elapsedMilliseconds()
             execute(routeRecovery.handle(.restartSucceeded(atMilliseconds: recoveredAt)))
