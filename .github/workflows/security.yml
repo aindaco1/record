@@ -54,7 +54,7 @@ jobs:
 
       # github/codeql-action v4.38.3, pinned to a verified commit.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066
         with:
           languages: swift
           build-mode: manual
@@ -67,6 +67,6 @@ jobs:
           --disable-automatic-resolution --disable-sandbox
 
       - name: Analyze
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066
         with:
           category: /language:swift
