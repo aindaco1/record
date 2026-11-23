@@ -181,7 +181,7 @@ jobs:
       # actions/dependency-review-action v5.0.0, pinned to a verified commit.
       - name: Verify shared desktop dependency contract
         run: node shared/dust-wave-platform/scripts/check-desktop-consumer.mjs
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+      - uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec
         with:
           fail-on-severity: moderate
           allow-licenses: Apache-2.0, MIT
